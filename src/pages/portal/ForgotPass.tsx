@@ -10,34 +10,26 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 
-const Login = () => {
+const ForgotPass = () => {
     const navigate = useNavigate()
     return <>
-        <Heading fontSize={'2xl'}>Sign in to your account</Heading>
+        <Heading fontSize={'2xl'}>Forgot Password</Heading>
         <FormControl id="email">
             <FormLabel>Email address</FormLabel>
             <Input type="email" />
-        </FormControl>
-        <FormControl id="password">
-            <FormLabel>Password</FormLabel>
-            <Input type="password" />
         </FormControl>
         <Stack spacing={6}>
             <Stack
                 direction={{ base: 'column', sm: 'row' }}
                 align={'start'}
                 justify={'space-between'}>
-                <Checkbox>Remember me</Checkbox>
-                <Link color={'blue.500'} onClick={() => navigate('/forgotpass')}>Forgot password?</Link>
+                <Link color={'blue.500'} onClick={() => navigate('/login')}>Want to sign in ?</Link>
             </Stack>
             <Button colorScheme={'blue'} variant={'solid'}>
-                Sign in
-            </Button>
-            <Button colorScheme={'blue'} variant={'outline'} onClick={() => navigate('/register')}>
-                Register Account
+                Send Password Reset
             </Button>
         </Stack>
     </>
 }
 
-export default Login
+export default ForgotPass

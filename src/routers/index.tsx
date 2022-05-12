@@ -13,6 +13,7 @@ import Dashboards from "../pages/portal/Dashboard";
 import Profile from "../pages/portal/Profile";
 import Login from "../pages/portal/Login";
 import Register from "../pages/portal/Register";
+import ForgotPass from "../pages/portal/ForgotPass";
 
 function RouterList() {
     const location = useLocation();
@@ -21,6 +22,7 @@ function RouterList() {
             <Route element={<AuthLayouts />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgotpass" element={<ForgotPass />} />
             </Route>
             <Route element={<MainLayouts />}>
                 <Route path="/" element={<Dashboards />} />

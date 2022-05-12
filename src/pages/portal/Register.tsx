@@ -9,7 +9,10 @@ import {
     Stack,
 } from '@chakra-ui/react';
 
+import { useNavigate } from 'react-router-dom';
+
 const Register = () => {
+    const navigate = useNavigate()
     return <>
         <Heading fontSize={'2xl'}>Register account</Heading>
         <FormControl id="username">
@@ -33,7 +36,7 @@ const Register = () => {
                 direction={{ base: 'column', sm: 'row' }}
                 align={'start'}
                 justify={'space-between'}>
-                <Link color={'blue.500'}>Already has an account ?</Link>
+                <Link color={'blue.500'} onClick={() => navigate('/login') }>Already has an account ?</Link>
             </Stack>
             <Button colorScheme={'blue'} variant={'solid'}>
                 Register

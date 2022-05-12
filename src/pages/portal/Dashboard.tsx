@@ -1,20 +1,24 @@
-import { Box, Grid, GridItem, Heading } from '@chakra-ui/react'
+import {
+    Box,
+    GridItem,
+    Grid
+} from '@chakra-ui/react';
 import useWindowDimensions from '../../components/useWindowDimensions'
+import CardAccount from '../../components/CardAccount';
 
 const Dashboards = () => {
     const { width }: any = useWindowDimensions();
 
     return (
-        <Box w='100%' p={4} color='white'>
+        <Box w='100%' p={4}>
             <Grid h='100%'
                 templateRows='repeat(5, 1fr)'
                 templateColumns='repeat(5, 1fr)'
                 gap={4}
+                textAlign={'center'}
             >
                 <GridItem rowSpan={width <= 900 ? 1 : 2} colSpan={width <= 900 ? 5 : 1} bg='red' >
-                    <Heading m={3}>
-                        Welcome User
-                    </Heading>
+                    <CardAccount />
                 </GridItem>
                 <GridItem colSpan={width <= 900 ? 5 : 2} bg='papayawhip'>
                     Notif 1
