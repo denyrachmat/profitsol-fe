@@ -5,7 +5,12 @@ import createSagaMiddleware from 'redux-saga'
 import rootSaga from './sagas'
 import localforage from 'localforage'
 
-const listReducers = combineReducers([])
+// Reducers
+import { AuthReducers as PortalAuthReducers } from "./reducers/portal/AuthReducers";
+
+const listReducers = combineReducers({
+    AuthPortal: PortalAuthReducers
+})
 
 const sagaMiddleware = createSagaMiddleware()
 
