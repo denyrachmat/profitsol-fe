@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation, Router } from "react-router-dom";
 import { Provider } from "react-redux";
 import { PersistGate } from 'redux-persist/integration/react'
+import { Wrapper, Status } from "@googlemaps/react-wrapper";
 
 import { store, persistor } from '../stores';
 
@@ -14,6 +15,8 @@ import Profile from "../pages/portal/Profile";
 import Login from "../pages/portal/Login";
 import Register from "../pages/portal/Register";
 import ForgotPass from "../pages/portal/ForgotPass";
+
+const API_KEY:string = process.env.REACT_APP_GAPI_KEY ?? ''
 
 function RouterList() {
     const location = useLocation();
@@ -37,7 +40,9 @@ const Routers = () => {
         <Provider store={store}>
             <PersistGate loading={null} persistor={persistor}>
                 <BrowserRouter>
-                    <RouterList />
+                    <Wrapper apiKey={API_KEY} libraries={["places"]}>
+                        <RouterList />
+                    </Wrapper>
                 </BrowserRouter>
             </PersistGate>
         </Provider>

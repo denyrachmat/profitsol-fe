@@ -16,14 +16,16 @@ import { useNavigate } from 'react-router-dom';
 
 const CardAccount = () => {
     const navigate = useNavigate()
-    return <Center py={6}>
+    return <Center>
         <Box
-            maxW={'270px'}
             w={'full'}
             bg={useColorModeValue('white', 'gray.800')}
             boxShadow={'2xl'}
             rounded={'md'}
-            overflow={'hidden'}>
+            overflow={'hidden'}
+            css={{
+                border: '2px solid grey',
+            }}>
             <Image
                 h={'120px'}
                 w={'full'}

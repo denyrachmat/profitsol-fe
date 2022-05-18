@@ -47,9 +47,6 @@ export const apiConn = async (
 
     let rootDomain
     switch (root) {
-        case 'api':
-            rootDomain = process.env.REACT_APP_ROOT_DOMAIN_PROD
-            break;
         case 'apidev':
             rootDomain = process.env.REACT_APP_ROOT_DOMAIN_DEV
             break;
@@ -59,10 +56,15 @@ export const apiConn = async (
         case 'storedev':
             rootDomain = process.env.REACT_APP_ROOT_STORAGE_DEV
             break;
-        default:
+        case 'api':
             rootDomain = process.env.REACT_APP_ROOT_DOMAIN_PROD
             break;
+        default:
+            rootDomain = ''
+            break;
     }
+
+    console.log(rootDomain)
     if (data) {
         processAxios = axios({
             method: methods,
