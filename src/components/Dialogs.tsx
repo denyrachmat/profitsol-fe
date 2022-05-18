@@ -25,10 +25,10 @@ const Dialogs = () => {
             {
                 dialogLists.map((val: DialogTypes.getCurrentDialog, idx: number) => {
                     return (
-                        <Modal closeOnOverlayClick={false} key={idx} isOpen={val.dialogIsOpen} onClose={() => onCloseDialog(val.dialogID)}>
+                        <Modal size={'5xl'} closeOnOverlayClick={false} key={idx} isOpen={val.dialogIsOpen} onClose={() => onCloseDialog(val.dialogID)}>
                             <ModalOverlay />
                             <ModalContent>
-                                <ModalHeader>Create your account</ModalHeader>
+                                <ModalHeader>{val.dialogTitle}</ModalHeader>
                                 <ModalCloseButton />
                                 <ModalBody pb={6}>
                                     {val.dialogContent}

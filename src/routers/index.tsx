@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation, Router } from "react-router-
 import { Provider } from "react-redux";
 import { PersistGate } from 'redux-persist/integration/react'
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
+import mapboxgl from 'mapbox-gl';
 
 import { store, persistor } from '../stores';
 
@@ -17,6 +18,7 @@ import Register from "../pages/portal/Register";
 import ForgotPass from "../pages/portal/ForgotPass";
 
 const API_KEY:string = process.env.REACT_APP_GAPI_KEY ?? ''
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGVueTIyIiwiYSI6ImNqaHU2aDZ2MzA3MjEza3BpbDA5cWQyNDEifQ.SNmUHNN6YhvH5ATUQSTeJQ'
 
 function RouterList() {
     const location = useLocation();
