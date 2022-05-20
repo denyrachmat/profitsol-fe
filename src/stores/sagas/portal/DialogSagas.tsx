@@ -24,8 +24,6 @@ function* pushingDialog({
         dialogCancelBtn: dialogCancelBtn,
         dialogPressedBtn: dialogPressedBtn
     }
-
-    console.log(data)
     
     let dataFinale = (data: Object, result: Object[] = []) => {
         result.push(...dialogLists, data)

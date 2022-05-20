@@ -20,11 +20,30 @@ const Dialogs = () => {
         ))
     }
 
+    const onCancelDialog = (id: string) => {
+        dispatch(DialogCreators.setButtonFeedBack(
+            id,
+            'cancel'
+        ))
+
+        onCloseDialog(id)
+    }
+
+    const onClickOk = (id: string) => {
+        dispatch(DialogCreators.setButtonFeedBack(
+            id,
+            'ok'
+        ))
+
+        onCloseDialog(id)
+    }
+
+    React.useEffect(() => {},[])
+    
     return dialogLists && dialogLists.length > 0
-        ? <>
+        ? <div>
             {
-                dialogLists.map((val: DialogTypes.getCurrentDialog, idx: number) => {
-                    return (
+                dialogLists.map((val: DialogTypes.getCurrentDialog, idx: number) => (
                         <Modal size={'5xl'} closeOnOverlayClick={false} key={idx} isOpen={val.dialogIsOpen} onClose={() => onCloseDialog(val.dialogID)}>
                             <ModalOverlay />
                             <ModalContent>
@@ -35,22 +54,22 @@ const Dialogs = () => {
                                 </ModalBody>
 
                                 <ModalFooter>
-                                    <Button colorScheme='blue' mr={3}>
+                                    <Button colorScheme='blue' mr={3} onClick={() => onClickOk(val.dialogID)}>
                                         Ok
                                     </Button>
                                     {
                                         val.dialogCancelBtn
-                                        ? <Button onClick={() => onCloseDialog(val.dialogID)}>Cancel</Button>
+                                        ? <Button onClick={() => onCancelDialog(val.dialogID)}>Cancel</Button>
                                         : null
                                     }                                    
                                 </ModalFooter>
                             </ModalContent>
                         </Modal>
                     )
-                })
+                )
             }
-        </>
-        : <></>
+        </div>
+        : <div></div>
 }
 
 export default Dialogs

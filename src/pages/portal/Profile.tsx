@@ -22,6 +22,8 @@ import MapView from "../../components/MapView";
 import Dialogs from "../../components/Dialogs";
 
 import * as DialogCreators from '../../stores/actions/creators/portal/DialogCreators'
+import { EmailIcon } from "@chakra-ui/icons";
+import { FaSearchLocation } from 'react-icons/fa'
 
 const Profile = () => {
     const ref = React.useRef();
@@ -47,7 +49,7 @@ const Profile = () => {
             'PROFILE_SHOW_MAPS',
             true,
             'Choose Location Point',
-            <MapView center={center} zoom={zoom}/>,
+            <MapView center={center} zoom={zoom} choosedData={choosedLocation}/>,
             true
         ))
     }
@@ -55,6 +57,10 @@ const Profile = () => {
     React.useEffect(() => {
         console.log('Location ID on changed')
     }, [IDLocG])
+
+    const choosedLocation = (val: object) => {
+        console.log('Masuk sini sih harusnya', val)
+    }
 
     return (
         <>
@@ -113,7 +119,10 @@ const Profile = () => {
             <Flex p={2} flex={1} justify={'center'} m={5}>
                 <Stack spacing={4} w={'full'} paddingLeft={2}>
                     <FormControl id="locationID">
-                        <FormLabel>Your ID location</FormLabel>
+                    <Button colorScheme='teal' leftIcon={<FaSearchLocation />} onClick={() => ShowMaps()}>
+                        Find on maps
+                    </Button>
+                        {/* <FormLabel>Your ID location</FormLabel>
                         <InputGroup size='md'>
                             <Input type="text" onChange={(val: { target: { value: string } }) => setIDLocG(val.target.value)} />
                             <InputRightElement width='4.5rem'>
@@ -121,7 +130,32 @@ const Profile = () => {
                                     Maps
                                 </Button>
                             </InputRightElement>
-                        </InputGroup>
+                        </InputGroup> */}
+                    </FormControl>
+
+                    <FormControl id="country">
+                        <FormLabel>Country</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+
+                    <FormControl id="state">
+                        <FormLabel>State / Province</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="city">
+                        <FormLabel>City</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="district">
+                        <FormLabel>District</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="subdistrict">
+                        <FormLabel>Sub-District</FormLabel>
+                        <Input type="text" />
                     </FormControl>
                 </Stack>
 
@@ -129,6 +163,31 @@ const Profile = () => {
                     <FormControl id="locationID">
                         <FormLabel>Your current location</FormLabel>
                         <Input type="text" onChange={(val: { target: { value: string } }) => setCurrLocG(val.target.value)} />
+                    </FormControl>                    
+
+                    <FormControl id="country">
+                        <FormLabel>Country</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+
+                    <FormControl id="state">
+                        <FormLabel>State / Province</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="city">
+                        <FormLabel>City</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="district">
+                        <FormLabel>District</FormLabel>
+                        <Input type="text" />
+                    </FormControl>
+                    
+                    <FormControl id="subdistrict">
+                        <FormLabel>Sub-District</FormLabel>
+                        <Input type="text" />
                     </FormControl>
                 </Stack>
             </Flex>

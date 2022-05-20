@@ -28,3 +28,16 @@ export const pushDialogs = (
         dialogs
     }
 }
+
+export const setButtonFeedBack = (
+    dialogPressedBtn: string,
+    dialogID: string,
+    dialogResult?: Object
+) => {
+    return {
+        type: DialogTypes.SET_BUTTON_FEEDBACK,
+        dialogID,
+        dialogPressedBtn,
+        dialogResult
+    }
+}

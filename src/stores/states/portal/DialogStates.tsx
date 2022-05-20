@@ -5,5 +5,6 @@ export const DialogStates: any = {
     dialogContent: '',
     dialogCancelBtn: false,
     dialogPressedBtn: false,
+    dialogResult: {},
     dialogLists: []
 }

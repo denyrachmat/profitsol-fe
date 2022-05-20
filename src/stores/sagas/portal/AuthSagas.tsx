@@ -10,31 +10,35 @@ const call: any = Eff.call;
 
 function* onLogin({ username, password }: AuthTypes.SetLoginRequest) {
     console.log('masuk sini')
-    const { data, message } = yield call(
-        apiConn,
-        'post',
-        'login',
-        'api',
-        {
-            username,
-            password
+    try {
+        const { data, message } = yield call(
+            apiConn,
+            'post',
+            'login',
+            'api',
+            {
+                username,
+                password
+            }
+        )
+    
+        if (data) {
+            console.log(data)
+    
+            yield put(
+                AuthCreators.SetLoginSuccess(
+                    data.data
+                )
+            );
+        } else {
+            yield put(
+                AuthCreators.SetLoginFailed(
+                    data.data
+                )
+            );
         }
-    )
-
-    if (data) {
-        console.log(data)
-
-        yield put(
-            AuthCreators.SetLoginSuccess(
-                data.data
-            )
-        );
-    } else {
-        yield put(
-            AuthCreators.SetLoginFailed(
-                data.data
-            )
-        );
+    } catch (error) {
+        console.log(error)
     }
 }
 

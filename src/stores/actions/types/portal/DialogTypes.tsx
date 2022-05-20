@@ -1,3 +1,5 @@
+import { ReactInstance } from "react"
+
 export const SET_DIALOG = 'SET_DIALOG'
 export interface setDialogs {
     type: typeof SET_DIALOG,
@@ -21,7 +23,7 @@ export interface getCurrentDialog {
     dialogID: string,
     dialogIsOpen: boolean,
     dialogTitle?: string,
-    dialogContent?: string,
+    dialogContent?: string | HTMLElement | React.ReactElement,
     dialogCancelBtn?: boolean,
     dialogPressedBtn?: string
 }
@@ -32,8 +34,17 @@ export interface getListDialog {
     dialogLists: string[]| Object[]
 }
 
+export const SET_BUTTON_FEEDBACK = 'SET_BUTTON_FEEDBACK'
+export interface setButtonFeedBack {
+    type: typeof SET_BUTTON_FEEDBACK,
+    dialogID: string,
+    dialogPressedBtn: string,
+    dialogResult?: Object
+}
+
 export type Dialogs = 
     setDialogs |
     pushDialogs |
     getCurrentDialog |
-    getListDialog
+    getListDialog |
+    setButtonFeedBack
