@@ -1,3 +1,29 @@
+export const PUSH_PROFILE = 'PUSH_PROFILE'
+export interface pushProfile {
+    type: typeof PUSH_PROFILE,
+    firstName: string,
+    lastName: string,
+    birthplace: string,
+    birthday: Date,
+    IDType: string,
+    IDNum: string,
+    country: string,
+    province: string,
+    cities: string,
+    district: string,
+    subdistrict: string,
+    countryCurrent: string,
+    provinceCurrent: string,
+    citiesCurrent: string,
+    districtCurrent: string,
+    subdistrictCurrent: string,
+    Educations: Object[],
+    families: Object[],
+    phoneNum: string,
+    detLoc: string,
+    detLocCurrent: string
+}
+
 export const SET_PROFILE = 'SET_PROFILE'
 export interface setProfile {
     type: typeof SET_PROFILE,
@@ -6,4 +32,5 @@ export interface setProfile {
 }
 
 export type PortalProfile = 
+    pushProfile |
     setProfile

@@ -11,7 +11,8 @@ export const DialogReducers = (state = DialogStates, actions: DialogTypes.Dialog
                 dialogTitle: actions.dialogTitle,
                 dialogContent: actions.dialogContent,
                 dialogCancelBtn: actions.dialogCancelBtn,
-                dialogPressedBtn: actions.dialogPressedBtn
+                dialogPressedBtn: actions.dialogPressedBtn,
+                dialogResult: actions.dialogResult
             }
         case DialogTypes.SET_BUTTON_FEEDBACK: 
             return {

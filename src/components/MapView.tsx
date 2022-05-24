@@ -1,14 +1,18 @@
 import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import React from "react";
+import { Autocomplete, Option } from 'chakra-ui-simple-autocomplete';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { List, ListItem, ListIcon } from "@chakra-ui/react";
+import { List, ListItem, ListIcon, MenuItem, MenuList, Menu } from "@chakra-ui/react";
+import SearchBox from "./SearchBox";
 
 import { MdCheckCircle, MdSettings } from "react-icons/md"
 
+
 import { apiConn } from "./apiHelpers";
+import { AddIcon, ExternalLinkIcon, RepeatIcon, EditIcon } from "@chakra-ui/icons";
 
 const MapView = ({ center, zoom, choosedData }: { center: google.maps.LatLngLiteral, zoom: number, choosedData?: any }) => {
     const mapContainer = React.useRef(null);
@@ -31,6 +35,9 @@ const MapView = ({ center, zoom, choosedData }: { center: google.maps.LatLngLite
     const [district, setDistrict] = React.useState('')
     const [subdistrict, setSubdistrict] = React.useState('')
 
+    const [options, setOptions] = React.useState([])
+    const [result, setResult] = React.useState([])
+
     React.useEffect(() => { // initialize map only once
         const geolocate = new mapboxgl.GeolocateControl({
             positionOptions: {
@@ -47,11 +54,6 @@ const MapView = ({ center, zoom, choosedData }: { center: google.maps.LatLngLite
         }).addControl(geolocate, "top-right")
 
         map.current = mapboxnya
-
-        // const geocoder = new MapboxGeocoder({
-        //     accessToken: mapboxgl.accessToken,
-        //     mapboxgl: mapboxnya
-        // });
 
         if (map.current) {
             map.current.on('click', (e: { lngLat: { lng: number, lat: number } }) => {
@@ -91,17 +93,17 @@ const MapView = ({ center, zoom, choosedData }: { center: google.maps.LatLngLite
                     if (map.current) {
                         const theMarkers = marker.setLngLat([lng, lat]).addTo(map.current)
 
-                        const dataMarkers:Object[] = markers
+                        const dataMarkers: Object[] = markers
 
                         dataMarkers.push(theMarkers)
-                        
+
                         setMarkers(dataMarkers)
 
                         const allMarkers = markers
 
                         if (allMarkers.length > 0) {
                             for (var i = allMarkers.length - 1; i >= 0; i--) {
-                              allMarkers[i].remove();
+                                allMarkers[i].remove();
                             }
 
                             setMarkers(allMarkers)
@@ -119,51 +121,87 @@ const MapView = ({ center, zoom, choosedData }: { center: google.maps.LatLngLite
         const dataDistrict = findPlaceInData('locality')
         const dataSubDistrict = findPlaceInData('neighborhood')
 
-        console.log(fullDataAddr)
-        if (dataCountry) {
+        if (dataCountry && dataCountry.text) {
             setCountry(dataCountry.text)
+        } else {
+            setCountry('')
         }
 
-        if (dataState) {
+        if (dataState && dataState.text) {
             setProvince(dataState.text)
+        } else {
+            setProvince('')
         }
 
-        if (dataCities) {
+        if (dataCities && dataCities.text) {
             setCities(dataCities.text)
         } else {
             setCities('')
         }
 
-        if (dataDistrict) {
+        if (dataDistrict && dataDistrict.text) {
             setDistrict(dataDistrict.text)
         } else {
             setDistrict('')
         }
 
-        if (dataSubDistrict) {
+        if (dataSubDistrict && dataSubDistrict.text) {
             setSubdistrict(dataSubDistrict.text)
         } else {
             setSubdistrict('')
         }
-
-        choosedData({
-            country: country,
-            province: province,
-            cities: cities,
-            district: district,
-            subdistrict: subdistrict
-        })
     }, [JSON.stringify(fullDataAddr)])
+
+    React.useEffect(() => {
+        if (country &&
+            province &&
+            cities &&
+            district &&
+            subdistrict) {
+            choosedData({
+                country: country,
+                province: province,
+                cities: cities,
+                district: district,
+                subdistrict: subdistrict
+            })
+        }
+    }, [country, province, cities, district, subdistrict])
 
     const findPlaceInData = (idnya: string) => {
         if (fullDataAddr.features) {
             const getData = fullDataAddr.features.filter((val: { id: string }) => val.id.includes(idnya))
-
             return getData[0]
         }
     }
 
+    const onChooseLoc = (val: any) => {
+        setLng(val[0])
+        setLat(val[1])
+
+        setPos({
+            lat: val[1],
+            lng: val[0]
+        })
+
+        setZoom(15)
+
+        map.current.flyTo({
+            center: val,
+            zoom: 15,
+            essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+    }
+
     return <div>
+        <SearchBox
+            url={`https://api.mapbox.com/geocoding/v5/mapbox.places/{q}.json?access_token=${mapboxgl.accessToken}`}
+            methods={'get'}
+            dataGetRoot={'data.features'}
+            dataValue={'center'}
+            dataLabel={'place_name'}
+            choosedData={onChooseLoc}
+        />
         Langitude: {lng}, Latitude: {lat}
         <div ref={mapContainer} className="map-container" style={{ height: '30vh' }} />
         <div style={{ paddingTop: 10 }}>

@@ -9,6 +9,8 @@ export interface setDialogs {
     dialogContent: string| HTMLElement,
     dialogCancelBtn: boolean,
     dialogPressedBtn: string,
+    dialogResult?: Object | string,
+    dialogLists?: Object[]
 }
 
 export const PUSH_DIALOGS = 'PUSH_DIALOGS'

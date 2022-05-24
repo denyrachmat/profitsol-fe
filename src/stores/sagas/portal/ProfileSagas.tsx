@@ -9,23 +9,70 @@ import * as ProfileCreators from '../../actions/creators/portal/ProfileCreators'
 
 const call: any = Eff.call;
 
-function* findPlace({ input_name, input_value }: ProfileTypes.setProfile) {
-    if (input_name === 'id_card_location') {
+function* pushingProfile({
+    firstName,
+    lastName,
+    birthplace,
+    birthday,
+    IDType,
+    IDNum,
+    country,
+    province,
+    cities,
+    district,
+    subdistrict,
+    countryCurrent,
+    provinceCurrent,
+    citiesCurrent,
+    districtCurrent,
+    subdistrictCurrent,
+    Educations,
+    families,
+    phoneNum,
+    detLoc,
+    detLocCurrent
+}: ProfileTypes.pushProfile) {
+    try {
+        console.log('siap di store !!')
         const { data } = yield call(
             apiConn,
-            'get',
-            `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GAPI_KEY}&libraries=places&callback=initMap`,
-            'ext',
+            'post',
+            'portal/profile',
+            'api',
             {
-                input_name,
-                input_value
-            }
+                firstName,
+                lastName,
+                birthplace,
+                birthday,
+                IDType,
+                IDNum,
+                country,
+                province,
+                cities,
+                district,
+                subdistrict,
+                countryCurrent,
+                provinceCurrent,
+                citiesCurrent,
+                districtCurrent,
+                subdistrictCurrent,
+                Educations,
+                families,
+                phoneNum,
+                detLoc,
+                detLocCurrent
+            },
+            true
         )
+
+        console.log(data)
+    } catch (error) {
+        console.log(error)
     }
 }
 
 function* watchProfileUpdate() {
-    yield takeEvery('SET_PROFILE', findPlace)
+    yield takeEvery('PUSH_PROFILE', pushingProfile)
 }
 
 export function* ProfileSagas() {

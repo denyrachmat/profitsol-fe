@@ -8,6 +8,31 @@ export const ProfileReducers = (state = ProfileStates, actions: ProfileTypes.Por
                 [actions.input_name]: actions.input_value,
                 ...state
             }
+        case ProfileTypes.PUSH_PROFILE: 
+            return {
+                ...state,
+                firstName: actions.firstName,
+                lastName: actions.lastName,
+                birthplace: actions.birthplace,
+                birthday: actions.birthday,
+                IDType: actions.IDType,
+                IDNum: actions.IDNum,
+                country: actions.country,
+                province: actions.province,
+                cities: actions.cities,
+                district: actions.district,
+                subdistrict: actions.subdistrict,
+                countryCurrent: actions.countryCurrent,
+                provinceCurrent: actions.provinceCurrent,
+                citiesCurrent: actions.citiesCurrent,
+                districtCurrent: actions.districtCurrent,
+                subdistrictCurrent: actions.subdistrictCurrent,
+                Educations: actions.Educations,
+                families: actions.families,
+                phoneNum: actions.phoneNum,
+                detLoc: actions.detLoc,
+                detLocCurrent: actions.detLocCurrent,
+            }
         default:
             return state
     }

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface apiResponse {
     status: boolean,
-    data: Array<String> | Object,
+    data: Array<String> | Object | null | undefined,
     message: string
 }
 
@@ -29,7 +29,7 @@ export const apiConn = async (
     if (authState) {
         header = {
             ...header,
-            'Authorization': `Bearer ${state.AuthInfo.token}`
+            'Authorization': `Bearer ${state.AuthPortal.authData.token}`
         }
     } else if (isUpload) {
         header = {
@@ -42,7 +42,8 @@ export const apiConn = async (
             responseType: 'blob',
         }
     }
-
+    // console.log(header)
+    // console.log(state)
     let processAxios
 
     let rootDomain
@@ -86,7 +87,10 @@ export const apiConn = async (
         return e.response.data
     })
 
+    return request
+
     if (request) {
+
         console.log(request)
         return request
     }

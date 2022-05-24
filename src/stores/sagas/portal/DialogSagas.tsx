@@ -62,8 +62,13 @@ function* watchEveryDialogFired() {
     yield takeEvery('SET_DIALOG', pushingDialog)
 }
 
+function* watchEveryDialogFeedback() {
+    yield takeEvery('SET_BUTTON_FEEDBACK', pushingDialog)
+}
+
 export function* DialogSagas() {
     yield all([
-        fork(watchEveryDialogFired)
+        fork(watchEveryDialogFired),
+        fork(watchEveryDialogFeedback)
     ]);
 }

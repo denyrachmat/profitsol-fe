@@ -7,7 +7,9 @@ export const setDialogs = (
     dialogTitle?: string,
     dialogContent?: string| HTMLElement | React.ReactElement,
     dialogCancelBtn?: boolean,
-    dialogPressedBtn?: string
+    dialogPressedBtn?: string,
+    dialogResult?: Object | string,
+    dialogLists?: Object[]
 ) => {
     return {
         type: DialogTypes.SET_DIALOG,
@@ -16,7 +18,9 @@ export const setDialogs = (
         dialogTitle,
         dialogContent,
         dialogCancelBtn,
-        dialogPressedBtn
+        dialogPressedBtn,
+        dialogResult,
+        dialogLists
     }
 }
 
@@ -30,8 +34,8 @@ export const pushDialogs = (
 }
 
 export const setButtonFeedBack = (
-    dialogPressedBtn: string,
     dialogID: string,
+    dialogPressedBtn: string,
     dialogResult?: Object
 ) => {
     return {
