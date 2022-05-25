@@ -19,5 +19,6 @@ export const ProfileStates: String[]| Object = {
     families: [],
     phoneNum: '',
     detLoc: '',
-    detLocCurrent: ''
+    detLocCurrent: '',
+    ava: ''
 }

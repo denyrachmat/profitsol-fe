@@ -17,11 +17,12 @@ export interface pushProfile {
     citiesCurrent: string,
     districtCurrent: string,
     subdistrictCurrent: string,
-    Educations: Object[],
-    families: Object[],
+    educations: any,
+    families: any,
     phoneNum: string,
     detLoc: string,
-    detLocCurrent: string
+    detLocCurrent: string,
+    ava: string
 }
 
 export const SET_PROFILE = 'SET_PROFILE'

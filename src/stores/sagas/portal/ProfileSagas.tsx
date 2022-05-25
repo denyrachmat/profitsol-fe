@@ -26,11 +26,12 @@ function* pushingProfile({
     citiesCurrent,
     districtCurrent,
     subdistrictCurrent,
-    Educations,
+    educations,
     families,
     phoneNum,
     detLoc,
-    detLocCurrent
+    detLocCurrent,
+    ava
 }: ProfileTypes.pushProfile) {
     try {
         console.log('siap di store !!')
@@ -56,11 +57,12 @@ function* pushingProfile({
                 citiesCurrent,
                 districtCurrent,
                 subdistrictCurrent,
-                Educations,
+                educations,
                 families,
                 phoneNum,
                 detLoc,
-                detLocCurrent
+                detLocCurrent,
+                ava
             },
             true
         )

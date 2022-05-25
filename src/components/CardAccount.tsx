@@ -12,10 +12,12 @@ import {
     GridItem,
     Grid
 } from '@chakra-ui/react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 const CardAccount = () => {
     const navigate = useNavigate()
+    const Profile = useSelector((state: any) => state.Profile)
     return <Center>
         <Box
             w={'full'}
@@ -38,18 +40,19 @@ const CardAccount = () => {
                 <Avatar
                     size={'xl'}
                     src={
-                        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&q=80&fm=jpg&crop=faces&fit=crop&h=200&w=200&ixid=eyJhcHBfaWQiOjE3Nzg0fQ'
+                        Profile.ava
                     }
                     css={{
                         border: '2px solid white',
                     }}
+                    name={`${Profile.firstName} ${Profile.lastName}`}
                 />
             </Flex>
 
             <Box p={6}>
                 <Stack spacing={0} align={'center'} mb={5}>
                     <Heading fontSize={'2xl'} fontWeight={500} fontFamily={'body'}>
-                        John Doe
+                        {`${Profile.firstName} ${Profile.lastName}`}
                     </Heading>
                     <Text color={'gray.500'}>Frontend Developer</Text>
                 </Stack>

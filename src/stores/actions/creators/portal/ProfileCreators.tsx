@@ -17,11 +17,12 @@ export const pushProfile = (
     citiesCurrent: string,
     districtCurrent: string,
     subdistrictCurrent: string,
-    Educations: Object[],
-    families: Object[],
+    educations: any,
+    families: any,
     phoneNum: string,
     detLoc: string,
-    detLocCurrent: string
+    detLocCurrent: string,
+    ava: string
 ): ProfileTypes.pushProfile => {
     return {
         type: ProfileTypes.PUSH_PROFILE,
@@ -41,11 +42,12 @@ export const pushProfile = (
         citiesCurrent,
         districtCurrent,
         subdistrictCurrent,
-        Educations,
+        educations,
         families,
         phoneNum,
         detLoc,
-        detLocCurrent
+        detLocCurrent,
+        ava
     }
 }
 

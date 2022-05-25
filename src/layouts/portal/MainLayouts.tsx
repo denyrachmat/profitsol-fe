@@ -21,7 +21,9 @@ const MainLayouts = () => {
     return (
         <div>
             <Header />
+            <div style={{marginTop: '10vh'}}>
             <Outlet></Outlet>
+            </div>
         </div>
     )
 }

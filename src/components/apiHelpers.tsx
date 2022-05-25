@@ -29,7 +29,8 @@ export const apiConn = async (
     if (authState) {
         header = {
             ...header,
-            'Authorization': `Bearer ${state.AuthPortal.authData.token}`
+            'Authorization': `Bearer ${state.AuthPortal.authData.token}`,
+            'Username': `${state.AuthPortal.authData.username}`
         }
     } else if (isUpload) {
         header = {

@@ -27,11 +27,12 @@ export const ProfileReducers = (state = ProfileStates, actions: ProfileTypes.Por
                 citiesCurrent: actions.citiesCurrent,
                 districtCurrent: actions.districtCurrent,
                 subdistrictCurrent: actions.subdistrictCurrent,
-                Educations: actions.Educations,
+                educations: actions.educations,
                 families: actions.families,
                 phoneNum: actions.phoneNum,
                 detLoc: actions.detLoc,
                 detLocCurrent: actions.detLocCurrent,
+                ava: actions.ava,
             }
         default:
             return state

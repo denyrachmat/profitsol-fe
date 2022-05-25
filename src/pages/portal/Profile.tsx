@@ -42,11 +42,13 @@ import * as DialogCreators from '../../stores/actions/creators/portal/DialogCrea
 import * as DialogTypes from '../../stores/actions/types/portal/DialogTypes'
 
 import * as ProfileCreators from '../../stores/actions/creators/portal/ProfileCreators'
+import * as ProfileTypes from '../../stores/actions/types/portal/ProfileTypes'
 
 import { EmailIcon, SearchIcon, DeleteIcon } from "@chakra-ui/icons";
 import { FaSearchLocation, FaCopy, FaBook, FaUsers, FaCamera } from 'react-icons/fa'
 import { MdAddAPhoto } from "react-icons/md";
 import CustDatePicker from "../../components/CustDatePicker";
+import UploadPhoto from "../../components/UploadPhoto";
 import _ from "lodash";
 
 export interface FamTypes {
@@ -66,7 +68,10 @@ const Profile = () => {
     const toast = useToast()
 
     const { isOpen, onToggle } = useDisclosure()
+    const [currLocG, setCurrLocG] = React.useState({}) as any
+    const [uploadedPhotoNow, setUploadedPhotoNow] = React.useState('')
 
+    const [ava, setAva] = React.useState('')
     const [firstName, setFirstName] = React.useState('')
     const [lastName, setLastName] = React.useState('')
     const [birthplace, setBirthplace] = React.useState('')
@@ -74,7 +79,6 @@ const Profile = () => {
     const [phoneNum, setPhoneNum] = React.useState('')
     const [IDType, setIDType] = React.useState('')
     const [IDNum, setIDNum] = React.useState('')
-    const [currLocG, setCurrLocG] = React.useState({}) as any
 
     const [country, setCountry] = React.useState('')
     const [province, setProvince] = React.useState('')
@@ -90,11 +94,12 @@ const Profile = () => {
     const [subdistrictCurrent, setSubdistrictCurrent] = React.useState('')
     const [detLocCurrent, setDetLocCurrent] = React.useState('')
 
-    const [Educations, setEducations] = React.useState([]) as any
+    const [educations, setEducations] = React.useState([]) as any
 
     const [families, setFamilies] = React.useState([]) as any
 
-    const { dialogID, dialogPressedBtn, dialogResult, dialogLists } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
+    const { dialogID, dialogPressedBtn, dialogIsOpen, dialogLists } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
+    const Profile = useSelector((state: { Profile: ProfileTypes.pushProfile }) => state.Profile)
 
     const dispatch = useDispatch()
 
@@ -113,8 +118,59 @@ const Profile = () => {
         ))
     }
 
+    React.useEffect(() => {
+        console.log(Profile.countryCurrent)
+        setFirstName(Profile.firstName)
+        setLastName(Profile.lastName)
+        setBirthplace(Profile.birthplace)
+        setBirthday(new Date(Profile.birthday))
+        setIDType(Profile.IDType)
+        setIDNum(Profile.IDNum)
+        setCountry(Profile.country)
+        setProvince(Profile.province)
+        setCities(Profile.cities)
+        setDistrict(Profile.district)
+        setSubdistrict(Profile.subdistrict)
+        setCountryCurrent(Profile.countryCurrent)
+        setProvinceCurrent(Profile.provinceCurrent)
+        setCitiesCurrent(Profile.citiesCurrent)
+        setDistrictCurrent(Profile.districtCurrent)
+        setSubdistrictCurrent(Profile.subdistrictCurrent)
+
+        if (Profile.educations) {
+            setEducations(JSON.parse(Profile.educations))
+        }
+
+        if (Profile.families) {
+            let hasilFam = []
+            JSON.parse(Profile.families).map((val: any) => {
+                hasilFam.push({
+                    fam_f_name: val.fam_f_name,
+                    fam_l_name: val.fam_l_name,
+                    fam_rel: val.fam_rel,
+                    fam_birthday: new Date(val.fam_birthday),
+                    fam_phone: val.fam_phone
+                })
+            })
+            setFamilies(JSON.parse(Profile.families))
+        }
+
+        setPhoneNum(Profile.phoneNum)
+        setDetLoc(Profile.detLoc)
+        setDetLocCurrent(Profile.detLocCurrent)
+        setAva(Profile.ava)
+    }, [])
+
+    // Check if firest run or not
+    const isFirstRun = React.useRef(true);
+
     // Dialogs
     React.useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+            return;
+        }
+
         console.log([dialogID, dialogPressedBtn])
         if (dialogID === 'PROFILE_SHOW_MAPS' && dialogPressedBtn === 'ok') {
             if (currLocG) {
@@ -138,8 +194,10 @@ const Profile = () => {
             setCitiesCurrent(cities)
             setDistrictCurrent(district)
             setSubdistrictCurrent(subdistrict)
+        } else if (dialogID === 'UPLOAD_PHOTO' && dialogPressedBtn === 'ok') {
+            setAva(uploadedPhotoNow)
         }
-    }, [JSON.stringify(dialogLists)])
+    }, [dialogIsOpen])
 
     const pushStored = React.useCallback(_.debounce((
         firstName,
@@ -158,11 +216,12 @@ const Profile = () => {
         citiesCurrent,
         districtCurrent,
         subdistrictCurrent,
-        Educations,
+        educations,
         families,
         phoneNum,
         detLoc,
-        detLocCurrent
+        detLocCurrent,
+        ava
     ) => {
         dispatch(ProfileCreators.pushProfile(
             firstName,
@@ -181,11 +240,12 @@ const Profile = () => {
             citiesCurrent,
             districtCurrent,
             subdistrictCurrent,
-            Educations,
+            educations,
             families,
             phoneNum,
             detLoc,
-            detLocCurrent
+            detLocCurrent,
+            ava
         ))
     }, 5000), [])
 
@@ -207,11 +267,12 @@ const Profile = () => {
             citiesCurrent,
             districtCurrent,
             subdistrictCurrent,
-            JSON.stringify(Educations),
+            JSON.stringify(educations),
             JSON.stringify(families),
             phoneNum,
             detLoc,
-            detLocCurrent
+            detLocCurrent,
+            ava
         )
     }, [
         firstName,
@@ -230,19 +291,30 @@ const Profile = () => {
         citiesCurrent,
         districtCurrent,
         subdistrictCurrent,
-        JSON.stringify(Educations),
+        JSON.stringify(educations),
         JSON.stringify(families),
         phoneNum,
         detLoc,
-        detLocCurrent
+        detLocCurrent,
+        ava
     ])
-
-    const dataStored = _.debounce(() => {
-        console.log('siap di store !!')
-    }, 5000)
 
     const onClickAva = () => {
         console.log('ava Clicked')
+
+        dispatch(DialogCreators.setDialogs(
+            'UPLOAD_PHOTO',
+            true,
+            'Upload Photo',
+            <UploadPhoto uploadedPhoto={uploadedPhoto} />,
+            true,
+            'cancel'
+        ))
+    }
+
+    const uploadedPhoto = (val: any) => {
+        setUploadedPhotoNow(val)
+        // console.log(val)
     }
 
     const copyLocation = () => {
@@ -258,9 +330,9 @@ const Profile = () => {
 
     // Education 
     const onAddEducations = () => {
-        if (Educations.length < 5) {
+        if (educations.length < 5) {
             setEducations([
-                ...Educations,
+                ...educations,
                 {
                     sch_type: '',
                     sch_name: '',
@@ -282,7 +354,7 @@ const Profile = () => {
     }
 
     const onDeleteEdu = (idx: number) => {
-        const remData = Educations.filter((val: any, idxD: number) => idxD !== idx)
+        const remData = educations.filter((val: any, idxD: number) => idxD !== idx)
 
         setEducations(remData)
     }
@@ -290,7 +362,7 @@ const Profile = () => {
     const onChangeDatEdu = (val: any, field: string, idx: number) => {
         const valuenya = val.target.value
 
-        const modData = Educations
+        const modData = educations
 
         modData[idx][field] = valuenya
 
@@ -336,7 +408,7 @@ const Profile = () => {
             <Flex p={2} flex={1} justify={'center'} m={5}>
                 <WrapItem>
                     <ScaleFade initialScale={0.9} in={!isOpen}>
-                        <Avatar onMouseOver={onToggle} size='2xl' name='John Doe' src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&q=80&fm=jpg&crop=faces&fit=crop&h=200&w=200&ixid=eyJhcHBfaWQiOjE3Nzg0fQ" />
+                        <Avatar onMouseOver={onToggle} size='2xl' name={`${firstName} ${lastName}`} src={ava} />
                     </ScaleFade>
                     {
                         isOpen
@@ -351,14 +423,14 @@ const Profile = () => {
                 <Stack spacing={4} w={'full'} paddingRight={2}>
                     <FormControl id="firstname">
                         <FormLabel>First Name</FormLabel>
-                        <Input type="text" onChange={(val: { target: { value: string } }) => setFirstName(val.target.value)} />
+                        <Input type="text" onChange={(val: { target: { value: string } }) => setFirstName(val.target.value)} value={firstName} />
                     </FormControl>
                 </Stack>
 
                 <Stack spacing={4} w={'full'} paddingLeft={2}>
                     <FormControl id="lastname">
                         <FormLabel>Last Name</FormLabel>
-                        <Input type="text" onChange={(val: { target: { value: string } }) => setLastName(val.target.value)} />
+                        <Input type="text" onChange={(val: { target: { value: string } }) => setLastName(val.target.value)} value={lastName} />
                     </FormControl>
                 </Stack>
             </Flex>
@@ -366,7 +438,7 @@ const Profile = () => {
                 <Stack spacing={4} w={'full'} paddingRight={2}>
                     <FormControl id="birthplace">
                         <FormLabel>Birth Places</FormLabel>
-                        <Input type="text" onChange={(val: { target: { value: string } }) => setBirthplace(val.target.value)} />
+                        <Input type="text" onChange={(val: { target: { value: string } }) => setBirthplace(val.target.value)} value={birthplace} />
                     </FormControl>
                 </Stack>
 
@@ -411,7 +483,7 @@ const Profile = () => {
                 <Stack spacing={4} w={'full'} paddingRight={2}>
                     <FormControl id="id">
                         <FormLabel>Your ID Number</FormLabel>
-                        <Input type="text" onChange={(val: { target: { value: string } }) => setIDNum(val.target.value)} />
+                        <Input type="text" value={IDNum} onChange={(val: { target: { value: string } }) => setIDNum(val.target.value)} />
                     </FormControl>
                 </Stack>
             </Flex>
@@ -511,7 +583,7 @@ const Profile = () => {
 
             <Flex p={2} flex={1} justify={'center'} m={5}>
                 <Stack spacing={4} w={'full'} paddingRight={2}>
-                    <Heading fontSize={'xl'}>Educations</Heading>
+                    <Heading fontSize={'xl'}>educations</Heading>
                 </Stack>
 
                 <Stack spacing={4} paddingRight={2} style={{ textAlign: 'right' }}>
@@ -522,7 +594,7 @@ const Profile = () => {
             </Flex>
 
             {
-                Educations.map((val: any, idx: number) =>
+                educations ? educations.map((val: any, idx: number) =>
                     <div key={idx}>
                         <Flex p={2} flex={1} justify={'center'} m={5}>
                             <Stack spacing={4} style={{ bottom: 0 }}>
@@ -541,11 +613,11 @@ const Profile = () => {
                                     <FormLabel>Study Type</FormLabel>
                                     <Select defaultValue={''} onChange={(val: any) => onChangeDatEdu(val, 'sch_type', idx)} value={val.sch_type}>
                                         <option value='' disabled>Choose One</option>
-                                        <option value='1' disabled={Educations.filter((val: { sch_type: string; }) => val.sch_type === '1').length > 0}>High Schools</option>
-                                        <option value='2' disabled={Educations.filter((val: { sch_type: string; }) => val.sch_type === '2').length > 0}>Associate Degrees</option>
-                                        <option value='3' disabled={Educations.filter((val: { sch_type: string; }) => val.sch_type === '3').length > 0}>Bachelor Degrees</option>
-                                        <option value='4' disabled={Educations.filter((val: { sch_type: string; }) => val.sch_type === '4').length > 0}>Master Degrees</option>
-                                        <option value='5' disabled={Educations.filter((val: { sch_type: string; }) => val.sch_type === '5').length > 0}>Doctoral Degrees</option>
+                                        <option value='1' disabled={educations.filter((val: { sch_type: string; }) => val.sch_type === '1').length > 0}>High Schools</option>
+                                        <option value='2' disabled={educations.filter((val: { sch_type: string; }) => val.sch_type === '2').length > 0}>Associate Degrees</option>
+                                        <option value='3' disabled={educations.filter((val: { sch_type: string; }) => val.sch_type === '3').length > 0}>Bachelor Degrees</option>
+                                        <option value='4' disabled={educations.filter((val: { sch_type: string; }) => val.sch_type === '4').length > 0}>Master Degrees</option>
+                                        <option value='5' disabled={educations.filter((val: { sch_type: string; }) => val.sch_type === '5').length > 0}>Doctoral Degrees</option>
                                     </Select>
                                 </FormControl>
                             </Stack>
@@ -587,7 +659,7 @@ const Profile = () => {
                             </Stack>
                         </Flex>
                     </div>
-                )
+                ) : null
             }
 
             <Divider />
@@ -605,7 +677,7 @@ const Profile = () => {
             </Flex>
 
             {
-                families.map((_val: any, idx: number) =>
+                families ? families.map((_val: any, idx: number) =>
                     <div key={idx}>
                         <Flex p={2} flex={1} justify={'center'} m={5}>
                             <Stack spacing={4} style={{ bottom: 0 }}>
@@ -652,7 +724,7 @@ const Profile = () => {
                             <Stack spacing={4} w={'full'} paddingRight={2}>
                                 <FormControl id={"fam_birthday" + idx}>
                                     <FormLabel>Birthday</FormLabel>
-                                    <CustDatePicker value={_val.fam_birthday} onChange={(valD: any) => onChangeDatFam({ target: { value: valD } }, 'fam_birthday', idx)} />
+                                    <CustDatePicker value={new Date(_val.fam_birthday)} onChange={(valD: any) => onChangeDatFam({ target: { value: valD } }, 'fam_birthday', idx)} />
                                 </FormControl>
                             </Stack>
 
@@ -667,7 +739,7 @@ const Profile = () => {
                             </Stack>
                         </Flex>
                     </div>
-                )
+                ) : null
             }
         </Stack>
     )

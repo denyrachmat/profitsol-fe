@@ -56,6 +56,14 @@ function* pushingDialog({
     console.log(resultArr)
 
     yield put(DialogCreators.pushDialogs(resultArr))
+    // yield put(DialogCreators.setDialogs(
+    //     dialogID,
+    //     dialogIsOpen,
+    //     dialogTitle,
+    //     dialogContent,
+    //     dialogCancelBtn,
+    //     'cancel'
+    // ))
 }
 
 function* watchEveryDialogFired() {
