@@ -1,7 +1,14 @@
 import { CheckIcon, AddIcon } from "@chakra-ui/icons";
-import { Center, Box, useColorModeValue, Stack, List, ListItem, ListIcon, Button, Text } from "@chakra-ui/react";
+import { Center, Box, useColorModeValue, Stack, List, ListItem, ListIcon, Button, Text, Heading } from "@chakra-ui/react";
 
-const AppListCard = () => {
+export interface appType {
+    appTitle: string, 
+    appDesc: string, 
+    appIcon: any, 
+    appURL: string
+}
+
+const AppListCard = ({appTitle, appDesc, appIcon, appURL}: appType) => {
     return (
         <Center py={6}>
             <Box
@@ -17,12 +24,13 @@ const AppListCard = () => {
                     color={useColorModeValue('gray.800', 'white')}
                     align={'center'}>
                     <Stack direction={'row'} align={'center'} justify={'center'}>
-                        <AddIcon w={10} h={10} />
+                        {appIcon}
                     </Stack>
                 </Stack>
 
-                <Box bg={useColorModeValue('gray.50', 'gray.900')} px={6} py={10}>
-                    <Text fontSize={'3xl'}>Ini Testing Menu</Text>
+                <Box bg={useColorModeValue('gray.50', 'gray.900')} px={6} py={5}>
+                    <Heading fontSize={'3xl'}>{appTitle}</Heading>
+                    <Text>{appDesc}</Text>
                     <Button
                         mt={10}
                         w={'full'}
