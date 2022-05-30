@@ -5,6 +5,13 @@ import Logo from "./Logo";
 import CustomBadge from "./CustomBadge";
 import { ColorModeSwitcher } from "../ColorModeSwitcher"
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from "react-redux";
+
+import Dialogs from "./Dialogs";
+
+import * as AuthCreator from '../stores/actions/creators/portal/AuthCreators'
+import * as DialogCreators from '../stores/actions/creators/portal/DialogCreators'
+import * as DialogTypes from '../stores/actions/types/portal/DialogTypes'
 
 const NavBar = (props: any) => {
     const [isOpen, setIsOpen] = React.useState(false);
@@ -42,17 +49,47 @@ const MenuItem = ({ children, isLast, to = "/", ...rest }: any) => {
 };
 
 const MenuLinks = ({ isOpen }: any) => {
+    const { dialogID, dialogPressedBtn, dialogIsOpen } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
+
+    const dispatch = useDispatch()
     const navigate = useNavigate()
 
     const changeLocation = (to: string) => {
         navigate(to)
     }
 
+    const onLogoutClick = () => {
+        dispatch(DialogCreators.setDialogs(
+            'IS_LOGOUT',
+            true,
+            'Logout',
+            'Are you sure want to logged out ?',
+            true,
+            'cancel'
+        ))
+    }
+
+    // Dialogs
+    // Check if firest run or not
+    const isFirstRun = React.useRef(true);
+    React.useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+            return;
+        }
+
+        if (dialogID === 'IS_LOGOUT' && dialogPressedBtn === 'ok') {
+            dispatch(AuthCreator.SetLogout())
+            changeLocation('/login')
+        }
+    }, [dialogIsOpen])
+
     return (
         <Box
             display={{ base: isOpen ? "block" : "none", md: "block" }}
             flexBasis={{ base: "100%", md: "auto" }}
         >
+            <Dialogs />
             <Stack
                 spacing={8}
                 align="center"
@@ -66,9 +103,9 @@ const MenuLinks = ({ isOpen }: any) => {
                         <MenuButton as={Button} rightIcon={<ChevronDownIcon />} size={'lg'} variant="ghost">
                             Account
                         </MenuButton>
-                        <MenuList>
+                        <MenuList p={4}>
                             <MenuItem to="#" onClick={() => changeLocation('/profile')}>Profile</MenuItem>
-                            <MenuItem>Logout</MenuItem>
+                            <MenuItem to="#" onClick={() => onLogoutClick()}>Logout</MenuItem>
                         </MenuList>
                     </Menu>
                 </MenuItem>
@@ -89,7 +126,7 @@ const NavBarContainer = ({ children, ...props }: any) => {
             p={5}
             bg={["primary.500", "primary.500", "transparent", "transparent"]}
             color={["primary.700", "primary.700"]}
-            style={{position: 'fixed', top: 0}}
+            style={{ position: 'fixed', top: 0 }}
             {...props}
         >
             {children}

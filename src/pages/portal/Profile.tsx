@@ -77,7 +77,7 @@ const Profile = () => {
     const [birthplace, setBirthplace] = React.useState('')
     const [birthday, setBirthday] = React.useState(new Date)
     const [phoneNum, setPhoneNum] = React.useState('')
-    const [IDType, setIDType] = React.useState('')
+    const [IDType, setIDType] = React.useState('nationality')
     const [IDNum, setIDNum] = React.useState('')
 
     const [country, setCountry] = React.useState('')
@@ -98,7 +98,7 @@ const Profile = () => {
 
     const [families, setFamilies] = React.useState([]) as any
 
-    const { dialogID, dialogPressedBtn, dialogIsOpen, dialogLists } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
+    const { dialogID, dialogPressedBtn, dialogIsOpen } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
     const Profile = useSelector((state: { Profile: ProfileTypes.pushProfile }) => state.Profile)
 
     const dispatch = useDispatch()
@@ -161,17 +161,16 @@ const Profile = () => {
         setAva(Profile.ava)
     }, [])
 
+    // Dialogs
     // Check if firest run or not
     const isFirstRun = React.useRef(true);
 
-    // Dialogs
     React.useEffect(() => {
         if (isFirstRun.current) {
             isFirstRun.current = false;
             return;
         }
 
-        console.log([dialogID, dialogPressedBtn])
         if (dialogID === 'PROFILE_SHOW_MAPS' && dialogPressedBtn === 'ok') {
             if (currLocG) {
                 setCountry(currLocG.country)

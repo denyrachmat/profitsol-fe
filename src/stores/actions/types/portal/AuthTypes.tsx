@@ -17,7 +17,13 @@ export interface SetLoginFailed {
     data: String[]| Object
 }
 
+export const LOGOUT = "LOGOUT";
+export interface SetLogout {
+    type: typeof LOGOUT
+}
+
 export type Auth = 
     SetLoginRequest |
     SetLoginSuccess |
-    SetLoginFailed
+    SetLoginFailed |
+    SetLogout

@@ -1,5 +1,6 @@
 import { CheckIcon, AddIcon } from "@chakra-ui/icons";
 import { Center, Box, useColorModeValue, Stack, List, ListItem, ListIcon, Button, Text, Heading } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
 
 export interface appType {
     appTitle: string, 
@@ -9,6 +10,8 @@ export interface appType {
 }
 
 const AppListCard = ({appTitle, appDesc, appIcon, appURL}: appType) => {
+    const navigate = useNavigate()
+
     return (
         <Center py={6}>
             <Box
@@ -43,8 +46,9 @@ const AppListCard = ({appTitle, appDesc, appIcon, appURL}: appType) => {
                         }}
                         _focus={{
                             bg: 'green.500',
-                        }}>
-                        Go to Apps
+                        }}
+                        onClick={() => navigate(appURL)}>
+                        Open
                     </Button>
                 </Box>
             </Box>

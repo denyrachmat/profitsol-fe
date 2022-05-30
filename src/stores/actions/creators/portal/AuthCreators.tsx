@@ -29,3 +29,9 @@ export const SetLoginFailed = (
         data
     }
 }
+
+export const SetLogout = (): actions.SetLogout => {
+    return {
+        type: actions.LOGOUT
+    }
+}

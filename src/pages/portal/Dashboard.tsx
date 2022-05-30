@@ -42,7 +42,7 @@ const Dashboards = () => {
                 >
                     <Heading size={'xl'}>App</Heading>
                     <br />
-                    <Grid p={2} style={{ overflow: 'auto', height: '100%', borderRadius: 20}} bg={"gray.200"}>
+                    <Grid p={2} style={{ overflow: 'auto', height: '100%', borderRadius: 20 }} bg={"gray.200"}>
                         <GridItem p={4} textAlign={'left'}>
                             <Heading color={'black'} size={"md"}>Setup</Heading>
                             <Grid
@@ -51,15 +51,6 @@ const Dashboards = () => {
                                 gap={1}
                                 textAlign={'center'}
                             >
-                                <GridItem>
-                                    <AppListCard appTitle='Settings' appDesc='Settings app' appIcon={<AiOutlineSetting style={{ height: 50, width: 50 }} />} appURL={'/settings'} />
-                                </GridItem>
-                                <GridItem>
-                                    <AppListCard appTitle='Settings' appDesc='Settings app' appIcon={<AiOutlineSetting style={{ height: 50, width: 50 }} />} appURL={'/settings'} />
-                                </GridItem>
-                                <GridItem>
-                                    <AppListCard appTitle='Settings' appDesc='Settings app' appIcon={<AiOutlineSetting style={{ height: 50, width: 50 }} />} appURL={'/settings'} />
-                                </GridItem>
                                 <GridItem>
                                     <AppListCard appTitle='Settings' appDesc='Settings app' appIcon={<AiOutlineSetting style={{ height: 50, width: 50 }} />} appURL={'/settings'} />
                                 </GridItem>

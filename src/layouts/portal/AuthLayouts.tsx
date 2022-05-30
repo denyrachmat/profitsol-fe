@@ -23,7 +23,7 @@ const AuthLayouts = () => {
     if (isLoggedIn) {
       toast({
         title: 'Login success.',
-        description: "Wellcome to STX App",
+        description: "Welcome to STX App",
         status: 'success',
         duration: 9000,
         isClosable: true,
