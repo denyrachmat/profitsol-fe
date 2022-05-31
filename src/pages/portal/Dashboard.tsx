@@ -10,7 +10,10 @@ import {
 import useWindowDimensions from '../../components/useWindowDimensions'
 import CardAccount from '../../components/CardAccount';
 import AppListCard from '../../components/AppListCard';
-import { AiOutlineSetting } from 'react-icons/ai'
+import { GrUserSettings } from 'react-icons/gr'
+import { GiOrganigram } from 'react-icons/gi'
+import { SiAdguard } from 'react-icons/si'
+import { AiOutlineAppstoreAdd } from 'react-icons/ai'
 
 const Dashboards = () => {
     const { width }: any = useWindowDimensions();
@@ -52,7 +55,16 @@ const Dashboards = () => {
                                 textAlign={'center'}
                             >
                                 <GridItem>
-                                    <AppListCard appTitle='Settings' appDesc='Settings app' appIcon={<AiOutlineSetting style={{ height: 50, width: 50 }} />} appURL={'/settings'} />
+                                    <AppListCard appTitle='Users' appDesc='Manage registered users' appIcon={<GrUserSettings style={{ height: 50, width: 50 }} />} appURL={'/users'} />
+                                </GridItem>
+                                <GridItem>
+                                    <AppListCard appTitle='Organizations' appDesc='Manage Organizations' appIcon={<GiOrganigram style={{ height: 50, width: 50 }} />} appURL={'/users'} />
+                                </GridItem>
+                                <GridItem>
+                                    <AppListCard appTitle='Roles' appDesc='Manage roles' appIcon={<SiAdguard style={{ height: 50, width: 50 }} />} appURL={'/users'} />
+                                </GridItem>
+                                <GridItem>
+                                    <AppListCard appTitle='Apps' appDesc='Manage Apps' appIcon={<AiOutlineAppstoreAdd style={{ height: 50, width: 50 }} />} appURL={'/users'} />
                                 </GridItem>
                             </Grid>
                         </GridItem>

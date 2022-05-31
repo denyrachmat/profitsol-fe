@@ -18,6 +18,7 @@ import Register from "../pages/portal/Register";
 import ForgotPass from "../pages/portal/ForgotPass";
 
 import Settings from "../pages/portal/Settings";
+import Users from "../pages/portal/Settings/Users";
 
 const API_KEY:string = process.env.REACT_APP_GAPI_KEY ?? ''
 mapboxgl.accessToken = 'pk.eyJ1IjoiZGVueTIyIiwiYSI6ImNqaHU2aDZ2MzA3MjEza3BpbDA5cWQyNDEifQ.SNmUHNN6YhvH5ATUQSTeJQ'
@@ -35,6 +36,7 @@ function RouterList() {
                 <Route path="/" element={<Dashboards />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/users" element={<Users />} />
             </Route>
         </Routes>
     )
