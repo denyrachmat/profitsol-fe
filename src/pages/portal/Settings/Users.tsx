@@ -4,9 +4,10 @@ import { AgGridReact } from 'ag-grid-react'; // the AG Grid React Component
 
 import 'ag-grid-community/dist/styles/ag-grid.css'; // Core grid CSS, always needed
 import 'ag-grid-community/dist/styles/ag-theme-alpine.css'; // Optional theme CSS
-import { Stack, Flex, Heading } from '@chakra-ui/react';
+import { Stack, Flex, Heading, Button } from '@chakra-ui/react';
 
 import { apiConn } from '../../../components/apiHelpers';
+import { MdDelete, MdEdit } from 'react-icons/md';
 
 var checkboxSelection = function (params: any) {
     // we put checkbox on the name if we are not doing grouping
@@ -18,26 +19,56 @@ var headerCheckboxSelection = function (params: any) {
     return params.columnApi.getRowGroupColumns().length === 0;
 };
 
+const BtnCellRenderer = (props: any, data: any) => {
+    return (
+        <Stack direction='row' spacing={4}>
+            {
+                data.length > 0
+                    ? data.map((val: any) =>
+                        <Button leftIcon={val.icon} colorScheme={val.color} variant='solid'>
+                            {val.name}
+                        </Button>
+                    )
+                    : null
+            }
+        </Stack>
+    )
+}
+
+const deleteClickAction = (str: any) => {
+    console.log(str)
+}
+
 const Users = () => {
     const containerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
     const gridStyle = useMemo(() => ({ height: '100%', width: '100%' }), []);
-    const [rowData, setRowData] = useState();
+    const [rowData, setRowData] = useState([]);
     const [columnDefs, setColumnDefs] = useState([
+        { field: 'username' },
+        { field: 'email' },
+        { field: 'email_verified_at', headerName: 'Verified At' },
+        { field: 'det.pud_first_name', headerName: 'First Name' },
+        { field: 'det.pud_last_name', headerName: 'Last Name' },
         {
-            field: 'athlete',
-            minWidth: 170,
-            checkboxSelection: checkboxSelection,
-            headerCheckboxSelection: headerCheckboxSelection,
-        },
-        { field: 'age' },
-        { field: 'country' },
-        { field: 'year' },
-        { field: 'date' },
-        { field: 'sport' },
-        { field: 'gold' },
-        { field: 'silver' },
-        { field: 'bronze' },
-        { field: 'total' },
+            field: 'id',
+            headerName: 'Action',
+            cellRenderer: (props: any) => BtnCellRenderer(props, [
+                {
+                    icon: <MdDelete />,
+                    color: 'red',
+                    name: ''
+                },{
+                    icon: <MdEdit />,
+                    color: 'cyan',
+                    name: ''
+                }
+            ]),
+            cellRendererParams: {
+                clicked: (field: any) => {
+                    alert(`${field} was clicked`);
+                },
+            },
+        }
     ]);
     const autoGroupColumnDef = useMemo(() => {
         return {
@@ -60,7 +91,7 @@ const Users = () => {
     }, []);
     const defaultColDef = useMemo(() => {
         return {
-            editable: true,
+            editable: false,
             enableRowGroup: true,
             enablePivot: true,
             enableValue: true,
@@ -73,10 +104,6 @@ const Users = () => {
     }, []);
 
     const onGridReady = useCallback((params) => {
-        // fetch('https://www.ag-grid.com/example-assets/olympic-winners.json')
-        //     .then((resp) => resp.json())
-        //     .then((data) => setRowData(data));
-
         apiConn(
             'get',
             'portal/users',
@@ -84,7 +111,9 @@ const Users = () => {
             null,
             true
         ).then(
-            (val: any) => val
+            (val: any) => {
+                setRowData(val.data)
+            }
         )
     }, []);
 

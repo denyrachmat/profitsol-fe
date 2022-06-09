@@ -1,6 +1,7 @@
 import * as ProfileTypes from '../../types/portal/ProfileTypes'
 
 export const pushProfile = (
+    username: string,
     firstName: string,
     lastName: string,
     birthplace: string,
@@ -26,6 +27,7 @@ export const pushProfile = (
 ): ProfileTypes.pushProfile => {
     return {
         type: ProfileTypes.PUSH_PROFILE,
+        username,
         firstName,
         lastName,
         birthplace,

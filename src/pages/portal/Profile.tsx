@@ -44,6 +44,8 @@ import * as DialogTypes from '../../stores/actions/types/portal/DialogTypes'
 import * as ProfileCreators from '../../stores/actions/creators/portal/ProfileCreators'
 import * as ProfileTypes from '../../stores/actions/types/portal/ProfileTypes'
 
+import * as AuthTypes from '../../stores/actions/types/portal/AuthTypes'
+
 import { EmailIcon, SearchIcon, DeleteIcon } from "@chakra-ui/icons";
 import { FaSearchLocation, FaCopy, FaBook, FaUsers, FaCamera } from 'react-icons/fa'
 import { MdAddAPhoto } from "react-icons/md";
@@ -100,7 +102,7 @@ const Profile = () => {
 
     const { dialogID, dialogPressedBtn, dialogIsOpen } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
     const Profile = useSelector((state: { Profile: ProfileTypes.pushProfile }) => state.Profile)
-
+    const Auth = useSelector((state: { AuthPortal: any}) => state.AuthPortal)
     const dispatch = useDispatch()
 
     const ShowMaps = (id: string) => {
@@ -118,8 +120,18 @@ const Profile = () => {
         ))
     }
 
+    const checkIsJson = (str: string) => {
+        try {
+            JSON.parse(str);
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
+
     React.useEffect(() => {
-        console.log(Profile.countryCurrent)
+        console.log(Auth)
+        // console.log(Profile.countryCurrent)
         setFirstName(Profile.firstName)
         setLastName(Profile.lastName)
         setBirthplace(Profile.birthplace)
@@ -137,13 +149,17 @@ const Profile = () => {
         setDistrictCurrent(Profile.districtCurrent)
         setSubdistrictCurrent(Profile.subdistrictCurrent)
 
-        if (Profile.educations) {
-            setEducations(JSON.parse(Profile.educations))
+        if (Profile.educations && Profile.educations.length > 0) {
+            // console.log(Profile.educations.length)
+            const data = checkIsJson(Profile.educations) ? JSON.parse(Profile.educations) : Profile.educations
+            setEducations(data)
         }
 
-        if (Profile.families) {
+        if (Profile.families && Profile.families.length > 0) {
+            console.log(Profile.families)
             let hasilFam = []
-            JSON.parse(Profile.families).map((val: any) => {
+            const data = checkIsJson(Profile.families) ? JSON.parse(Profile.families) : Profile.families
+            data.map((val: any) => {
                 hasilFam.push({
                     fam_f_name: val.fam_f_name,
                     fam_l_name: val.fam_l_name,
@@ -152,7 +168,7 @@ const Profile = () => {
                     fam_phone: val.fam_phone
                 })
             })
-            setFamilies(JSON.parse(Profile.families))
+            setFamilies(data)
         }
 
         setPhoneNum(Profile.phoneNum)
@@ -199,6 +215,7 @@ const Profile = () => {
     }, [dialogIsOpen])
 
     const pushStored = React.useCallback(_.debounce((
+        username,
         firstName,
         lastName,
         birthplace,
@@ -223,6 +240,7 @@ const Profile = () => {
         ava
     ) => {
         dispatch(ProfileCreators.pushProfile(
+            username,
             firstName,
             lastName,
             birthplace,
@@ -250,6 +268,7 @@ const Profile = () => {
 
     React.useEffect(() => {
         pushStored(
+            Auth.authData.username,
             firstName,
             lastName,
             birthplace,
@@ -376,7 +395,7 @@ const Profile = () => {
                 fam_f_name: '',
                 fam_l_name: '',
                 fam_rel: '',
-                fam_birthday: new Date,
+                fam_birthday: new Date(),
                 fam_phone: ''
             }
         ])
@@ -723,7 +742,7 @@ const Profile = () => {
                             <Stack spacing={4} w={'full'} paddingRight={2}>
                                 <FormControl id={"fam_birthday" + idx}>
                                     <FormLabel>Birthday</FormLabel>
-                                    <CustDatePicker value={new Date(_val.fam_birthday)} onChange={(valD: any) => onChangeDatFam({ target: { value: valD } }, 'fam_birthday', idx)} />
+                                    <CustDatePicker value={new Date(_val.fam_birthday) ?? new Date()} onChange={(valD: any) => onChangeDatFam({ target: { value: valD } }, 'fam_birthday', idx)} />
                                 </FormControl>
                             </Stack>
 

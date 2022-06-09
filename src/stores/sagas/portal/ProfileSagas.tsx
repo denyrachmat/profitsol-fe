@@ -10,6 +10,7 @@ import * as ProfileCreators from '../../actions/creators/portal/ProfileCreators'
 const call: any = Eff.call;
 
 function* pushingProfile({
+    username,
     firstName,
     lastName,
     birthplace,
@@ -34,11 +35,11 @@ function* pushingProfile({
     ava
 }: ProfileTypes.pushProfile) {
     try {
-        console.log('siap di store !!')
+        // console.log('siap di store !!')
         const { data } = yield call(
             apiConn,
-            'post',
-            'portal/profile',
+            'put',
+            `portal/profiles/${username}`,
             'api',
             {
                 firstName,

@@ -39,7 +39,7 @@ const Dashboards = () => {
                     <Heading size={'md'}>Messages</Heading>
                 </GridItem>
                 <GridItem
-                    colSpan={width <= 900 ? 3 : 4}
+                    colSpan={width <= 900 ? 5 : 4}
                     p={4}
                     h={'65vh'}
                 >

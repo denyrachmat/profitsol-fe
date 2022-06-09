@@ -1,6 +1,7 @@
 export const PUSH_PROFILE = 'PUSH_PROFILE'
 export interface pushProfile {
     type: typeof PUSH_PROFILE,
+    username: string,
     firstName: string,
     lastName: string,
     birthplace: string,
