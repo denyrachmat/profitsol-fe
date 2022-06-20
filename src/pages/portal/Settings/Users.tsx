@@ -4,7 +4,7 @@ import { AgGridReact } from 'ag-grid-react'; // the AG Grid React Component
 
 import 'ag-grid-community/dist/styles/ag-grid.css'; // Core grid CSS, always needed
 import 'ag-grid-community/dist/styles/ag-theme-alpine.css'; // Optional theme CSS
-import { Stack, Flex, Heading, Button } from '@chakra-ui/react';
+import { Stack, Flex, Heading, Button, IconButton } from '@chakra-ui/react';
 
 import { apiConn } from '../../../components/apiHelpers';
 import { MdDelete, MdEdit } from 'react-icons/md';
@@ -25,9 +25,11 @@ const BtnCellRenderer = (props: any, data: any) => {
             {
                 data.length > 0
                     ? data.map((val: any) =>
-                        <Button leftIcon={val.icon} colorScheme={val.color} variant='solid'>
+                        val.name 
+                        ? <Button leftIcon={val.icon} colorScheme={val.color} variant='solid'>
                             {val.name}
                         </Button>
+                        : <IconButton icon={val.icon} colorScheme={val.color} aria-label={''} />
                     )
                     : null
             }
