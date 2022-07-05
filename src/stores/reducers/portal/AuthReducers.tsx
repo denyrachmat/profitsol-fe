@@ -19,7 +19,8 @@ export const AuthReducers = (state = AuthStates, actions: AuthTypes.Auth) => {
             return {
                 ...state,
                 isLoggedIn: false,
-                isLoading: false
+                isLoading: false,
+                authData: actions.data
             }
         case AuthTypes.LOGOUT:
             return {

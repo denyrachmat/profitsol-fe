@@ -85,14 +85,10 @@ export const apiConn = async (
     const request = await processAxios.then((result: { data: any; }) => {
         return result
     }).catch((e: any) => {
-        return e.response.data
+        return e.response
     })
-
-    return request
-
+    
     if (request) {
-
-        console.log(request)
         return request
     }
 }
