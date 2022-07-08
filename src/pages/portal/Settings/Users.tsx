@@ -5,85 +5,99 @@ import { Stack, Flex, Heading, Button, IconButton } from '@chakra-ui/react';
 import { apiConn } from '../../../components/apiHelpers';
 
 import CustDataTable from '../../../components/dataTable'
-import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { AddIcon, CheckIcon, CloseIcon, DeleteIcon, EditIcon, LockIcon } from '@chakra-ui/icons';
 
-const columns: any = [
-    {
-        name: "username",
-        label: "Username",
-        options: {
-            filter: true,
-            sort: true,
-        }
-    },
-    {
-        name: "email",
-        label: "Email",
-        options: {
-            filter: true,
-            sort: false,
-        }
-    },
-    {
-        name: "email_verified_at",
-        label: "Email Verified",
-        options: {
-            filter: true,
-            sort: false,
-        }
-    },
-    {
-        name: "pud_first_name",
-        label: "First Name",
-        options: {
-            filter: true,
-            sort: false,
-        }
-    },
-    {
-        name: "pud_last_name",
-        label: "Last Name",
-        options: {
-            filter: true,
-            sort: false,
-        }
-    },
-    {
-        name: "actions",
-        label: "Action",
-        options: {
-            filter: true,
-            sort: false,
-        },
-        field: (val: any) => <Stack spacing={4} direction='row' align='center'>
-            <IconButton
-                colorScheme='red'
-                aria-label='Delete Data'
-                icon={<DeleteIcon/>}
-                size='sm'
-                onClick={() => onDeleteRows(val)}
-            />
-            <IconButton
-                colorScheme='teal'
-                aria-label='Edit Data'
-                icon={<EditIcon/>}
-                size='sm'
-                onClick={() => onUpdateRows(val)}
-            />
-        </Stack>
-    }
-]
+import * as DialogCreators from '../../../stores/actions/creators/portal/DialogCreators'
+import * as DialogTypes from '../../../stores/actions/types/portal/DialogTypes'
+import { useDispatch, useSelector } from 'react-redux';
+import DrawerDialog from '../../../components/DrawerDialog';
 
-const onDeleteRows = (val:any) => {
-    console.log(val)
-}
-
-const onUpdateRows = (val:any) => {
-    console.log(val)
-}
-
+import FormUpdateUser from './FormUpdateUser';
 const Users = () => {
+    const dispatch = useDispatch()
     const [rowData, setRowData] = useState([]);
+    const [formUser, setFormUser] = useState({})
+
+    const [openForm, setOpenForm] = useState(false)
+    const [bodyForm, setBodyForm] = useState(null) as any
+
+    const columns: any = [
+        {
+            name: "username",
+            label: "Username",
+            options: {
+                filter: true,
+                sort: true,
+            }
+        },
+        {
+            name: "email",
+            label: "Email",
+            options: {
+                filter: true,
+                sort: false,
+            }
+        },
+        {
+            name: "pud_first_name",
+            label: "First Name",
+            options: {
+                filter: true,
+                sort: false,
+            }
+        },
+        {
+            name: "pud_last_name",
+            label: "Last Name",
+            options: {
+                filter: true,
+                sort: false,
+            }
+        },
+        {
+            name: "email_verified_at",
+            label: "Email Verified",
+            options: {
+                filter: true,
+                sort: false,
+            },
+            field: (val: any, nameRes: any) => nameRes ? <CheckIcon color={'teal'}/> : <CloseIcon color={'red'}/>
+        },
+        {
+            name: "actions",
+            label: "Action",
+            options: {
+                filter: true,
+                sort: false,
+            },
+            align: 'center',
+            field: (val: any) => <Stack spacing={4} direction='row' align='center'>
+                <IconButton
+                    colorScheme='red'
+                    aria-label='Delete Data'
+                    icon={<DeleteIcon />}
+                    size='sm'
+                    onClick={() => onDeleteRows(val)}
+                />
+                <IconButton
+                    colorScheme='teal'
+                    aria-label='Edit Data'
+                    icon={<EditIcon />}
+                    size='sm'
+                    onClick={() => onUpdateRows(val)}
+                />
+                <IconButton
+                    colorScheme='orange'
+                    aria-label='Update Password'
+                    icon={<LockIcon />}
+                    size='sm'
+                    onClick={() => onUpdateRows(val)}
+                />
+            </Stack>
+        },
+    ]
+
+    const { dialogID, dialogPressedBtn, dialogIsOpen } = useSelector((state: { Dialogs: DialogTypes.setDialogs }) => state.Dialogs)
 
     const onGridReady = useCallback((params) => {
         apiConn(
@@ -99,12 +113,69 @@ const Users = () => {
         )
     }, []);
 
+    const onDeleteRows = (val: any) => {
+        console.log(val)
+    }
+
+    const onUpdateRows = (val: any) => {
+        const datanya = rowData[val] as any
+        setOpenForm(true)
+        setBodyForm(<FormUpdateUser 
+            first_name={datanya.pud_first_name}
+            last_name={datanya.pud_last_name}
+            email={datanya.email}
+            is_verified={datanya.email_verified_at ? true : false}
+            changedData={resultUpdateRows}
+        />)
+
+        // dispatch(DialogCreators.setDialogs(
+        //     'SET_USER_UPDATE',
+        //     true,
+        //     'Update data user',
+        //     <FormUpdateUser 
+        //         first_name={datanya.pud_first_name}
+        //         last_name={datanya.pud_last_name}
+        //         email={datanya.email}
+        //         is_verified={datanya.email_verified_at ? true : false}
+        //         changedData={resultUpdateRows}
+        //     />,
+        //     true,
+        //     'cancel'
+        // ))
+    }
+
+    const resultUpdateRows = (val: any) => {
+        setOpenForm(false)
+        setFormUser(val)
+    }
+
+    // Effect
     React.useEffect(() => {
         onGridReady([])
     }, [])
+    
+    React.useEffect(() => {
+        if (dialogID === 'SET_USER_UPDATE' && dialogPressedBtn === 'ok') {
+            dispatch(DialogCreators.setDialogs(
+                'YES_NO_UPDATE',
+                true,
+                'Update data user',
+                'Are you sure want to update this user ?',
+                true,
+                'cancel'
+            ))
+        } else if (dialogID === 'YES_NO_UPDATE' && dialogPressedBtn === 'ok') {
+            console.log(formUser)
+        }
+    }, [dialogIsOpen])
+
+    const onDrawerAct = (val: any) => {
+        console.log(val)
+    }
 
     return (
         <Stack p={5}>
+            <DrawerDialog openDrawer={openForm} header={'Update Users'} bodyDrawer={bodyForm} resultDrawer={onDrawerAct}/>
             <Flex p={2} flex={1} justify={'center'} m={5}>
                 <Heading fontSize={'2xl'}>Settings</Heading>
             </Flex>
@@ -115,6 +186,15 @@ const Users = () => {
                         data={rowData}
                         columns={columns}
                         selectable
+                        choosedData={(data: any) => console.log(data)}
+                        header={
+                            <Stack spacing={4} direction='row'>
+                                <Button size='md' leftIcon={<AddIcon />} colorScheme='teal' variant='solid'>
+                                    Add
+                                </Button>
+                            </Stack>
+                        }
+                        filtered
                     />
                 </div>
             </Flex>
