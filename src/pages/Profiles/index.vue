@@ -1,0 +1,719 @@
+<template>
+  <div class="q-pa-md">
+    <div class="row q-py-md">
+      <div class="col text-center">
+        <b class="text-h4">Profiles</b>
+      </div>
+    </div>
+    <!-- Photo Profile -->
+    <div class="row q-py-md">
+      <div class="col" style="position: relative; min-height: 150px">
+        <!-- <transition
+          appear
+          enter-active-class="animated fadeIn"
+          leave-active-class="animated fadeOut"
+          :duration="200"
+        >
+          <q-avatar
+            size="150px"
+            v-if="!changePhoto"
+            @mouseenter="onHoverPhoto(true)"
+            position="absolute"
+            style="left: 50%; transform: translateX(-50%); z-index: 1"
+          >
+            <img
+              :src="store.getDetail.user_det.pud_photo"
+              style="object-fit: cover"
+            />
+          </q-avatar>
+          <q-btn
+            round
+            size="50px"
+            position="absolute"
+            style="left: 50%; transform: translateX(-50%); z-index: 99"
+            @mouseleave="onHoverPhoto(false)"
+            v-else
+          >
+            <q-avatar
+              size="150px"
+              font-size="52px"
+              color="teal"
+              text-color="white"
+              icon="refresh"
+            />
+          </q-btn>
+        </transition> -->
+
+        <q-avatar
+          size="150px"
+          v-if="!changePhoto"
+          @mouseenter="onHoverPhoto(true)"
+          position="absolute"
+          style="left: 50%; transform: translateX(-50%); z-index: 1"
+        >
+          <img
+            :src="store.getDetail.user_det.pud_photo"
+            style="object-fit: cover"
+          />
+        </q-avatar>
+
+        <div v-else>
+          <q-btn
+            round
+            size="50px"
+            position="absolute"
+            style="left: 50%; transform: translateX(-50%); z-index: 99"
+            @mouseleave="onHoverPhoto(false)"
+          >
+            <q-avatar size="150px" color="teal" text-color="white">
+              <q-icon name="refresh" size="100px"></q-icon>
+              <p style="font-size: 12px"><b>Change Photo</b></p>
+            </q-avatar>
+          </q-btn>
+        </div>
+      </div>
+    </div>
+
+    <q-separator />
+    <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md q-pa-md">
+      <!-- Personal Data -->
+      <div class="row">
+        <div class="col q-px-sm">
+          <q-input
+            dense
+            outlined
+            v-model="form.pud_first_name"
+            label="First Name *"
+            lazy-rules
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+          />
+        </div>
+        <div class="col q-px-sm">
+          <q-input
+            dense
+            outlined
+            v-model="form.pud_last_name"
+            label="Last Name *"
+            lazy-rules
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+          />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col q-px-sm">
+          <q-input
+            dense
+            outlined
+            v-model="form.pud_birth_place"
+            label="Birth Place"
+            lazy-rules
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+          />
+        </div>
+        <div class="col q-px-sm">
+          <q-input
+            dense
+            outlined
+            v-model="form.pud_birth_date"
+            mask="date"
+            :rules="['date']"
+            label="Birth Date"
+            lazy-rules
+          >
+            <template v-slot:append>
+              <q-icon name="event" class="cursor-pointer">
+                <q-popup-proxy
+                  cover
+                  transition-show="scale"
+                  transition-hide="scale"
+                >
+                  <q-date v-model="form.pud_birth_date">
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup label="Close" color="primary" flat />
+                    </div>
+                  </q-date>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col q-px-sm">
+          <q-input
+            outlined
+            v-model="form.pud_phone"
+            label="Phone Number"
+            lazy-rules
+            mask="(+##) ###-####-####"
+            hint="(+##) ###-####-####"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+            dense
+          />
+        </div>
+      </div>
+
+      <!-- ID Number -->
+      <q-separator />
+      <div class="row">
+        <div class="col-px-sm">
+          <div class="q-gutter-sm">
+            <div><b>ID Type</b></div>
+            <q-radio
+              keep-color
+              v-model="form.pud_id_type"
+              val="nationality"
+              label="Nationality ID"
+              color="teal"
+            />
+            <q-radio
+              keep-color
+              v-model="form.pud_id_type"
+              val="driving"
+              label="Driving ID"
+              color="orange"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col q-px-sm">
+          <q-input
+            outlined
+            v-model="form.pud_id_card"
+            label="ID Number"
+            lazy-rules
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+            dense
+          />
+        </div>
+      </div>
+
+      <!-- Identification Detail -->
+      <q-separator />
+      <div class="row">
+        <div class="col-12 q-px-sm col-sm-6">
+          <div class="row q-py-md">
+            <div class="col">
+              <div class="text-h5"><b>ID Address</b></div>
+            </div>
+          </div>
+          <div class="row q-py-md">
+            <div class="col">
+              <q-btn icon="place" color="cyan" no-caps @click="viewMaps('id')"
+                >Find place on Maps</q-btn
+              >
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_country"
+                label="Country"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_states"
+                label="State / Province"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_cities"
+                label="City"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_district"
+                label="District"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_subdistrict"
+                label="Sub-District"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_addr1"
+                label="Detail Locations"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+        </div>
+        <div class="col-12 q-px-sm col-sm-6">
+          <div class="row q-py-md">
+            <div class="col">
+              <div class="text-h5"><b>Current Address</b></div>
+            </div>
+          </div>
+          <div class="row q-py-md">
+            <div class="col">
+              <q-btn-group>
+                <q-btn
+                  icon="content_copy"
+                  color="orange"
+                  no-caps
+                  @click="isSameAddr()"
+                  >Same address as your ID</q-btn
+                >
+                <q-btn
+                  icon="place"
+                  color="cyan"
+                  no-caps
+                  @click="viewMaps('curr')"
+                  >Find place on Maps</q-btn
+                >
+              </q-btn-group>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_country_rsdn"
+                label="Country"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_states_rsdn"
+                label="State / Province"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_cities_rsdn"
+                label="City"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_district_rsdn"
+                label="District"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_subdistrict_rsdn"
+                label="Sub-District"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="form.pud_addr1_rsdn"
+                label="Detail Locations"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <q-separator />
+      <div class="row">
+        <div class="col-10 text-h4"><b>Educations Detail</b></div>
+        <div class="col-2">
+          <q-btn icon="add" color="cyan" no-caps @click="addEdu()"
+            >Add more data</q-btn
+          >
+        </div>
+      </div>
+      <div class="row" v-if="educations.length === 0">
+        <div class="col q-pa-md text-center"><b>No data found</b></div>
+      </div>
+      <template v-else>
+        <template v-for="(edu, idx) in educations" :key="idx">
+          <div class="row">
+            <div class="col-5">
+              <q-select
+                outlined
+                v-model="edu.pusd_level"
+                :options="schoolOpt"
+                label="School Level"
+                dense
+              />
+            </div>
+            <div class="col-6 q-px-sm">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_name"
+                label="School Name"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col-1 q-px-sm text-right">
+              <q-btn
+                round
+                color="red"
+                icon="clear"
+                outline
+                @click="removeEdu(idx)"
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_majors"
+                label="School Major"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col q-px-sm">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_minors"
+                label="School Minor"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_end"
+                mask="####-##-##"
+                label="Graduate Date"
+                dense
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="edu.pusd_sch_end" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+            <div class="col q-px-sm">
+              <q-input
+                outlined
+                v-model="edu.pusd_grade"
+                label="Grade"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <q-separator />
+      <div class="row">
+        <div class="col-10 text-h4"><b>Families Detail</b></div>
+        <div class="col-2">
+          <q-btn icon="add" color="cyan" no-caps @click="addFam()"
+            >Add more data</q-btn
+          >
+        </div>
+      </div>
+      <div class="row" v-if="families.length === 0">
+        <div class="col q-pa-md text-center">
+          <b>No data found</b>
+        </div>
+      </div>
+    </q-form>
+  </div>
+</template>
+<script>
+/* eslint-disable */
+import { defineComponent, ref } from "vue";
+import { useAuthStore } from "stores/authStore";
+
+import MapView from "../../components/mapView.vue";
+
+const educationTemp = {
+  pusd_level: "",
+  pusd_sch_name: "",
+  pusd_sch_majors: "",
+  pusd_sch_minors: "",
+  pusd_sch_addr: "",
+  pusd_sch_start: "",
+  pusd_sch_end: "",
+  pusd_grade: "",
+  pusd_sch_passed: "",
+};
+
+const familiesTemp = {
+  pufd_first_name: "",
+  pufd_last_name: "",
+  pufd_relation: "",
+  pufd_phone: "",
+  pufd_birthday: "",
+};
+
+export default defineComponent({
+  name: "Profiles",
+  components: { MapView },
+  setup() {
+    const store = useAuthStore();
+
+    return {
+      store,
+      form: ref({
+        pud_first_name: "",
+        pud_last_name: "",
+        pud_id_card: "",
+        pud_photo: "",
+        pud_phone: "",
+        pud_country: "",
+        pud_states: "",
+        pud_cities: "",
+        pud_district: "",
+        pud_subdistrict: "",
+        pud_addr1: "",
+        pud_addr2: "",
+        pud_id_type: "nationality",
+        pud_birth_place: "",
+        pud_birth_date: "",
+        pud_country_rsdn: "",
+        pud_states_rsdn: "",
+        pud_cities_rsdn: "",
+        pud_district_rsdn: "",
+        pud_subdistrict_rsdn: "",
+        pud_addr1_rsdn: "",
+        pud_addr2_rsdn: "",
+      }),
+      educations: ref([]),
+      families: ref([]),
+      changePhoto: ref(false),
+      schoolOpt: ref([
+        {
+          label: "High School",
+          value: 1,
+        },
+        {
+          label: "Associate / Diploma Degree",
+          value: 2,
+        },
+        {
+          label: "Bachelor Degree",
+          value: 3,
+        },
+        {
+          label: "Master Degree",
+          value: 4,
+        },
+        {
+          label: "Doctor Degree",
+          value: 5,
+        },
+      ]),
+    };
+  },
+  created() {
+    this.form = this.store.getDetail.user_det;
+    this.educations = this.store.getDetail.edu;
+    this.families = this.store.getDetail.fam;
+  },
+  methods: {
+    onHoverPhoto(state) {
+      this.changePhoto = state;
+    },
+    viewMaps(sts) {
+      this.$q
+        .dialog({
+          component: MapView,
+
+          // props forwarded to your custom component
+          componentProps: {
+            title: "Select Location",
+            // ...more..props...
+          },
+        })
+        .onOk((val) => {
+          if (sts === "id") {
+            this.form.pud_country = val.country;
+            this.form.pud_states = val.state;
+            this.form.pud_cities = val.city;
+            this.form.pud_district = val.distric;
+            this.form.pud_subdistrict = val.subDistrict;
+            this.form.pud_addr2 = val.latLng;
+          } else {
+            this.form.pud_country_rsdn = val.country;
+            this.form.pud_states_rsdn = val.state;
+            this.form.pud_cities_rsdn = val.city;
+            this.form.pud_district_rsdn = val.distric;
+            this.form.pud_subdistrict_rsdn = val.subDistrict;
+            this.form.pud_addr2_rsdn = val.latLng;
+          }
+          console.log(val);
+        })
+        .onCancel(() => {
+          console.log("Cancel");
+        });
+    },
+    isSameAddr() {
+      this.$q
+        .dialog({
+          title: "Confirm",
+          message:
+            "Are you sure want to copy ID Address to your current Address ?",
+          cancel: true,
+          persistent: true,
+        })
+        .onOk(() => {
+          this.form.pud_country_rsdn = this.form.pud_country;
+          this.form.pud_states_rsdn = this.form.pud_states;
+          this.form.pud_cities_rsdn = this.form.pud_cities;
+          this.form.pud_district_rsdn = this.form.pud_district;
+          this.form.pud_subdistrict_rsdn = this.form.pud_subdistrict;
+          this.form.pud_addr2_rsdn = this.form.pud_addr2;
+          // console.log('>>>> OK')
+        });
+    },
+    addEdu() {
+      this.educations.push(educationTemp);
+    },
+    removeEdu(idx) {
+      this.$q
+        .dialog({
+          title: "Confirm",
+          message: "Are you sure want to delete this item ?",
+          cancel: true,
+          persistent: true,
+        })
+        .onOk(() => {
+          this.educations.splice(idx, 1);
+        });
+    },
+    addFam() {
+      this.families.push(educationTemp);
+    },
+  },
+});
+</script>
