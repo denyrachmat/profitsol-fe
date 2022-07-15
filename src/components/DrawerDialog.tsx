@@ -5,10 +5,12 @@ export interface propTypes {
     openDrawer: boolean,
     header: string,
     bodyDrawer: any,
-    resultDrawer?: any
+    resultDrawer?: any,
+    toogleDrawer?: any
+    // drawerState?: boolean
 }
 
-const DrawerDialog = ({openDrawer, header, bodyDrawer, resultDrawer}: propTypes) => {
+const DrawerDialog = ({openDrawer, header, bodyDrawer, resultDrawer, toogleDrawer}: propTypes) => {
     const firstField = React.useRef() as any
     const { isOpen, onOpen, onClose } = useDisclosure()
 
@@ -21,9 +23,14 @@ const DrawerDialog = ({openDrawer, header, bodyDrawer, resultDrawer}: propTypes)
     }, [openDrawer])
 
     const onOke = (flag: Boolean) => {
-        onClose()
         resultDrawer(flag)
+        onClose()
     }
+
+    React.useEffect(() => {
+        toogleDrawer(isOpen)
+        console.log(isOpen)
+    }, [isOpen])
 
     return <>
         <Drawer
@@ -31,6 +38,7 @@ const DrawerDialog = ({openDrawer, header, bodyDrawer, resultDrawer}: propTypes)
             placement='right'
             initialFocusRef={firstField}
             onClose={onClose}
+            size={'lg'}
         >
             <DrawerOverlay />
             <DrawerContent>
