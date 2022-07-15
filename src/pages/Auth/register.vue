@@ -1,5 +1,5 @@
 <template>
-  <q-card class="my-card center" style="height: 80vh">
+  <q-card class="my-card center" style="height: 75vh">
     <q-card-section class="bg-purple q-pa-md text-white">
       <div class="text-h6">
         <q-btn
@@ -17,13 +17,15 @@
 
     <q-card-section>
       <q-scroll-area style="height: 60vh">
-        <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md">
+        <q-form @submit="onSubmit" @reset="onReset" class="q-pa-md">
           <q-input
             filled
             v-model="username"
             label="Username"
             lazy-rules
-            :rules="[val => (val && val.length > 0) || 'Please type something']"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
           />
 
           <q-input
@@ -31,10 +33,19 @@
             v-model="fname"
             label="First Name"
             lazy-rules
-            :rules="[val => (val && val.length > 0) || 'Please type something']"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
           />
 
-          <q-input filled v-model="lname" label="Last Name" />
+          <q-input
+            filled
+            v-model="lname"
+            label="Last Name"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
+          />
 
           <q-input
             filled
@@ -42,7 +53,9 @@
             v-model="email"
             label="Email"
             lazy-rules
-            :rules="[val => (val && val.length > 0) || 'Please type something']"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
           />
 
           <q-input
@@ -51,7 +64,9 @@
             v-model="password"
             label="Password"
             lazy-rules
-            :rules="[val => (val && val.length > 0) || 'Please type something']"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
           />
 
           <q-input
@@ -60,18 +75,40 @@
             v-model="c_password"
             label="Confirm Password"
             lazy-rules
-            :rules="[val => (val && val.length > 0) || 'Please type something']"
+            :rules="[
+              (val) => (val && val.length > 0) || 'Please type something',
+            ]"
           />
 
-          <div>
-            <q-btn label="Submit" type="submit" color="primary" />
-            <q-btn
+          <div class="row">
+            <div class="col">
+              <q-btn
+                label="Submit"
+                type="submit"
+                color="primary"
+                class="full-width"
+              />
+            </div>
+            <!-- <q-btn
               label="Reset"
               type="reset"
               color="primary"
               flat
               class="q-ml-sm"
-            />
+            /> -->
+          </div>
+          <div class="q-py-md text-center">OR</div>
+          <div class="row">
+            <div class="col text-center">
+              <q-btn
+                icon="ion-logo-windows"
+                label=" Sign Up with Microsoft"
+                @click="SignInMs"
+                class="full-width"
+                color="blue-5"
+                outline
+              ></q-btn>
+            </div>
           </div>
         </q-form>
       </q-scroll-area>
@@ -82,6 +119,7 @@
 <script>
 /* eslint-disable */
 import { HelpersComponent } from "../../components/HelpersComponent";
+import { PublicClientApplication } from "@azure/msal-browser";
 
 export default {
   name: "register",
@@ -93,14 +131,26 @@ export default {
       lname: "",
       password: "",
       c_password: "",
-      email: ""
+      email: "",
     };
+  },
+  created() {
+    this.$msalInstance = new PublicClientApplication({
+      auth: {
+        clientId: process.env.MS_CLIENTID,
+        authority: process.env.MS_AUTHORITY,
+      },
+      cache: {
+        cacheLocation: "localStorage",
+      },
+    });
   },
   methods: {
     async onSubmit() {
+      console.log("masuk sini");
       let opt = {
         methods: "post",
-        url: "api/register"
+        url: "api/register",
       };
 
       let data = {
@@ -109,7 +159,7 @@ export default {
         lname: this.lname,
         password: this.password,
         password_confirmation: this.c_password,
-        email: this.email
+        email: this.email,
       };
 
       let hasil = await this.postData(opt, data);
@@ -126,7 +176,26 @@ export default {
       this.password = "";
       this.email = "";
       this.c_password = "";
-    }
-  }
+    },
+    async SignInMs() {
+      await this.$msalInstance
+        .loginPopup({})
+        .then(() => {
+          const myAccounts = this.$msalInstance.getAllAccounts();
+          const msAcct = myAccounts[0];
+          this.username = msAcct.username;
+          this.fname = msAcct.name.split(" ")[0];
+          this.lname = msAcct.name.split(" ")[1];
+          this.password = "stxi1234";
+          this.c_password = "stxi1234";
+          this.email = msAcct.username;
+
+          this.onSubmit();
+        })
+        .catch((error) => {
+          console.error(`error during authentication: ${error}`);
+        });
+    },
+  },
 };
 </script>

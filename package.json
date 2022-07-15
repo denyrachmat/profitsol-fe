@@ -11,6 +11,9 @@
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
+    "@azure/core-http": "^2.2.5",
+    "@azure/msal-browser": "^2.27.0",
+    "@azure/storage-blob": "^12.11.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.1",
     "@quasar/extras": "^1.0.0",
     "axios": "^0.21.1",
@@ -20,6 +23,7 @@
     "pinia-plugin-persistedstate": "^1.6.1",
     "quasar": "^2.6.0",
     "stylus-loader": "^7.0.0",
+    "tiny-emitter": "^2.1.0",
     "vue": "^3.0.0",
     "vue-mapbox": "^0.4.1",
     "vue-router": "^4.0.0"

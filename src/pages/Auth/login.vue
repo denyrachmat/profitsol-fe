@@ -2,25 +2,6 @@
   <q-card class="my-card center">
     <q-card-section class="bg-purple q-pa-md text-white">
       <div class="text-h6">Login to your account</div>
-      <div class="text-subtitle2">
-        Don't have an account?
-        <q-btn
-          flat
-          color="cyan"
-          label="Sign Up here"
-          no-caps
-          @click="$emit('getrouted', 'register')"
-        />
-        <br />
-        Or login guest here
-        <q-btn
-          flat
-          color="cyan"
-          label="Login here"
-          no-caps
-          @click="onSubmit('guest')"
-        />
-      </div>
     </q-card-section>
 
     <q-separator dark />
@@ -55,16 +36,50 @@
         />
 
         <div>
-          <q-btn label="Submit" type="submit" color="primary" />
           <q-btn
-            label="Reset"
-            type="reset"
-            color="primary"
-            flat
-            class="q-ml-sm"
+            label="Submit"
+            type="submit"
+            color="green"
+            class="full-width"
           />
         </div>
       </q-form>
+      <div class="q-pa-md text-center">Or</div>
+      <div class="row">
+        <div class="col text-center">
+          <q-btn
+            icon="ion-logo-windows"
+            label=" Login with Microsoft"
+            @click="SignInMs"
+            class="full-width"
+            color="blue-5"
+            outline
+          ></q-btn>
+        </div>
+      </div>
+      <div class="row q-py-md">
+        <div class="col text-center">
+          <div class="text-subtitle2">
+            Don't have an account?
+            <q-btn
+              flat
+              color="cyan"
+              label="Sign Up here"
+              no-caps
+              @click="$emit('getrouted', 'register')"
+            />
+            <!-- <br />
+            Or login guest here
+            <q-btn
+              flat
+              color="cyan"
+              label="Login here"
+              no-caps
+              @click="onSubmit('guest')"
+            /> -->
+          </div>
+        </div>
+      </div>
     </q-card-section>
   </q-card>
 </template>
@@ -73,7 +88,7 @@
 /* eslint-disable */
 import { HelpersComponent } from "../../components/HelpersComponent";
 import { defineComponent, ref } from "vue";
-
+import { PublicClientApplication } from "@azure/msal-browser";
 import { useAuthStore } from "stores/authStore";
 
 export default defineComponent({
@@ -96,6 +111,24 @@ export default defineComponent({
     } else if (!this.$q.localStorage.has("LoggedOut")) {
       this.onSubmit("guest");
     }
+
+    this.$msalInstance = new PublicClientApplication({
+      auth: {
+        clientId: process.env.MS_CLIENTID,
+        authority: process.env.MS_AUTHORITY,
+      },
+      cache: {
+        cacheLocation: "localStorage",
+      },
+    });
+  },
+  mounted() {
+    const accounts = this.$msalInstance.getAllAccounts();
+    if (accounts.length == 0) {
+      return;
+    }
+
+    console.log(accounts[0]);
   },
   computed: {
     authDetail() {
@@ -140,6 +173,17 @@ export default defineComponent({
       this.onReset();
     },
     onReset() {},
+    async SignInMs() {
+      await this.$msalInstance
+        .loginPopup({})
+        .then(() => {
+          const myAccounts = this.$msalInstance.getAllAccounts();
+          console.log(myAccounts);
+        })
+        .catch((error) => {
+          console.error(`error during authentication: ${error}`);
+        });
+    },
   },
 });
 </script>
