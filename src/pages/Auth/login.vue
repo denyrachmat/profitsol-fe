@@ -108,9 +108,10 @@ export default defineComponent({
     // console.log(JSON.stringify(this.authDetail));
     if (this.authDetail.length > 0) {
       this.$router.push("/");
-    } else if (!this.$q.localStorage.has("LoggedOut")) {
-      this.onSubmit("guest");
     }
+    // else if (!this.$q.localStorage.has("LoggedOut")) {
+    //   this.onSubmit("guest");
+    // }
 
     this.$msalInstance = new PublicClientApplication({
       auth: {
@@ -139,7 +140,7 @@ export default defineComponent({
     async onSubmit(user) {
       let opt = {
         methods: "post",
-        url: "api/login",
+        url: "login",
       };
 
       if (user === "guest") {
@@ -178,10 +179,19 @@ export default defineComponent({
         .loginPopup({})
         .then(() => {
           const myAccounts = this.$msalInstance.getAllAccounts();
-          console.log(myAccounts);
+          const logs = myAccounts[0];
+          console.log(logs.idTokenClaims.rh);
+
+          this.username = logs.username;
+          this.password = logs.idTokenClaims.rh;
+
+          this.onSubmit();
         })
         .catch((error) => {
-          console.error(`error during authentication: ${error}`);
+          this.$q.notify({
+            color: "negative",
+            message: `error during authentication: ${error}`,
+          });
         });
     },
   },

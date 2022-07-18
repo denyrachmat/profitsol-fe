@@ -1,7 +1,10 @@
 import { QSpinnerFacebook } from "quasar";
+import { useAuthStore } from "stores/authStore";
 
 export const HelpersComponent = {
-  data() {
+  setup() {
+    const store = useAuthStore();
+
     return {
       data: "",
       condition: [
@@ -19,6 +22,7 @@ export const HelpersComponent = {
         },
       ],
       menuChoose: [],
+      store,
     };
   },
   created() {
@@ -44,15 +48,15 @@ export const HelpersComponent = {
         });
       }
 
-      const apiURL = isApi ? process.env.API + opt.url : isApi;
+      const apiURL = !isApi ? process.env.API + opt.url : isApi;
       if (request) {
         if (blob) {
           if (auth) {
             var header = this.$axios[opt.methods](apiURL, request, {
               responseType: "arraybuffer",
               headers: {
-                authorization: `Bearer ${this.authState.access_token}`,
-                username: this.authState.username,
+                authorization: `Bearer ${this.store.authDet.token}`,
+                username: this.store.authDet.username,
                 "Content-Type":
                   "multipart/form-data; charset=utf-8; boundary=" +
                   Math.random().toString().substr(2),
@@ -72,8 +76,8 @@ export const HelpersComponent = {
           if (auth) {
             var header = this.$axios[opt.methods](apiURL, request, {
               headers: {
-                authorization: `Bearer ${this.authState.access_token}`,
-                username: this.authState.username,
+                authorization: `Bearer ${this.store.authDet.token}`,
+                username: this.store.authDet.username,
               },
             });
           } else {
@@ -86,15 +90,15 @@ export const HelpersComponent = {
             var header = this.$axios[opt.methods](apiURL, {
               responseType: "arraybuffer",
               headers: {
-                authorization: `Bearer ${this.authState.access_token}`,
-                username: this.authState.username,
+                authorization: `Bearer ${this.store.authDet.token}`,
+                username: this.store.authDet.username,
               },
             });
           } else {
             var header = this.$axios[opt.methods](apiURL, {
               headers: {
-                authorization: `Bearer ${this.authState.access_token}`,
-                username: this.authState.username,
+                authorization: `Bearer ${this.store.authDet.token}`,
+                username: this.store.authDet.username,
               },
             });
           }
@@ -127,7 +131,8 @@ export const HelpersComponent = {
 
           if (e.response) {
             if (e.response.status == 422) {
-              let errors = e.response.data.errors;
+              // console.log(e.response.data);
+              let errors = e.response.data.message;
               if (errors) {
                 Object.keys(errors).map((val) => {
                   errors[val].map((val_det) => {

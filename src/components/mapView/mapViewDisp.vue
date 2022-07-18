@@ -7,8 +7,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
-import HelpersComponent from "./HelpersComponent";
-
 import axios from "axios";
 
 export default defineComponent({

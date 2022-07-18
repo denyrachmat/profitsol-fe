@@ -49,9 +49,14 @@
           v-if="!changePhoto"
           @mouseenter="onHoverPhoto(true)"
           position="absolute"
+          icon="account_circle"
           style="left: 50%; transform: translateX(-50%); z-index: 1"
+          color="teal"
+          text-color="white"
+          font-size="150px"
         >
           <img
+            v-if="store.getDetail.user_det.pud_photo"
             :src="store.getDetail.user_det.pud_photo"
             style="object-fit: cover"
           />
@@ -64,6 +69,7 @@
             position="absolute"
             style="left: 50%; transform: translateX(-50%); z-index: 99"
             @mouseleave="onHoverPhoto(false)"
+            @click="changePhotoClick()"
           >
             <q-avatar size="150px" color="teal" text-color="white">
               <q-icon name="refresh" size="100px"></q-icon>
@@ -551,10 +557,14 @@
 </template>
 <script>
 /* eslint-disable */
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, watch } from "vue";
 import { useAuthStore } from "stores/authStore";
+import _ from "lodash";
 
-import MapView from "../../components/mapView.vue";
+import { HelpersComponent } from "src/components/HelpersComponent";
+
+import MapView from "../../components/mapView/index.vue";
+import UploadPhoto from "../../components/uploadPhoto/index.vue";
 
 const educationTemp = {
   pusd_level: "",
@@ -579,37 +589,50 @@ const familiesTemp = {
 export default defineComponent({
   name: "Profiles",
   components: { MapView },
+  mixins: [HelpersComponent],
   setup() {
     const store = useAuthStore();
+    const form = ref({
+      pud_first_name: "",
+      pud_last_name: "",
+      pud_id_card: "",
+      pud_photo: "",
+      pud_phone: "",
+      pud_country: "",
+      pud_states: "",
+      pud_cities: "",
+      pud_district: "",
+      pud_subdistrict: "",
+      pud_addr1: "",
+      pud_addr2: "",
+      pud_id_type: "nationality",
+      pud_birth_place: "",
+      pud_birth_date: "",
+      pud_country_rsdn: "",
+      pud_states_rsdn: "",
+      pud_cities_rsdn: "",
+      pud_district_rsdn: "",
+      pud_subdistrict_rsdn: "",
+      pud_addr1_rsdn: "",
+      pud_addr2_rsdn: "",
+    });
+
+    const educations = ref([]);
+    const families = ref([]);
+
+    // watch(
+    //   () => JSON.stringify(form.value),
+    //   _.debounce((newVal) => {
+    //     this.updateProfile();
+    //     console.log("berubah loh", newVal);
+    //   }, 5000)
+    // );
 
     return {
       store,
-      form: ref({
-        pud_first_name: "",
-        pud_last_name: "",
-        pud_id_card: "",
-        pud_photo: "",
-        pud_phone: "",
-        pud_country: "",
-        pud_states: "",
-        pud_cities: "",
-        pud_district: "",
-        pud_subdistrict: "",
-        pud_addr1: "",
-        pud_addr2: "",
-        pud_id_type: "nationality",
-        pud_birth_place: "",
-        pud_birth_date: "",
-        pud_country_rsdn: "",
-        pud_states_rsdn: "",
-        pud_cities_rsdn: "",
-        pud_district_rsdn: "",
-        pud_subdistrict_rsdn: "",
-        pud_addr1_rsdn: "",
-        pud_addr2_rsdn: "",
-      }),
-      educations: ref([]),
-      families: ref([]),
+      form,
+      educations,
+      families,
       changePhoto: ref(false),
       schoolOpt: ref([
         {
@@ -662,14 +685,14 @@ export default defineComponent({
             this.form.pud_cities = val.city;
             this.form.pud_district = val.distric;
             this.form.pud_subdistrict = val.subDistrict;
-            this.form.pud_addr2 = val.latLng;
+            this.form.pud_addr2 = JSON.stringify(val.latLng.value);
           } else {
             this.form.pud_country_rsdn = val.country;
             this.form.pud_states_rsdn = val.state;
             this.form.pud_cities_rsdn = val.city;
             this.form.pud_district_rsdn = val.distric;
             this.form.pud_subdistrict_rsdn = val.subDistrict;
-            this.form.pud_addr2_rsdn = val.latLng;
+            this.form.pud_addr2_rsdn = JSON.stringify(val.latLng.value);
           }
           console.log(val);
         })
@@ -692,6 +715,7 @@ export default defineComponent({
           this.form.pud_cities_rsdn = this.form.pud_cities;
           this.form.pud_district_rsdn = this.form.pud_district;
           this.form.pud_subdistrict_rsdn = this.form.pud_subdistrict;
+          this.form.pud_addr1_rsdn = this.form.pud_addr1;
           this.form.pud_addr2_rsdn = this.form.pud_addr2;
           // console.log('>>>> OK')
         });
@@ -713,6 +737,55 @@ export default defineComponent({
     },
     addFam() {
       this.families.push(educationTemp);
+    },
+    changePhotoClick() {
+      this.$q
+        .dialog({
+          component: UploadPhoto,
+
+          // props forwarded to your custom component
+          componentProps: {
+            title: "Select Photo",
+            // ...more..props...
+          },
+        })
+        .onOk((val) => {});
+    },
+    async updateProfile() {
+      const data = await this.postData(
+        {
+          url: `portal/profiles/${btoa(this.store.authDet.username)}`,
+          methods: "patch",
+        },
+        {
+          form: this.form,
+          educations: this.educations,
+          families: this.families,
+        },
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        console.log(data);
+      }
+    },
+  },
+  watch: {
+    form: {
+      handler: _.debounce(function (newVal) {
+        this.updateProfile();
+        console.log("berubah loh", newVal);
+
+        // const data = _.debounce(() => {
+        //   this.updateProfile();
+        //   console.log("berubah loh", newVal);
+        // }, 3000);
+
+        // data();
+      }, 3000),
+      deep: true,
     },
   },
 });

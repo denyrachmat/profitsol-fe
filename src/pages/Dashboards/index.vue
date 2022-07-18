@@ -5,12 +5,25 @@
         <q-card class="my-card">
           <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg">
             <div class="text-center full-width full-height">
-              <q-avatar size="150px" style="margin: 0 auto; top: 20%">
+              <q-avatar
+                size="150px"
+                style="margin: 0 auto; top: 20%"
+                v-if="store.getDetail.user_det.pud_photo"
+              >
                 <img
                   :src="store.getDetail.user_det.pud_photo"
                   style="object-fit: cover"
                 />
               </q-avatar>
+              <q-avatar
+                v-else
+                size="150px"
+                style="margin: 0 auto; top: 20%"
+                color="teal"
+                text-color="white"
+                icon="account_circle"
+                font-size="150px"
+              />
             </div>
           </q-img>
 

@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     authDet: [],
+    msLoginDet: [],
     isLoggedIn: false,
     latestStatusLog: "",
   }),
@@ -22,6 +23,9 @@ export const useAuthStore = defineStore("auth", {
   actions: {
     storeAuthDet(data) {
       this.authDet = data;
+    },
+    storeMSLoginDet(data) {
+      this.msLoginDet = data;
     },
     toggleLoggedIn() {
       this.isLoggedIn != this.isLoggedIn;

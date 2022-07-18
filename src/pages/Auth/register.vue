@@ -150,13 +150,13 @@ export default {
       console.log("masuk sini");
       let opt = {
         methods: "post",
-        url: "api/register",
+        url: "register",
       };
 
       let data = {
         username: this.username,
-        fname: this.fname,
-        lname: this.lname,
+        pud_first_name: this.fname,
+        pud_last_name: this.lname,
         password: this.password,
         password_confirmation: this.c_password,
         email: this.email,
@@ -164,9 +164,12 @@ export default {
 
       let hasil = await this.postData(opt, data);
       if (hasil) {
+        console.log(hasil);
         this.onReset();
 
         this.$emit("getrouted", "login");
+      } else {
+        console.log(hasil);
       }
     },
     onReset() {
@@ -183,11 +186,13 @@ export default {
         .then(() => {
           const myAccounts = this.$msalInstance.getAllAccounts();
           const msAcct = myAccounts[0];
+
+          console.log(msAcct.idTokenClaims.rh);
           this.username = msAcct.username;
           this.fname = msAcct.name.split(" ")[0];
           this.lname = msAcct.name.split(" ")[1];
-          this.password = "stxi1234";
-          this.c_password = "stxi1234";
+          this.password = msAcct.idTokenClaims.rh;
+          this.c_password = msAcct.idTokenClaims.rh;
           this.email = msAcct.username;
 
           this.onSubmit();

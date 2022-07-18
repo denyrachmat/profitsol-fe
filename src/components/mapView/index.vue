@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <q-dialog ref="dialogRef" full-width full-height>
     <div style="position: relative">
