@@ -1,22 +1,32 @@
 /* eslint-disable */
 const routes = [
   {
-    path: '/',
-    component: () => import('layouts/MainLayout.vue'),
+    path: "/",
+    component: () => import("layouts/MainLayout.vue"),
     children: [
-      { path: '', component: () => import('pages/Dashboards/index.vue') }
-    ]
+      { path: "", component: () => import("pages/Dashboards/index.vue") },
+    ],
   },
   {
-    path: '/profiles',
-    component: () => import('layouts/MainLayout.vue'),
+    path: "/profiles",
+    component: () => import("layouts/MainLayout.vue"),
     children: [
-      { path: '', component: () => import('pages/Profiles/index.vue') }
-    ]
+      { path: "", component: () => import("pages/Profiles/index.vue") },
+    ],
   },
   {
-    path: '/login',
-    component: () => import('pages/Auth'),
+    path: "/settings/",
+    component: () => import("layouts/MainLayout.vue"),
+    children: [
+      {
+        path: "users",
+        component: () => import("pages/Settings/Users/index.vue"),
+      },
+    ],
+  },
+  {
+    path: "/login",
+    component: () => import("pages/Auth"),
     // children: [
     //   { path: '', component: () => import('pages/Index.vue') }
     // ]
@@ -25,9 +35,9 @@ const routes = [
   // Always leave this as last one,
   // but you can also remove it
   {
-    path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue')
-  }
-]
+    path: "/:catchAll(.*)*",
+    component: () => import("pages/ErrorNotFound.vue"),
+  },
+];
 
-export default routes
+export default routes;

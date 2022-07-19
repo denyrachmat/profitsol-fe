@@ -7,7 +7,7 @@
           <q-uploader
             style="max-width: 500px"
             :factory="factoryFn"
-            label="Restricted to images"
+            :label="title"
             accept=".jpg, image/*"
             auto-upload
           />
@@ -16,8 +16,13 @@
       <div class="row q-pa-sm">
         <div class="col text-right">
           <q-btn-group spread>
-            <q-btn color="red" label="Cancel" />
-            <q-btn label="Ok" color="primary" />
+            <q-btn color="red" label="Cancel" v-close-popup />
+            <q-btn
+              label="Ok"
+              color="primary"
+              @click="onOKClick()"
+              :disable="!result"
+            />
           </q-btn-group>
         </div>
       </div>
@@ -30,6 +35,7 @@ import { useDialogPluginComponent } from "quasar";
 
 export default defineComponent({
   props: {
+    title: String,
     // ...your custom props
   },
 
@@ -51,12 +57,9 @@ export default defineComponent({
     // onDialogCancel - Function to call to settle dialog with "cancel" outcome
     const result = ref("");
 
-    const factoryFn = (val) => {
-      console.log(val);
-      console.log(convertBase64(val));
-
-      result.value = convertBase64(val).result;
-
+    function factoryFn(val) {
+      // result.value = convertBase64(val).result;
+      // console.log(convertBase64(val));
       return convertBase64(val).result;
       return new Promise((resolve) => {
         // simulating a delay of 2 seconds
@@ -67,14 +70,16 @@ export default defineComponent({
           });
         }, 2000);
       });
-    };
+    }
 
     const convertBase64 = (filenya, callback) => {
       const reader = new FileReader();
-      let hasil = "";
+      var hasil = "";
+
       reader.readAsDataURL(filenya[0]);
       reader.onload = function () {
-        return reader.result;
+        hasil = reader.result;
+        result.value = reader.result;
       };
       reader.onerror = function (error) {
         return `Error: ${error}`;
@@ -96,7 +101,7 @@ export default defineComponent({
       onOKClick() {
         // on OK, it is REQUIRED to
         // call onDialogOK (with optional payload)
-        onDialogOK();
+        onDialogOK({ result: result.value });
         // or with payload: onDialogOK({ ... })
         // ...and it will also hide the dialog automatically
       },

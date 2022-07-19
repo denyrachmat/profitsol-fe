@@ -17,11 +17,11 @@
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
             <q-list style="min-width: 100px">
+              <q-item clickable v-close-popup>
+                <q-item-section>Change Password</q-item-section>
+              </q-item>
               <q-item clickable v-close-popup @click="logout()">
                 <q-item-section>Logout</q-item-section>
-              </q-item>
-              <q-item clickable v-close-popup>
-                <q-item-section>New incognito tab</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -31,7 +31,7 @@
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label header> Essential Links </q-item-label>
+        <q-item-label header> Setup Apps </q-item-label>
 
         <EssentialLink
           v-for="link in essentialLinks"
@@ -54,46 +54,22 @@ import { useAuthStore } from "stores/authStore";
 
 const linksList = [
   {
-    title: "Docs",
-    caption: "quasar.dev",
-    icon: "school",
-    link: "https://quasar.dev",
+    title: "Users Setup",
+    caption: "Setup users for portal app",
+    icon: "account_circle",
+    link: "#/settings/users",
   },
   {
-    title: "Github",
-    caption: "github.com/quasarframework",
-    icon: "code",
-    link: "https://github.com/quasarframework",
+    title: "Menu Setup",
+    caption: "Setup menu apps",
+    icon: "touch_app",
+    link: "#/settings/menu",
   },
   {
-    title: "Discord Chat Channel",
-    caption: "chat.quasar.dev",
-    icon: "chat",
-    link: "https://chat.quasar.dev",
-  },
-  {
-    title: "Forum",
-    caption: "forum.quasar.dev",
-    icon: "record_voice_over",
-    link: "https://forum.quasar.dev",
-  },
-  {
-    title: "Twitter",
-    caption: "@quasarframework",
-    icon: "rss_feed",
-    link: "https://twitter.quasar.dev",
-  },
-  {
-    title: "Facebook",
-    caption: "@QuasarFramework",
-    icon: "public",
-    link: "https://facebook.quasar.dev",
-  },
-  {
-    title: "Quasar Awesome",
-    caption: "Community Quasar projects",
-    icon: "favorite",
-    link: "https://awesome.quasar.dev",
+    title: "Role Setup",
+    caption: "Setup users role",
+    icon: "settings_accessibility",
+    link: "#/settings/role",
   },
 ];
 
