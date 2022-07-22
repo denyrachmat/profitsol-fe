@@ -7,27 +7,49 @@
       <q-card-section class="q-pt-none">
         <div class="row q-pb-sm">
           <div class="col">
-            <q-input outlined label="Username" v-model="dataHasil.username" />
+            <q-input
+              outlined
+              label="App Code"
+              v-model="dataHasil.am_app_code"
+            />
           </div>
         </div>
         <div class="row q-pb-sm">
           <div class="col">
-            <q-input outlined label="Email" v-model="dataHasil.email" />
+            <q-input
+              outlined
+              label="App Name"
+              v-model="dataHasil.am_app_name"
+            />
           </div>
         </div>
         <div class="row q-pb-sm">
-          <div class="col q-pr-sm">
+          <div class="col">
             <q-input
               outlined
-              label="First Name"
-              v-model="dataHasil.pud_first_name"
+              label="App URL"
+              v-model="dataHasil.am_app_url"
+              mask="http://"
             />
           </div>
-          <div class="col q-pl-sm">
+        </div>
+        <div class="row q-pb-sm">
+          <div class="col">
             <q-input
               outlined
-              label="Last Name"
-              v-model="dataHasil.pud_last_name"
+              label="App Icon Name"
+              v-model="dataHasil.am_app_icon"
+              mask="http://"
+            />
+          </div>
+        </div>
+        <div class="row q-pb-sm">
+          <div class="col">
+            <q-input
+              type="textarea"
+              outlined
+              label="App Desc"
+              v-model="dataHasil.am_app_desc"
             />
           </div>
         </div>
@@ -35,7 +57,7 @@
           <div class="col">
             <q-checkbox
               v-model="isVerified"
-              label="Is Verified"
+              label="Is Drawer Menu ?"
               checked-icon="task_alt"
               unchecked-icon="highlight_off"
               :color="isVerified ? 'green' : 'red'"
@@ -54,31 +76,28 @@
     </q-card>
   </q-dialog>
 </template>
-
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
 
 const props = defineProps({
-  dataProps: Object,
+  dataProps: Object || null,
   // ...your custom props
 });
 
 const dataHasil = ref(null);
-const isVerified = ref(false);
 
-watch(isVerified, (val) => {
-  if (val) {
-    dataHasil.value.email_verified_at = date.formatDate(
-      Date.now(),
-      "YYYY-MM-DD HH:mm:ss"
-    );
-  }
-});
+// watch(isVerified, (val) => {
+//   if (val) {
+//     dataHasil.value.email_verified_at = date.formatDate(
+//       Date.now(),
+//       "YYYY-MM-DD HH:mm:ss"
+//     );
+//   }
+// });
 
 onMounted(() => {
   dataHasil.value = props.dataProps;
-  isVerified.value = props.dataProps.email_verified_at ? true : false;
 });
 
 defineEmits([

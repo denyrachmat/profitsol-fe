@@ -2,7 +2,7 @@
 <template>
   <div class="q-pa-md">
     <div class="row">
-      <div class="col text-center text-h4">Users Setup</div>
+      <div class="col text-center text-h4">Apps Setup</div>
     </div>
     <div class="row q-py-md">
       <div class="col">
@@ -10,22 +10,37 @@
           :rows="rows"
           :columns="columns"
           row-key="username"
-          title="User List"
+          title="Apps List"
           :filter="filterData"
           dense
         >
           <template v-slot:top-right>
-            <q-input
-              borderless
-              dense
-              debounce="300"
-              v-model="filter"
-              placeholder="Search"
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+            <div class="row">
+              <div class="col q-pr-sm">
+                <q-btn-group spread>
+                  <q-btn
+                    color="green"
+                    icon="add"
+                    outline
+                    @click="onUpdatedApps()"
+                  />
+                  <q-btn color="purple" icon="view_list" outline />
+                </q-btn-group>
+              </div>
+              <div class="col">
+                <q-input
+                  outlined
+                  dense
+                  debounce="300"
+                  v-model="filter"
+                  placeholder="Search"
+                >
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
           </template>
           <template v-slot:body="props">
             <q-tr :props="props">
@@ -78,52 +93,55 @@
   </div>
 </template>
 <script setup>
-import { defineComponent, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import apiRequest from "src/components/apiRequest";
+import updateApps from "./updateApps.vue";
 import { useQuasar, date } from "quasar";
-import { useAuthStore } from "stores/authStore";
 
-import updateUsers from "./updateUsers";
-
-const { postData } = apiRequest();
 const $q = useQuasar();
-const store = useAuthStore();
 
 const rows = ref([]);
 const columns = ref([
   {
-    name: "username",
+    name: "am_app_code",
     align: "center",
-    label: "Username",
-    field: "u_username",
+    label: "App Code",
+    field: "am_app_code",
     sortable: true,
   },
   {
-    name: "email",
+    name: "am_app_name",
     align: "center",
-    label: "Email",
-    field: "email",
+    label: "App Name",
+    field: "am_app_name",
     sortable: true,
   },
   {
-    name: "pud_first_name",
+    name: "am_app_desc",
     align: "center",
-    label: "First Name",
-    field: "pud_first_name",
+    label: "App Desc",
+    field: "am_app_desc",
     sortable: true,
   },
   {
-    name: "pud_last_name",
+    name: "am_app_url",
     align: "center",
-    label: "Last Name",
-    field: "pud_last_name",
+    label: "App URL",
+    field: "am_app_url",
     sortable: true,
   },
   {
-    name: "email_verified_at",
+    name: "am_app_icon",
     align: "center",
-    label: "Verified Date",
-    field: "email_verified_at",
+    label: "App Icon",
+    field: "am_app_icon",
+    sortable: true,
+  },
+  {
+    name: "am_is_drawer",
+    align: "center",
+    label: "Is On Drawer ?",
+    field: "am_is_drawer",
     sortable: true,
   },
   {
@@ -136,20 +154,21 @@ const columns = ref([
 const filterData = ref("");
 
 onMounted(async () => {
-  getUsers();
+  getApps();
 });
 
-const getUsers = async () => {
-  const data = await postData("get", null, "portal/users", false, false, true);
-  if (data) {
-    rows.value = data.data;
+const onUpdatedApps = (
+  data = {
+    am_app_code: "",
+    am_app_name: "",
+    am_app_desc: "",
+    am_app_url: "",
+    am_app_icon: "",
+    am_is_drawer: false,
   }
-};
-
-const updateUsersAction = (data) => {
-  console.log(data);
+) => {
   $q.dialog({
-    component: updateUsers,
+    component: updateApps,
 
     // props forwarded to your custom component
     componentProps: {
@@ -158,10 +177,7 @@ const updateUsersAction = (data) => {
     },
   })
     .onOk(async (val) => {
-      const updateProf = await updateProfile(val.value);
-      if (updateProf) {
-        getUsers();
-      }
+      console.log(val);
     })
     .onCancel(() => {
       console.log("Cancel");
@@ -171,44 +187,10 @@ const updateUsersAction = (data) => {
     });
 };
 
-const deleteUser = (username) => {
-  $q.dialog({
-    title: "Alert",
-    message: "Are you sure want to delete this user ?",
-    cancel: true,
-  })
-    .onOk(async () => {
-      const data = await postData(
-        "delete",
-        null,
-        `portal/profiles/${btoa(username)}`,
-        false,
-        false,
-        true
-      );
-
-      if (data) {
-        console.log(data);
-      }
-      // console.log('OK')
-    })
-    .onCancel(() => {});
-};
-
-const updateProfile = async (datas) => {
-  const data = await postData(
-    "patch",
-    {
-      form: datas,
-    },
-    `portal/profiles/${btoa(datas.username)}`,
-    false,
-    false,
-    true
-  );
-
+const getApps = async () => {
+  const data = await postData("get", null, "portal/apps", false, false, true);
   if (data) {
-    return data;
+    rows.value = data.data;
   }
 };
 </script>
