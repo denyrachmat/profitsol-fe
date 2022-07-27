@@ -9,8 +9,8 @@
           <div class="col">
             <q-input
               outlined
-              label="App Code"
-              v-model="dataHasil.am_app_code"
+              label="Role Name"
+              v-model="dataHasil.rm_role_name"
             />
           </div>
         </div>
@@ -18,70 +18,12 @@
           <div class="col">
             <q-input
               outlined
-              label="App Name"
-              v-model="dataHasil.am_app_name"
-            />
-          </div>
-        </div>
-        <div class="row q-pb-sm">
-          <div class="col">
-            <q-input outlined label="App URL" v-model="dataHasil.am_app_url" />
-          </div>
-        </div>
-        <div class="row q-pb-sm">
-          <div class="col">
-            <q-input
-              outlined
-              label="App Icon Name"
-              v-model="dataHasil.am_app_icon"
-            />
-          </div>
-        </div>
-        <div class="row q-pb-sm">
-          <div class="col">
-            <q-input
-              type="textarea"
-              outlined
-              label="App Desc"
-              v-model="dataHasil.am_app_desc"
-            />
-          </div>
-        </div>
-        <div class="row q-pb-sm">
-          <div class="col">
-            <!-- <q-input
-              outlined
-              label="Parent"
-              v-model="dataHasil.am_app_parent"
-            /> -->
-
-            <q-select
-              filled
-              v-model="dataHasil.am_app_parent"
-              :options="listParent"
-              label="Parent Apps"
-              option-label="am_app_name"
-              option-value="am_app_code"
-              emit-value
-              map-options
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-checkbox
-              v-model="isVerified"
-              label="Is Drawer Menu ?"
-              checked-icon="task_alt"
-              unchecked-icon="highlight_off"
-              :color="isVerified ? 'green' : 'red'"
-              keep-color
+              label="Role Desc"
+              v-model="dataHasil.rm_role_desc"
             />
           </div>
         </div>
       </q-card-section>
-
-      <!-- buttons example -->
       <q-separator />
       <q-card-actions align="right">
         <q-btn color="primary" label="OK" @click="onOKClick" />
@@ -96,19 +38,10 @@ import { useDialogPluginComponent, date } from "quasar";
 
 const props = defineProps({
   dataProps: Object || null,
-  list_parent: Array,
   // ...your custom props
 });
 
 const dataHasil = ref(null);
-const listParent = ref(props.list_parent);
-const isVerified = ref(false);
-
-watch(isVerified, (val) => {
-  if (val) {
-    dataHasil.value.am_is_drawer = val;
-  }
-});
 
 onMounted(() => {
   dataHasil.value = props.dataProps;

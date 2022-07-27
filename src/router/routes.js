@@ -26,6 +26,10 @@ const routes = [
         path: "menu",
         component: () => import("pages/Settings/Apps/index.vue"),
       },
+      {
+        path: "role",
+        component: () => import("pages/Settings/Role/index.vue"),
+      },
     ],
   },
   {

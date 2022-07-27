@@ -17,14 +17,19 @@
           <template v-slot:top-right>
             <div class="row">
               <div class="col q-pr-sm">
-                <q-btn-group spread>
+                <q-btn-group>
                   <q-btn
                     color="green"
                     icon="add"
                     outline
                     @click="onUpdatedApps()"
                   />
-                  <q-btn color="purple" icon="view_list" outline />
+                  <q-btn
+                    color="purple"
+                    icon="view_list"
+                    outline
+                    @click="onMapping()"
+                  />
                 </q-btn-group>
               </div>
               <div class="col">
@@ -32,7 +37,7 @@
                   outlined
                   dense
                   debounce="300"
-                  v-model="filter"
+                  v-model="filterData"
                   placeholder="Search"
                 >
                   <template v-slot:append>
@@ -44,25 +49,23 @@
           </template>
           <template v-slot:body="props">
             <q-tr :props="props">
-              <q-td key="username" :props="props">
-                {{ props.row.username }}
+              <q-td key="am_app_code" :props="props">
+                {{ props.row.am_app_code }}
               </q-td>
-              <q-td key="email" :props="props">
-                {{ props.row.email }}
+              <q-td key="am_app_name" :props="props">
+                {{ props.row.am_app_name }}
               </q-td>
-              <q-td key="pud_first_name" :props="props">
-                {{ props.row.pud_first_name }}
+              <q-td key="am_app_desc" :props="props">
+                {{ props.row.am_app_desc }}
               </q-td>
-              <q-td key="pud_last_name" :props="props">
-                {{ props.row.pud_last_name }}
+              <q-td key="am_app_url" :props="props">
+                {{ props.row.am_app_url }}
               </q-td>
-              <q-td key="email_verified_at" :props="props">
-                {{
-                  date.formatDate(
-                    props.row.email_verified_at,
-                    "YYYY-MM-DD HH:mm:ss"
-                  )
-                }}
+              <q-td key="am_app_icon" :props="props">
+                <q-icon :name="props.row.am_app_icon" size="30px" />
+              </q-td>
+              <q-td key="am_is_drawer" :props="props">
+                {{ props.row.am_is_drawer }}
               </q-td>
               <q-td key="action" :props="props">
                 <q-btn-group spread rounded>
@@ -71,7 +74,7 @@
                     label="Update"
                     icon="edit"
                     dense
-                    @click="updateUsersAction(props.row)"
+                    @click="onUpdatedApps(false, props.row)"
                     :disable="props.row.username === store.authDet.username"
                   />
                   <q-btn
@@ -95,10 +98,17 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import apiRequest from "src/components/apiRequest";
+
 import updateApps from "./updateApps.vue";
+import mappingApps from "./mappingApps.vue";
+
 import { useQuasar, date } from "quasar";
+import { useAuthStore } from "stores/authStore";
 
 const $q = useQuasar();
+
+const { postData } = apiRequest();
+const store = useAuthStore();
 
 const rows = ref([]);
 const columns = ref([
@@ -158,6 +168,7 @@ onMounted(async () => {
 });
 
 const onUpdatedApps = (
+  isNew = true,
   data = {
     am_app_code: "",
     am_app_name: "",
@@ -173,11 +184,65 @@ const onUpdatedApps = (
     // props forwarded to your custom component
     componentProps: {
       dataProps: data,
+      list_parent: rows.value,
       // ...more..props...
     },
   })
     .onOk(async (val) => {
-      console.log(val);
+      const dataSub = await postData(
+        isNew ? "post" : "patch",
+        {
+          ...val.value,
+          u_username: store.authDet.username,
+        },
+        isNew ? `portal/apps` : `portal/apps/${val.value.am_app_code}`,
+        false,
+        false,
+        true
+      );
+
+      if (dataSub) {
+        console.log(data);
+        getApps();
+      }
+    })
+    .onCancel(() => {
+      console.log("Cancel");
+    })
+    .onDismiss(() => {
+      console.log("Called on OK or Cancel");
+    });
+};
+
+const onMapping = () => {
+  $q.dialog({
+    component: mappingApps,
+
+    // props forwarded to your custom component
+    componentProps: {
+      dataProps: rows.value,
+      // ...more..props...
+    },
+  })
+    .onOk(async (val) => {
+      console.log(val.value);
+
+      const data = await postData(
+        "post",
+        {
+          ...val.value,
+          u_username: store.authDet.username,
+        },
+        `portal/apps`,
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        console.log(data);
+        getApps();
+      }
     })
     .onCancel(() => {
       console.log("Cancel");
