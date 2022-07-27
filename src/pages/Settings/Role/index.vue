@@ -49,28 +49,24 @@
                 <q-btn-group spread rounded>
                   <q-btn
                     color="green"
-                    label="Update"
                     icon="edit"
                     dense
                     @click="onUpdatedRoles(false, props.row)"
                   />
                   <q-btn
                     color="cyan"
-                    label="Assign User"
                     icon="people"
                     dense
                     @click="onUpdatedRoles(false, props.row, assignUsers)"
                   />
                   <q-btn
                     color="purple"
-                    label="Assign Menu"
                     icon="list"
                     dense
                     @click="onUpdatedRoles(false, props.row, assignMenus)"
                   />
                   <q-btn
                     color="red"
-                    label="Delete"
                     icon="delete"
                     dense
                     @click="deleteRole(props.row.username)"

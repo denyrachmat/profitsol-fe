@@ -1,9 +1,11 @@
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide">
-    <q-card
-      class="q-dialog-plugin q-pt-md"
-      style="width: 700px; max-width: 80vw"
-    >
+    <q-card class="q-dialog-plugin" style="width: 700px; max-width: 80vw">
+      <q-card-section>
+        <div class="text-h6">Assign Role to Apps</div>
+      </q-card-section>
+
+      <q-separator inset />
       <q-card-section class="q-pt-none">
         <div class="row">
           <div class="col">
