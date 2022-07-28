@@ -121,16 +121,16 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 function onOKClick() {
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
-  // const selectApp = [];
-  // selectedApps.value.map((val) => {
-  //   selectApp.push({
-  //     u_username: dataHasil.value.u_username,
-  //     rm_role_id: dataHasil.value.id,
-  //     am_app_id: val,
-  //   });
-  // });
+  const selectApp = [];
+  ticked.value.map((val) => {
+    selectApp.push({
+      u_username: dataHasil.value.u_username,
+      rm_role_id: dataHasil.value.id,
+      am_app_id: val,
+    });
+  });
 
-  console.log(ticked.value);
+  console.log({ ...dataHasil.value, app_map: selectApp });
 
   // onDialogOK(ref({ ...dataHasil.value, app_map: selectApp }));
   // or with payload: onDialogOK({ ... })
