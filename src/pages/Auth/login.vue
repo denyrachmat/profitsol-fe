@@ -168,6 +168,7 @@ export default defineComponent({
         this.store.storeAuthDet(grup);
         this.store.toggleLoggedIn();
         this.store.logMessage(hasil.message);
+        this.store.storeChoosedRole(grup.rolesGroup.roles[0]);
 
         this.$router.push("/");
       }

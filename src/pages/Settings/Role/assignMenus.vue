@@ -18,7 +18,7 @@
               v-model:selected="selectedApps"
               v-model:ticked="ticked"
               default-expand-all
-              @update:selected="(val) => console.log(val)"
+              @update:ticked="onTicked"
             />
           </div>
           <div class="col">
@@ -30,7 +30,7 @@
                       (fil) => fil.am_app_code === selectedApps
                     )[0].am_app_desc
                   : null
-                : NULL
+                : null
             }}
           </div>
         </div>
@@ -65,6 +65,13 @@ const selectedApps = ref([]);
 
 onMounted(() => {
   dataHasil.value = props.dataProps;
+
+  const getTick = [];
+  dataHasil.value.app_map.map((val) => {
+    getTick.push(val.am_app_id);
+  });
+
+  ticked.value = getTick;
   getApps();
   // listParent.value = props.list_parent;
 });
@@ -79,6 +86,7 @@ const spreadingNodes = (data) => {
       value: val.am_app_code,
       icon: val.am_app_icon,
       children: val.child_apps.length > 0 ? spreadingNodes(val.child_apps) : [],
+      parent: val.am_app_parent,
     };
   });
 };
@@ -100,6 +108,21 @@ const getApps = async () => {
 
 const filterUsers = (val, update, abort) => {
   update(() => {});
+};
+
+const onTicked = (val) => {
+  ticked.value = toggleChecking(options.value, val);
+};
+
+const toggleChecking = (arr, val, par = "") => {
+  return arr.reduce((r, o) => {
+    const children = toggleChecking(o.children, val, o.value);
+    if (val.includes(o.value) || children.length > 0) {
+      r.push(o.value, ...children);
+    }
+
+    return r;
+  }, []);
 };
 
 defineEmits([
@@ -127,12 +150,13 @@ function onOKClick() {
       u_username: dataHasil.value.u_username,
       rm_role_id: dataHasil.value.id,
       am_app_id: val,
+      am_app_parent: options.value.filter((fil) => fil.value === val)[0].parent,
     });
   });
 
   console.log({ ...dataHasil.value, app_map: selectApp });
 
-  // onDialogOK(ref({ ...dataHasil.value, app_map: selectApp }));
+  onDialogOK(ref({ ...dataHasil.value, app_map: selectApp }));
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
 }

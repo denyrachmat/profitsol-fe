@@ -112,6 +112,14 @@ const apiRequest = () => {
             localStorage.clear();
             router.push("/login");
           }
+
+          if (e.response.status == 500) {
+            $q.notify({
+              color: "negative",
+              message: e.response.data.message,
+              timeout: 10000,
+            });
+          }
         }
       });
 

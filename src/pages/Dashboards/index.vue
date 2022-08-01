@@ -77,42 +77,49 @@
           </div>
         </div>
         <div class="row">
-          <div class="col">
-            <!-- <q-card class="my-card" style="max-width: 25%">
-              <q-card-section class="bg-purple text-white">
-                <div class="text-h6">Our Changing Planet</div>
-                <div class="text-subtitle2">by John Doe</div>
-              </q-card-section>
-
-              <q-card-actions align="around">
-                <q-btn flat>Action 1</q-btn>
-                <q-btn flat>Action 2</q-btn>
-              </q-card-actions>
-            </q-card> -->
-
-            <MglMap :accessToken="accessToken" :mapStyle="mapStyle" />
+          <div class="col text-right">
+            <q-btn-toggle
+              v-model="viewMode"
+              class="my-custom-toggle"
+              no-caps
+              rounded
+              unelevated
+              toggle-color="primary"
+              color="white"
+              text-color="primary"
+              :options="[
+                { icon: 'apps', value: 'apps' },
+                { icon: 'format_list_numbered', value: 'list' },
+              ]"
+            />
           </div>
         </div>
+
+        <appListVue :mode="viewMode" />
       </div>
     </div>
   </div>
 </template>
 <script>
 /* eslint-disable */
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import { MglMap } from "vue-mapbox";
 import { useAuthStore } from "stores/authStore";
 
+import appListVue from "./appList.vue";
+
 export default defineComponent({
   name: "Dashboard",
-  components: { MglMap },
+  components: { MglMap, appListVue },
   setup() {
     const store = useAuthStore();
+    const viewMode = ref("apps");
     return {
       accessToken:
         "pk.eyJ1IjoiZGVueTIyIiwiYSI6ImNqaHU2aDZ2MzA3MjEza3BpbDA5cWQyNDEifQ.SNmUHNN6YhvH5ATUQSTeJQ", // your access token. Needed if you using Mapbox maps
       mapStyle: "mapbox://styles/mapbox/dark-v10", // your map style
       store,
+      viewMode,
     };
   },
 });
