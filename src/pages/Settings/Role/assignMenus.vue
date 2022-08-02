@@ -67,7 +67,7 @@ onMounted(() => {
   dataHasil.value = props.dataProps;
 
   const getTick = [];
-  dataHasil.value.app_map.map((val) => {
+  dataHasil.value.role_app_map.map((val) => {
     getTick.push(val.am_app_id);
   });
 
@@ -125,6 +125,18 @@ const toggleChecking = (arr, val, par = "") => {
   }, []);
 };
 
+const findData = (arr, val) => {
+  return arr.reduce((r, o) => {
+    const children = findData(o.children, val);
+    if (o.value === val) {
+      r.push(o, ...children);
+    } else {
+      r.push(...children);
+    }
+    return r;
+  }, []);
+};
+
 defineEmits([
   // REQUIRED; need to specify some events that your
   // component will emit through useDialogPluginComponent()
@@ -146,17 +158,16 @@ function onOKClick() {
   // call onDialogOK (with optional payload)
   const selectApp = [];
   ticked.value.map((val) => {
+    // console.log(options.value);
     selectApp.push({
       u_username: dataHasil.value.u_username,
       rm_role_id: dataHasil.value.id,
       am_app_id: val,
-      am_app_parent: options.value.filter((fil) => fil.value === val)[0].parent,
+      am_app_parent: findData(options.value, val)[0].parent,
     });
   });
 
-  console.log({ ...dataHasil.value, app_map: selectApp });
-
-  onDialogOK(ref({ ...dataHasil.value, app_map: selectApp }));
+  onDialogOK(ref({ ...dataHasil.value, role_app_map: selectApp }));
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
 }

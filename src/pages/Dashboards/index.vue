@@ -1,7 +1,7 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row">
-      <div class="col-12 col-sm-3">
+  <div class="q-pa-sm">
+    <div class="row q-py-sm">
+      <div class="col-12 col-sm-3 q-pa-sm">
         <q-card class="my-card">
           <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg">
             <div class="text-center full-width full-height">
@@ -70,32 +70,47 @@
           </q-card-actions>
         </q-card>
       </div>
-      <div class="col-9 q-pa-md bg-grey-2">
-        <div class="row">
-          <div class="col text-center">
-            <strong class="text-h4">Application List</strong>
+      <div class="col-12 col-sm-9 q-pa-sm">
+        <div class="row bg-grey-3 full-height">
+          <div class="col q-py-md text-center">
+            <strong class="text-h5 text-bold">Information</strong>
           </div>
         </div>
-        <div class="row">
-          <div class="col text-right">
-            <q-btn-toggle
-              v-model="viewMode"
-              class="my-custom-toggle"
-              no-caps
-              rounded
-              unelevated
-              toggle-color="primary"
-              color="white"
-              text-color="primary"
-              :options="[
-                { icon: 'apps', value: 'apps' },
-                { icon: 'format_list_numbered', value: 'list' },
-              ]"
-            />
-          </div>
-        </div>
+      </div>
+    </div>
 
-        <appListVue :mode="viewMode" />
+    <div class="row">
+      <div class="col q-pa-sm">
+        <div class="bg-grey-3 q-pa-md">
+          <div class="row">
+            <div class="col text-center">
+              <strong class="text-h5 text-bold">Application List</strong>
+            </div>
+          </div>
+          <div class="row q-px-md">
+            <div class="col text-right">
+              <q-btn-toggle
+                v-model="viewMode"
+                class="my-custom-toggle"
+                no-caps
+                rounded
+                unelevated
+                toggle-color="primary"
+                color="white"
+                text-color="primary"
+                :options="[
+                  { icon: 'apps', value: 'apps' },
+                  { icon: 'format_list_numbered', value: 'list' },
+                ]"
+              />
+            </div>
+          </div>
+          <div class="row q-px-md">
+            <div class="col">
+              <appListVue :mode="viewMode" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
