@@ -17,7 +17,8 @@ const apiRequest = () => {
     blob = false,
     loading = false,
     auth = false,
-    isApi = null
+    isApi = null,
+    isMSToken = false
   ) => {
     // Jika menggunakan loading
     if (loading) {
@@ -37,7 +38,9 @@ const apiRequest = () => {
     let header = {
       responseType: blob ? "arraybuffer" : "json",
       headers: {
-        authorization: `Bearer ${store.authDet.token}`,
+        authorization: `Bearer ${
+          isMSToken ? store.msTokenDet.accessToken : store.authDet.token
+        }`,
         username: store.authDet.username,
         ...(blob
           ? {

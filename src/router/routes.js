@@ -35,9 +35,18 @@ const routes = [
   {
     path: "/login",
     component: () => import("pages/Auth"),
-    // children: [
-    //   { path: '', component: () => import('pages/Index.vue') }
-    // ]
+  },
+  {
+    path: "/dms/",
+    name: "apps",
+    component: () => import("pages/Dashboards/viewApps.vue"),
+    children: [
+      {
+        path: "uploadDocument",
+        name: "apps",
+        component: () => import("pages/DMS/uploadDocument.vue"),
+      },
+    ],
   },
 
   // Always leave this as last one,

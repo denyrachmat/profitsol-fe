@@ -4,6 +4,7 @@ export const useAuthStore = defineStore("auth", {
   state: () => ({
     authDet: [],
     msLoginDet: [],
+    msTokenDet: [],
     isLoggedIn: false,
     latestStatusLog: "",
     choosedRoles: null,
@@ -22,6 +23,12 @@ export const useAuthStore = defineStore("auth", {
     getChoosedRole(state) {
       return state.choosedRoles;
     },
+    getMSLogDet(state) {
+      return state.msLoginDet;
+    },
+    getMSTokenDet(state) {
+      return state.msTokenDet;
+    },
   },
 
   actions: {
@@ -30,6 +37,9 @@ export const useAuthStore = defineStore("auth", {
     },
     storeMSLoginDet(data) {
       this.msLoginDet = data;
+    },
+    storeMSTokenDet(data) {
+      this.msTokenDet = data;
     },
     storeChoosedRole(data) {
       this.choosedRoles = data;

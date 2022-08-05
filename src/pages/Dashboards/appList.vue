@@ -77,6 +77,8 @@ import { useQuasar, date } from "quasar";
 import viewApps from "./viewApps.vue";
 import appListRows from "./appListRows.vue";
 
+import uploadDocument from "../DMS/uploadDocument.vue";
+
 const $q = useQuasar();
 
 const props = defineProps({
@@ -132,6 +134,7 @@ const chooseApp = (val) => {
       // props forwarded to your custom component
       componentProps: {
         dataProps: val.apps.am_app_url,
+        title: val.apps.am_app_name,
         // ...more..props...
       },
     }).onOk(async (val) => {});

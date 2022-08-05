@@ -51,7 +51,7 @@
 import { defineComponent, ref } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import { useAuthStore } from "stores/authStore";
-
+import { Providers, Msal2Provider, ProviderState } from "@microsoft/mgt";
 const linksList = [
   {
     title: "Users Setup",
@@ -97,6 +97,12 @@ export default defineComponent({
     // console.log(JSON.stringify(this.authDetail));
     if (this.authDetail.length === 0) {
       this.$router.push("/login");
+    }
+
+    if (Providers.globalProvider) {
+      console.log(Providers.globalProvider.state);
+
+      console.log(ProviderState.SignedIn);
     }
   },
   computed: {

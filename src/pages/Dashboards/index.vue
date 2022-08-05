@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <div class="q-pa-sm">
     <div class="row q-py-sm">
@@ -72,8 +73,22 @@
       </div>
       <div class="col-12 col-sm-9 q-pa-sm">
         <div class="row bg-grey-3 full-height">
-          <div class="col q-py-md text-center">
-            <strong class="text-h5 text-bold">Information</strong>
+          <div class="col q-py-md">
+            <div class="full-height row">
+              <div class="col-12 col-md-6">
+                <div class="text-center">
+                  <strong class="text-h5 text-bold">Meeting Schedule</strong>
+                </div>
+                <div style="overflow: scroll; max-height: 50em">
+                  <eventList :events="mainEvent" />
+                </div>
+              </div>
+              <div class="col-12 col-md-6 q-pl-sm">
+                <div class="text-center">
+                  <strong class="text-h5 text-bold">Information</strong>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -115,29 +130,52 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 /* eslint-disable */
-import { defineComponent, ref } from "vue";
-import { MglMap } from "vue-mapbox";
+import { defineComponent, ref, onMounted } from "vue";
 import { useAuthStore } from "stores/authStore";
+import apiRequest from "src/components/apiRequest";
+import eventList from "./eventList.vue";
+// import {
+//   Providers,
+//   MgtPerson,
+//   MgtAgenda,
+//   MgtPeople,
+//   MgtTasks,
+//   IDynamicPerson,
+// } from "@microsoft/mgt";
 
 import appListVue from "./appList.vue";
+const store = useAuthStore();
+const viewMode = ref("apps");
+const mainEvent = ref([]);
 
-export default defineComponent({
-  name: "Dashboard",
-  components: { MglMap, appListVue },
-  setup() {
-    const store = useAuthStore();
-    const viewMode = ref("apps");
-    return {
-      accessToken:
-        "pk.eyJ1IjoiZGVueTIyIiwiYSI6ImNqaHU2aDZ2MzA3MjEza3BpbDA5cWQyNDEifQ.SNmUHNN6YhvH5ATUQSTeJQ", // your access token. Needed if you using Mapbox maps
-      mapStyle: "mapbox://styles/mapbox/dark-v10", // your map style
-      store,
-      viewMode,
-    };
-  },
+const { postData } = apiRequest();
+
+onMounted(() => {
+  getMSUserDetail();
 });
+
+const getMSUserDetail = async () => {
+  const data = await postData(
+    "get",
+    null,
+    null,
+    false,
+    false,
+    false,
+    process.env.GRAPH_API + "me/calendar/events",
+    true
+  );
+
+  console.log(process.env.GRAPH_API + store.getMSLogDet.localAccountId);
+
+  if (data) {
+    mainEvent.value = data.value;
+  }
+};
+
+// Providers.globalProvider = new Msal2Provider({
+//   clientId: "fad753b2-465c-4663-b44b-50aabeb3a4ed",
+// });
 </script>
-<!-- <style scoped src="https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css">
-</style> -->

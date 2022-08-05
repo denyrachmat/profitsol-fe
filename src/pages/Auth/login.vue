@@ -90,6 +90,7 @@ import { HelpersComponent } from "../../components/HelpersComponent";
 import { defineComponent, ref } from "vue";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { useAuthStore } from "stores/authStore";
+import { Providers, Msal2Provider } from "@microsoft/mgt";
 
 export default defineComponent({
   name: "login",
@@ -178,15 +179,27 @@ export default defineComponent({
     async SignInMs() {
       await this.$msalInstance
         .loginPopup({})
-        .then(() => {
+        .then(async (val) => {
           const myAccounts = this.$msalInstance.getAllAccounts();
           const logs = myAccounts[0];
-          console.log(logs.idTokenClaims.rh);
+          const tokenRequest = {
+            scopes: ["user.read", "mail.send"],
+          };
 
-          this.username = logs.username;
-          this.password = logs.idTokenClaims.rh;
+          const dataToken = await this.$msalInstance.acquireTokenPopup(
+            tokenRequest
+          );
 
-          this.onSubmit();
+          if (dataToken) {
+            this.store.storeMSTokenDet(dataToken);
+
+            this.store.storeMSLoginDet(logs);
+
+            this.username = logs.username;
+            this.password = logs.idTokenClaims.rh;
+
+            this.onSubmit();
+          }
         })
         .catch((error) => {
           this.$q.notify({

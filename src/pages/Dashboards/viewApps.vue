@@ -8,9 +8,10 @@
   >
     <q-card class="q-dialog-plugin">
       <q-bar>
+        {{ title }}
         <q-space />
 
-        <q-btn
+        <!-- <q-btn
           dense
           flat
           icon="minimize"
@@ -31,7 +32,7 @@
           <q-tooltip v-if="!maximizedToggle" class="bg-white text-primary"
             >Maximize</q-tooltip
           >
-        </q-btn>
+        </q-btn> -->
         <q-btn dense flat icon="close" v-close-popup>
           <q-tooltip class="bg-white text-primary">Close</q-tooltip>
         </q-btn>
@@ -42,17 +43,35 @@
           :src="dataProps"
           class="full-width window-height"
         ></iframe>
+        <component :is="dyne" v-else />
+        <!-- <router-view v-else name="apps" /> -->
       </q-card-section>
     </q-card>
   </q-dialog>
 </template>
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, defineAsyncComponent, computed } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
+import { useRouter } from "vue-router";
 
+import DMSUploadDocument from "../DMS/uploadDocument.vue";
+
+const router = useRouter();
 const props = defineProps({
   dataProps: String,
+  title: String,
   // ...your custom props
+});
+
+const url = ref("");
+
+onMounted(async () => {
+  url.value = props.dataProps;
+});
+
+const dyne = computed(() => {
+  const urlCompile = "../" + url.value + ".vue";
+  return defineAsyncComponent(() => import("../" + url.value + ".vue"));
 });
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =

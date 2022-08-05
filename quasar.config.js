@@ -15,7 +15,7 @@ const { configure } = require("quasar/wrappers");
 module.exports = configure(function (ctx) {
   return {
     // https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
-    supportTS: false,
+    supportTS: true,
 
     // https://v2.quasar.dev/quasar-cli-webpack/prefetch-feature
     // preFetch: true,
@@ -52,14 +52,17 @@ module.exports = configure(function (ctx) {
         MS_CLIENTID: "fad753b2-465c-4663-b44b-50aabeb3a4ed",
         MS_AUTHORITY:
           "https://login.microsoftonline.com/0891bc2a-866c-4709-950d-c2d0ef23bbe7",
+        GRAPH_API: "https://graph.microsoft.com/v1.0/",
       },
-      // transpile: false,
+      transpile: true,
       // publicPath: '/',
 
       // Add dependencies for transpiling with Babel (Array of string/regex)
       // (from node_modules, which are by default not transpiled).
       // Applies only if "transpile" is set to true.
-      // transpileDependencies: [],
+      transpileDependencies: [
+        /[\\/]node_modules[\\/]@microsoft[\\/]mgt-components.*/,
+      ],
 
       // rtl: true, // https://quasar.dev/options/rtl-support
       // preloadChunks: true,
