@@ -37,15 +37,14 @@
           <q-tooltip class="bg-white text-primary">Close</q-tooltip>
         </q-btn>
       </q-bar>
-      <q-card-section class="q-pa-md">
+      <div>
         <iframe
           v-if="dataProps.includes('http')"
           :src="dataProps"
           class="full-width window-height"
         ></iframe>
         <component :is="dyne" v-else />
-        <!-- <router-view v-else name="apps" /> -->
-      </q-card-section>
+      </div>
     </q-card>
   </q-dialog>
 </template>
