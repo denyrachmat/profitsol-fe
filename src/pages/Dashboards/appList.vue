@@ -11,6 +11,7 @@
             <q-breadcrumbs-el
               label="Home"
               icon="home"
+              class="cursor-pointer"
               @click="clickedApp = []"
             />
             <q-breadcrumbs-el
@@ -21,6 +22,11 @@
                 clickedApp
               )"
               :key="idx + 'bc'"
+              class="cursor-pointer"
+              @click="
+                console.log(clickedApp);
+                console.log(clickedApp.splice(idx));
+              "
             />
           </q-breadcrumbs>
         </div>
