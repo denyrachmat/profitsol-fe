@@ -2,11 +2,15 @@
   <q-list
     bordered
     separator
-    class="full-width"
+    class="full-width bg-white"
     v-for="(element, idx) in dataProps"
     :key="idx"
   >
-    <q-item v-if="element.child_roles.length === 0" clickable>
+    <q-item
+      v-if="element.child_roles.length === 0"
+      clickable
+      @click="chooseApp(element)"
+    >
       <q-item-section avatar>
         <q-avatar :icon="element.apps.am_app_icon" />
       </q-item-section>
@@ -22,6 +26,7 @@
       :label="element.apps.am_app_name"
       :caption="element.apps.am_app_desc"
       :content-inset-level="1"
+      default-opened
       v-else
     >
       <appListRows :dataProps="element.child_roles" />
@@ -31,8 +36,11 @@
 <script setup>
 import draggable from "vuedraggable";
 import { ref, onMounted, watch } from "vue";
-import { useDialogPluginComponent, date } from "quasar";
+import { useDialogPluginComponent, date, useQuasar } from "quasar";
 
+import viewApps from "./viewApps.vue";
+
+const $q = useQuasar();
 const dataHasil = ref(null);
 
 const props = defineProps({
@@ -43,4 +51,18 @@ const props = defineProps({
 onMounted(() => {
   dataHasil.value = props.dataProps;
 });
+
+const chooseApp = (val) => {
+  // console.log(val);
+  $q.dialog({
+    component: viewApps,
+
+    // props forwarded to your custom component
+    componentProps: {
+      dataProps: val.apps.am_app_url,
+      title: val.apps.am_app_name,
+      // ...more..props...
+    },
+  }).onOk(async (val) => {});
+};
 </script>
