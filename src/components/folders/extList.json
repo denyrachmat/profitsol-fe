@@ -1,0 +1,87 @@
+[
+  {
+    "ext": "xls",
+    "icon": "la-file-excel",
+    "color": "green"
+  },
+  {
+    "ext": "xlsx",
+    "icon": "la-file-excel",
+    "color": "green"
+  },
+  {
+    "ext": "xlsm",
+    "icon": "la-file-excel",
+    "color": "green"
+  },
+  {
+    "ext": "xlsb",
+    "icon": "la-file-excel",
+    "color": "green"
+  },
+  {
+    "ext": "doc",
+    "icon": "la-file-word",
+    "color": "blue"
+  },
+  {
+    "ext": "docx",
+    "icon": "la-file-word",
+    "color": "blue"
+  },
+  {
+    "ext": "docm",
+    "icon": "la-file-word",
+    "color": "blue"
+  },
+  {
+    "ext": "csv",
+    "icon": "la-file-csv",
+    "color": "green"
+  },
+  {
+    "ext": "html",
+    "icon": "la-file-code",
+    "color": "orange"
+  },
+  {
+    "ext": "htm",
+    "icon": "la-file-code",
+    "color": "orange"
+  },
+  {
+    "ext": "mp3",
+    "icon": "la-file-audio",
+    "color": "indigo"
+  },
+  {
+    "ext": "wav",
+    "icon": "la-file-audio",
+    "color": "indigo"
+  },
+  {
+    "ext": "mp4",
+    "icon": "la-file-video",
+    "color": "grey"
+  },
+  {
+    "ext": "3gp",
+    "icon": "la-file-video",
+    "color": "grey"
+  },
+  {
+    "ext": "flv",
+    "icon": "la-file-video",
+    "color": "grey"
+  },
+  {
+    "ext": "mkv",
+    "icon": "la-file-video",
+    "color": "grey"
+  },
+  {
+    "ext": "pdf",
+    "icon": "la-file-pdf",
+    "color": "red"
+  }
+]

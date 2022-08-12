@@ -23,10 +23,7 @@
               )"
               :key="idx + 'bc'"
               class="cursor-pointer"
-              @click="
-                console.log(clickedApp);
-                console.log(clickedApp.splice(idx));
-              "
+              @click="goToNav(idx)"
             />
           </q-breadcrumbs>
         </div>
@@ -98,9 +95,6 @@ const clickedApp = ref([]);
 const searchApp = ref("");
 
 const listMenu = computed(() => {
-  console.log(
-    findApps(store.getChoosedRole.role.role_app_map, clickedApp.value)
-  );
   return clickedApp.value.length === 0
     ? store.getChoosedRole.role.role_app_map
     : findApps(store.getChoosedRole.role.role_app_map, clickedApp.value)[0];
@@ -147,5 +141,12 @@ const chooseApp = (val) => {
   } else {
     clickedApp.value = [...clickedApp.value, val.apps.am_app_code];
   }
+};
+
+const goToNav = (idx) => {
+  const datanya = clickedApp.value;
+  datanya.splice(idx + 1, clickedApp.value.length - (idx + 1));
+
+  clickedApp.value = datanya;
 };
 </script>

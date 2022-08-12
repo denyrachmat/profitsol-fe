@@ -183,10 +183,16 @@ export default defineComponent({
           const myAccounts = this.$msalInstance.getAllAccounts();
           const logs = myAccounts[0];
           const tokenRequest = {
-            scopes: ["user.read", "mail.send"],
+            scopes: [
+              "user.read",
+              "mail.send",
+              "files.read.All",
+              "sites.read.all",
+            ],
+            account: logs.username,
           };
 
-          const dataToken = await this.$msalInstance.acquireTokenPopup(
+          const dataToken = await this.$msalInstance.acquireTokenSilent(
             tokenRequest
           );
 
