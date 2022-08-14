@@ -46,7 +46,14 @@
   </div>
 </template>
 <script setup>
-import { defineProps, ref, onMounted, useContext, defineEmits } from "vue";
+import {
+  defineProps,
+  ref,
+  onMounted,
+  useContext,
+  defineEmits,
+  watch,
+} from "vue";
 import extList from "./extList.json";
 
 const selectedFolder = ref([]);
@@ -60,7 +67,11 @@ const props = defineProps({
   // ...your custom props
 });
 
-const emit = defineEmits(["onSelectItem", "onMountedDone"]);
+const emit = defineEmits([
+  "onSelectItem",
+  "onMountedDone",
+  "onSelectedFileFolder",
+]);
 
 onMounted(() => {
   emit("onMountedDone", true);
@@ -75,6 +86,13 @@ const getIcon = (filename) => {
 
   return getfileIcon[0];
 };
+
+watch(
+  () => JSON.stringify(selectedFolder.value),
+  (val) => {
+    emit("onSelectedFileFolder", JSON.parse(val));
+  }
+);
 
 const clickedFolder = (val) => {
   // selectedFolder.value = val;

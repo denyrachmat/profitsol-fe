@@ -2,53 +2,31 @@
   <q-dialog
     ref="dialogRef"
     @hide="onDialogHide"
-    maximized
     transition-show="slide-up"
     transition-hide="slide-down"
   >
     <q-card class="q-dialog-plugin">
-      <q-bar>
-        {{ title }}
-        <q-space />
-        <q-btn dense flat icon="close" v-close-popup>
-          <q-tooltip class="bg-white text-primary">Close</q-tooltip>
-        </q-btn>
-      </q-bar>
-      <div>
-        <iframe
-          v-if="dataProps.includes('http')"
-          :src="dataProps"
-          class="full-width window-height"
-        ></iframe>
-        <component :is="dyne" v-else />
-      </div>
+      <VuePdfEmbed v-if="getExt === 'pdf'" />
     </q-card>
   </q-dialog>
 </template>
 <script setup>
 import { ref, onMounted, defineAsyncComponent, computed } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
-import { useRouter } from "vue-router";
 
-import DMSUploadDocument from "../DMS/uploadDocument.vue";
+import VuePdfEmbed from "vue-pdf-embed";
 
-const router = useRouter();
 const props = defineProps({
-  dataProps: String,
+  base64File: String,
   title: String,
   // ...your custom props
 });
 
-const url = ref("");
+const getExt = () => {
+  const exp = props.title.split(".");
 
-onMounted(async () => {
-  url.value = props.dataProps;
-});
-
-const dyne = computed(() => {
-  const urlCompile = "../" + url.value + ".vue";
-  return defineAsyncComponent(() => import("../" + url.value + ".vue"));
-});
+  return exp[exp.length - 1];
+};
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
@@ -63,7 +41,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 function onOKClick() {
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
-  onDialogOK(dataHasil);
+  onDialogOK();
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
 }

@@ -28,6 +28,7 @@
     "tiny-emitter": "^2.1.0",
     "vue": "^3.0.0",
     "vue-mapbox": "^0.4.1",
+    "vue-pdf-embed": "^1.1.4",
     "vue-router": "^4.0.0",
     "vuedraggable": "^4.1.0"
   },
