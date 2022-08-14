@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row">
       <div class="col">
-        <q-input label="Search file / Folder" outlined dense />
+        <q-input label="Search file / Folder" outlined dense v-model="search" />
       </div>
       <div class="col-2 text-right">
         <q-btn-group spread flat>
@@ -14,7 +14,7 @@
             @click="addFolder()"
           />
 
-          <template v-if="selectedItems.length > 0">
+          <template v-if="selectedItems.length > 0 || selectedFiles.length > 0">
             <q-btn flat color="orange" icon="edit" />
             <q-btn flat color="red" icon="delete" @click="deleteItemsCheck()" />
           </template>
@@ -48,14 +48,25 @@
         </q-breadcrumbs>
       </div>
     </div>
-    <div class="row">
+    <div class="row" style="height: 78vh">
       <div class="col">
+        <q-menu touch-position context-menu>
+          <q-list dense style="min-width: 100px">
+            <q-item clickable v-close-popup @click="uploadExcel">
+              <q-item-section>Upload Files...</q-item-section>
+            </q-item>
+            <q-item clickable v-close-popup @click="addFolder">
+              <q-item-section>New Folder</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
         <tilesView
           :folders="folders"
           :files="files"
           @onSelectItem="onSelectFiles"
           @onMountedDone="checkMounted"
           @onSelectedFileFolder="selectedItem"
+          @onSelectedFilesCheck="selectedFile"
           :key="refresher"
         />
       </div>
@@ -79,6 +90,7 @@ import { useQuasar } from "quasar";
 import uploadPhoto from "../../components/uploadPhoto";
 
 import tilesView from "src/components/folders/tilesView.vue";
+import openFiles from "src/components/files/openFiles.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -90,11 +102,15 @@ const refresher = ref(0);
 const selectedPath = ref([]);
 const isLoading = ref(false);
 const selectedItems = ref([]);
+const selectedFiles = ref([]);
+const search = ref("");
 
 const selectedItem = (val) => {
   selectedItems.value = val;
-  // refresher.value = refresher.value + 1;
-  // console.log(selectedItems.value);
+};
+
+const selectedFile = (val) => {
+  selectedFiles.value = val;
 };
 
 const getData = async () => {
@@ -102,7 +118,7 @@ const getData = async () => {
   const data = await postData(
     "get",
     null,
-    `dms/documents/${store.authDet.username}`,
+    `dms/folders/${store.authDet.username}`,
     false,
     false,
     true
@@ -141,7 +157,12 @@ watch(
   }
 );
 
-const onSelectFiles = (val) => {
+watch(
+  () => search,
+  () => {}
+);
+
+const onSelectFiles = async (val) => {
   if (val.child_folders) {
     isLoading.value = true;
     selectedPath.value = [...selectedPath.value, val.id];
@@ -149,7 +170,30 @@ const onSelectFiles = (val) => {
     files.value = val.doc;
     refresher.value = refresher.value + 1;
   } else {
-    console.log(val);
+    const getFiles = await postData(
+      "get",
+      null,
+      `dms/documents/${val.id}`,
+      false,
+      false,
+      true
+    );
+
+    if (getFiles) {
+      console.log(getFiles);
+      $q.dialog({
+        component: openFiles,
+
+        // props forwarded to your custom component
+        componentProps: {
+          base64File: getFiles.data,
+          title: val.ddm_doc_real_name,
+          // ...more..props...
+        },
+      }).onOk(async (val) => {
+        console.log(val);
+      });
+    }
   }
 };
 
@@ -210,6 +254,23 @@ const uploadExcel = () => {
     },
   }).onOk(async (val) => {
     console.log(val);
+    const stored = await postData(
+      "post",
+      {
+        p_u_username: store.authDet.username,
+        dfm_id: selectedPath.value[selectedPath.value.length - 1],
+        fileName: val.fileName,
+        file_all: val.result,
+      },
+      `dms/documents`,
+      false,
+      false,
+      true
+    );
+
+    if (stored) {
+      refreshCurrentPath();
+    }
   });
 };
 
@@ -241,58 +302,79 @@ const addFolder = () => {
     );
 
     if (datas) {
-      const getData = await getData();
+      const getDatas = await getData();
 
-      if (getData) {
-        isLoading.value = false;
-        refresher.value = refresher.value + 1;
+      if (getDatas) {
+        refreshCurrentPath();
       }
     }
   });
 };
 
+const refreshCurrentPath = async () => {
+  const getDatas = await getData();
+
+  if (getDatas) {
+    isLoading.value = false;
+    rootData.value = getDatas.data;
+
+    const getSelected = selectedPath.value;
+    const foldernya = findChoosedFolder(
+      rootData.value.child_folders,
+      getSelected
+    );
+
+    folders.value = foldernya[foldernya.length - 1].child_folders;
+    files.value = foldernya[foldernya.length - 1].doc;
+    refresher.value = refresher.value + 1;
+  }
+};
+
 const deleteItemsCheck = () => {
   $q.dialog({
     title: "Delte Folder",
-    message: "Are you sure want to delete selected folder ?",
+    message: "Are you sure want to delete selected items ?",
     cancel: true,
   }).onOk(() => {
-    const getDataFolder = findChoosedFolder(
-      rootData.value.child_folders,
-      selectedItems.value
-    );
-    const checkNotEmpty = getDataFolder[getDataFolder.length - 1];
-
-    console.log(getDataFolder);
-
-    if (checkNotEmpty.child_folders.length > 0) {
-      $q.dialog({
-        title: "Confirmation",
-        message:
-          "One of selected folder is not empty, are you sure want to delete this folder ? (This action irreversible)",
-        cancel: true,
-      }).onOk(() => {
+    if (selectedItems.value.length > 0) {
+      const getDataFolder = findChoosedFolder(
+        rootData.value.child_folders,
+        selectedItems.value
+      );
+      const checkNotEmpty = getDataFolder[getDataFolder.length - 1];
+      if (checkNotEmpty.child_folders.length > 0) {
+        $q.dialog({
+          title: "Confirmation",
+          message:
+            "One of selected folder is not empty, are you sure want to delete this folder ? (This action irreversible)",
+          cancel: true,
+        }).onOk(() => {
+          deleteItems(selectedItems.value);
+        });
+      } else {
         deleteItems(selectedItems.value);
-      });
+      }
     } else {
-      deleteItems(selectedItems.value);
+      deleteItems(
+        selectedPath.value[selectedPath.value.length - 1],
+        selectedFiles.value
+      );
     }
   });
 };
 
-const deleteItems = async (id) => {
+const deleteItems = async (id, idFiles = null) => {
   const datas = await postData(
     "delete",
     null,
-    `dms/folders/${btoa(id)}`,
+    !idFiles ? `dms/folders/${btoa(id)}` : `dms/documents/${btoa(idFiles)}`,
     false,
     false,
     true
   );
 
   if (datas) {
-    getData();
-    refresher.value = refresher.value + 1;
+    refreshCurrentPath();
   }
 };
 </script>

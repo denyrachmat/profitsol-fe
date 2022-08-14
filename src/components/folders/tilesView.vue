@@ -29,12 +29,19 @@
         :key="'doc' + idx"
         @click="clickedFolder(doc)"
       >
-        <div>
-          <q-icon
-            size="5em"
-            :color="getIcon(doc.ddm_doc_real_name).color"
-            :name="`las ${getIcon(doc.ddm_doc_real_name).icon}`"
-          />
+        <div class="row">
+          <div class="col-4">
+            <q-checkbox v-model="selectedFiles" size="xs" :val="doc.id" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col text-center">
+            <q-icon
+              size="5em"
+              :color="getIcon(doc.ddm_doc_real_name).color"
+              :name="`las ${getIcon(doc.ddm_doc_real_name).icon}`"
+            />
+          </div>
         </div>
         <div>
           <span class="text-bold text-center" style="word-wrap: break-word">
@@ -57,6 +64,7 @@ import {
 import extList from "./extList.json";
 
 const selectedFolder = ref([]);
+const selectedFiles = ref([]);
 const folderList = ref([]);
 const folders = ref([]);
 const files = ref([]);
@@ -71,6 +79,7 @@ const emit = defineEmits([
   "onSelectItem",
   "onMountedDone",
   "onSelectedFileFolder",
+  "onSelectedFilesCheck",
 ]);
 
 onMounted(() => {
@@ -91,6 +100,13 @@ watch(
   () => JSON.stringify(selectedFolder.value),
   (val) => {
     emit("onSelectedFileFolder", JSON.parse(val));
+  }
+);
+
+watch(
+  () => JSON.stringify(selectedFiles.value),
+  (val) => {
+    emit("onSelectedFilesCheck", JSON.parse(val));
   }
 );
 

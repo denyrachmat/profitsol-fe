@@ -50,6 +50,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 //                    example: onDialogOK({ /*.../* }) - with payload
 // onDialogCancel - Function to call to settle dialog with "cancel" outcome
 const result = ref([]);
+const resultFileName = ref([]);
 
 function factoryFn(val) {
   // result.value = convertBase64(val).result;
@@ -78,9 +79,10 @@ const convertBase64 = (filenya, callback) => {
   // }
 
   reader.readAsDataURL(filenya[0]);
-  reader.onload = function () {
+  reader.onload = function (readerEvt) {
     hasil = reader.result;
     result.value = [...result.value, reader.result];
+    resultFileName.value = [...resultFileName.value, filenya[0].name];
   };
   reader.onerror = function (error) {
     return `Error: ${error}`;
@@ -94,6 +96,7 @@ const onOKClick = () => {
   // call onDialogOK (with optional payload)
   onDialogOK({
     result: props.multiple ? result.value : result.value[0],
+    fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
