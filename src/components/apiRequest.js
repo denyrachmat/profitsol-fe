@@ -116,6 +116,10 @@ const apiRequest = () => {
             router.push("/login");
           }
 
+          if (e.response.status == 499) {
+            window.open(apiURL, "_blank");
+          }
+
           if (e.response.status == 500) {
             $q.notify({
               color: "negative",
