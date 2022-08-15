@@ -91,7 +91,9 @@ onMounted(() => {
 
 const getIcon = (filename) => {
   const splitter = filename.split(".");
-  const getfileIcon = extList.filter((fil) => fil.ext === splitter[1]);
+  const getfileIcon = extList.filter(
+    (fil) => fil.ext === splitter[splitter.length - 1]
+  );
 
   return getfileIcon[0];
 };
