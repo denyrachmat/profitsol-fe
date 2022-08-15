@@ -136,15 +136,17 @@ export default defineComponent({
   },
   methods: {
     async logout() {
-      const logoutRequest = {
-        account: this.store.authDet.username,
-      };
+      if (this.store.msLoginDet.length !== 0) {
+        const logoutRequest = {
+          account: this.store.authDet.username,
+        };
 
-      console.log(this.$msalInstance);
-      const loggerout = await this.$msalInstance.logout();
-      if (loggerout) {
-        console.log(loggerout);
+        const loggerout = await this.$msalInstance.logout();
+        if (loggerout) {
+          console.log(loggerout);
+        }
       }
+
       this.store.logoutAction;
       this.$router.push("/login");
     },

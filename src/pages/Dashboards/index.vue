@@ -169,6 +169,7 @@ const mainEvent = ref([]);
 const { postData } = apiRequest();
 
 onMounted(() => {
+  console.log(Object.values(store.msLoginDet));
   if (Object.values(store.msLoginDet).length > 0) {
     getMSUserDetail();
   }

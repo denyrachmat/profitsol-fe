@@ -112,6 +112,7 @@ const apiRequest = () => {
               color: "negative",
               message: "You need to login to access this function!",
             });
+            store.logoutAction();
             localStorage.clear();
             router.push("/login");
           }

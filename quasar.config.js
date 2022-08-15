@@ -47,7 +47,7 @@ module.exports = configure(function (ctx) {
       vueRouterMode: "hash", // available values: 'hash', 'history'
       env: {
         API: ctx.dev
-          ? "http://localhost/v2-stx-api/public/api/"
+          ? "http://localhost/stx-api/public/api/"
           : "https://192.168.100.32/stx_api_v2/public/api/",
         MS_CLIENTID: "fad753b2-465c-4663-b44b-50aabeb3a4ed",
         MS_AUTHORITY:

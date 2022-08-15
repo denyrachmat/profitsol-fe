@@ -140,7 +140,7 @@ onMounted(async () => {
     refresher.value = refresher.value + 1;
   }
 
-  if (store.msLoginDet) {
+  if (store.msLoginDet.length > 0) {
     getMSOneDriveFolder();
   }
   // findChoosedFolder(folders, selectedPath);
