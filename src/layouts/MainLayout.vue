@@ -9,6 +9,7 @@
           icon="menu"
           aria-label="Menu"
           @click="toggleLeftDrawer"
+          v-if="store.choosedRoles && store.choosedRoles.id === 1"
         />
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
         <q-toolbar-title> PT Sumitronics Indonesia </q-toolbar-title>
@@ -17,7 +18,7 @@
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
             <q-list style="min-width: 100px">
-              <q-item clickable v-close-popup>
+              <q-item clickable v-close-popup @click="changePassword()">
                 <q-item-section>Change Password</q-item-section>
               </q-item>
               <q-item clickable v-close-popup @click="logout()">
@@ -52,6 +53,11 @@ import { defineComponent, ref } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import { useAuthStore } from "stores/authStore";
 import { Providers, Msal2Provider, ProviderState } from "@microsoft/mgt";
+import { useQuasar } from "quasar";
+import { PublicClientApplication } from "@azure/msal-browser";
+
+import ChangePasswordVue from "src/pages/Dashboards/changePassword.vue";
+
 const linksList = [
   {
     title: "Users Setup",
@@ -78,11 +84,14 @@ export default defineComponent({
 
   components: {
     EssentialLink,
+    // eslint-disable-next-line vue/no-unused-components
+    ChangePasswordVue,
   },
 
   setup() {
     const leftDrawerOpen = ref(false);
     const store = useAuthStore();
+    const $q = useQuasar();
 
     return {
       essentialLinks: linksList,
@@ -91,11 +100,16 @@ export default defineComponent({
         leftDrawerOpen.value = !leftDrawerOpen.value;
       },
       store,
+      $q,
     };
   },
+  beforeCreate() {
+    console.log(this.authDetail);
+  },
   created() {
-    // console.log(JSON.stringify(this.authDetail));
-    if (this.authDetail.length === 0) {
+    console.log(JSON.stringify(this.authDetail));
+    if (!this.authDetail || this.authDetail.length === 0) {
+      console.log("masuk sini");
       this.$router.push("/login");
     }
 
@@ -104,6 +118,16 @@ export default defineComponent({
 
       console.log(ProviderState.SignedIn);
     }
+
+    this.$msalInstance = new PublicClientApplication({
+      auth: {
+        clientId: process.env.MS_CLIENTID,
+        authority: process.env.MS_AUTHORITY,
+      },
+      cache: {
+        cacheLocation: "localStorage",
+      },
+    });
   },
   computed: {
     authDetail() {
@@ -111,9 +135,33 @@ export default defineComponent({
     },
   },
   methods: {
-    logout() {
+    async logout() {
+      const logoutRequest = {
+        account: this.store.authDet.username,
+      };
+
+      console.log(this.$msalInstance);
+      const loggerout = await this.$msalInstance.logout();
+      if (loggerout) {
+        console.log(loggerout);
+      }
       this.store.logoutAction;
       this.$router.push("/login");
+    },
+    changePassword() {
+      this.$q
+        .dialog({
+          component: ChangePasswordVue,
+
+          // props forwarded to your custom component
+          componentProps: {
+            title: "Upload Documents",
+            // ...more..props...
+          },
+        })
+        .onOk(async (val) => {
+          console.log(val);
+        });
     },
   },
 });

@@ -3,7 +3,7 @@
   <div class="q-pa-sm">
     <div class="row q-py-sm">
       <div class="col-12 col-sm-3 q-pa-sm">
-        <q-card class="my-card">
+        <q-card class="my-card" v-if="store.getDetail">
           <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg">
             <div class="text-center full-width full-height">
               <q-avatar
@@ -39,8 +39,12 @@
 
             <div class="row no-wrap items-center">
               <div class="col text-h6 ellipsis">
-                {{ store.getDetail.user_det.pud_first_name }}
-                {{ store.getDetail.user_det.pud_last_name }}
+                {{
+                  store.authDet ? store.getDetail.user_det.pud_first_name : ""
+                }}
+                {{
+                  store.authDet ? store.getDetail.user_det.pud_last_name : ""
+                }}
               </div>
               <div
                 class="
@@ -80,7 +84,19 @@
                   <strong class="text-h5 text-bold">Meeting Schedule</strong>
                 </div>
                 <div style="overflow: scroll; max-height: 50em">
-                  <eventList :events="mainEvent" />
+                  <eventList
+                    :events="mainEvent"
+                    v-if="Object.values(store.msLoginDet).length > 0"
+                  />
+                  <div v-else class="text-center q-pa-md" style="height: 20em">
+                    <q-btn
+                      icon="ion-logo-windows"
+                      label=" Login with Microsoft"
+                      @click="SignInMs"
+                      color="blue-5"
+                      outline
+                    ></q-btn>
+                  </div>
                 </div>
               </div>
               <div class="col-12 col-md-6 q-pl-sm">
@@ -122,7 +138,7 @@
           </div>
           <div class="row q-px-md">
             <div class="col">
-              <appListVue :mode="viewMode" />
+              <appListVue :mode="viewMode" v-if="store.getChoosedRole" />
             </div>
           </div>
         </div>
@@ -153,7 +169,14 @@ const mainEvent = ref([]);
 const { postData } = apiRequest();
 
 onMounted(() => {
-  getMSUserDetail();
+  if (Object.values(store.msLoginDet).length > 0) {
+    getMSUserDetail();
+  }
+
+  if (!store.authDet) {
+    console.log("masuk sini");
+    this.$router.push("login");
+  }
 });
 
 const getMSUserDetail = async () => {

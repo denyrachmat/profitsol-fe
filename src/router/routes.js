@@ -1,6 +1,11 @@
 /* eslint-disable */
 const routes = [
   {
+    path: "/login",
+    component: () => import("pages/Auth"),
+    children: [{ path: "", component: () => import("pages/Auth/index.vue") }],
+  },
+  {
     path: "/",
     component: () => import("layouts/MainLayout.vue"),
     children: [
@@ -31,10 +36,6 @@ const routes = [
         component: () => import("pages/Settings/Role/index.vue"),
       },
     ],
-  },
-  {
-    path: "/login",
-    component: () => import("pages/Auth"),
   },
   {
     path: "/dms/",

@@ -106,8 +106,7 @@ export default defineComponent({
     };
   },
   created() {
-    // console.log(JSON.stringify(this.authDetail));
-    if (this.authDetail.length > 0) {
+    if (this.authDetail && this.authDetail.length > 0) {
       this.$router.push("/");
     }
     // else if (!this.$q.localStorage.has("LoggedOut")) {
@@ -129,8 +128,6 @@ export default defineComponent({
     if (accounts.length == 0) {
       return;
     }
-
-    console.log(accounts[0]);
   },
   computed: {
     authDetail() {

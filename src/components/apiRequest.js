@@ -77,7 +77,7 @@ const apiRequest = () => {
         if (e.response) {
           if (e.response.status == 422) {
             // console.log(e.response.data);
-            let errors = e.response.data.message;
+            let errors = e.response.data.errors;
             if (errors) {
               Object.keys(errors).map((val) => {
                 errors[val].map((val_det) => {
@@ -129,6 +129,40 @@ const apiRequest = () => {
     if (req) {
       return req;
     }
+  };
+
+  const SignInMs = async () => {
+    await this.$msalInstance
+      .loginPopup({})
+      .then(async (val) => {
+        const myAccounts = this.$msalInstance.getAllAccounts();
+        const logs = myAccounts[0];
+        const tokenRequest = {
+          scopes: ["user.read", "mail.send"],
+          account: logs.username,
+        };
+
+        const dataToken = await this.$msalInstance.acquireTokenSilent(
+          tokenRequest
+        );
+
+        if (dataToken) {
+          store.storeMSTokenDet(dataToken);
+
+          store.storeMSLoginDet(logs);
+
+          return {
+            username: logs.username,
+            password: logs.idTokenClaims.rh,
+          };
+        }
+      })
+      .catch((error) => {
+        $q.notify({
+          color: "negative",
+          message: `error during authentication: ${error}`,
+        });
+      });
   };
 
   return {

@@ -52,6 +52,9 @@ export const useAuthStore = defineStore("auth", {
     },
     logoutAction() {
       this.authDet = [];
+      this.msLoginDet = [];
+      this.msTokenDet = [];
+      this.isLoggedIn = false;
       this.toggleLoggedIn();
     },
   },
