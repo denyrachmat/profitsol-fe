@@ -6,6 +6,7 @@
         v-for="(folder, idx) in folders"
         :key="idx"
         @click="clickedFolder(folder)"
+        @contextmenu="(e) => rightClick(e, folder)"
       >
         <div class="row">
           <div class="col-4">
@@ -28,6 +29,7 @@
         v-for="(doc, idx) in files"
         :key="'doc' + idx"
         @click="clickedFolder(doc)"
+        @contextmenu="(e) => rightClick(e, doc)"
       >
         <div class="row">
           <div class="col-4">
@@ -80,6 +82,7 @@ const emit = defineEmits([
   "onMountedDone",
   "onSelectedFileFolder",
   "onSelectedFilesCheck",
+  "onRightClickItems",
 ]);
 
 onMounted(() => {
@@ -117,5 +120,10 @@ const clickedFolder = (val) => {
   // files.value = val.child_folders;
 
   emit("onSelectItem", val);
+};
+
+const rightClick = (e, val) => {
+  emit("onRightClickItems", val);
+  e.preventDefault();
 };
 </script>

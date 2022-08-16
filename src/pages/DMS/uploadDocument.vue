@@ -13,11 +13,26 @@
             icon="create_new_folder"
             @click="addFolder()"
           />
-
-          <template v-if="selectedItems.length > 0 || selectedFiles.length > 0">
-            <q-btn flat color="orange" icon="edit" />
-            <q-btn flat color="red" icon="delete" @click="deleteItemsCheck()" />
-          </template>
+          <q-btn
+            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            flat
+            color="orange"
+            icon="edit"
+          />
+          <q-btn
+            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            flat
+            color="red"
+            icon="delete"
+            @click="deleteItemsCheck()"
+          />
+          <q-btn
+            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            flat
+            color="brown"
+            icon="open_with"
+            @click="moveItems()"
+          />
         </q-btn-group>
       </div>
     </div>
@@ -50,16 +65,6 @@
     </div>
     <div class="row" style="height: 78vh">
       <div class="col">
-        <q-menu touch-position context-menu>
-          <q-list dense style="min-width: 100px">
-            <q-item clickable v-close-popup @click="uploadExcel">
-              <q-item-section>Upload Files...</q-item-section>
-            </q-item>
-            <q-item clickable v-close-popup @click="addFolder">
-              <q-item-section>New Folder</q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
         <tilesView
           :folders="folders"
           :files="files"
@@ -67,8 +72,49 @@
           @onMountedDone="checkMounted"
           @onSelectedFileFolder="selectedItem"
           @onSelectedFilesCheck="selectedFile"
+          @onRightClickItems="rightClickItem"
           :key="refresher"
         />
+
+        <q-menu touch-position context-menu @hide="onCloseContext">
+          <q-list dense style="min-width: 100px">
+            <q-item clickable v-close-popup @click="uploadExcel">
+              <q-item-section>Upload Files...</q-item-section>
+            </q-item>
+            <q-item clickable v-close-popup @click="addFolder">
+              <q-item-section>New Folder</q-item-section>
+            </q-item>
+
+            <q-separator />
+
+            <q-item
+              clickable
+              v-close-popup
+              @click="addFolder"
+              :disable="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            >
+              <q-item-section>Move Items</q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-close-popup
+              @click="renameItems"
+              :disable="
+                !(selectedItems.length === 1 || selectedFiles.length === 1)
+              "
+            >
+              <q-item-section>Rename</q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-close-popup
+              @click="addFolder"
+              :disable="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            >
+              <q-item-section>Delete</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
       </div>
       <div class="absolute text-center full-width">
         <q-spinner-cube color="orange" size="10em" v-if="isLoading" />
@@ -113,6 +159,19 @@ const selectedFile = (val) => {
   selectedFiles.value = val;
 };
 
+const rightClickItem = (val) => {
+  if (val.dfm_folder_name) {
+    selectedItems.value = [val.id];
+  } else {
+    selectedFiles.value = [val.id];
+  }
+};
+
+const onCloseContext = () => {
+  selectedItems.value = [];
+  selectedFiles.value = [];
+};
+
 const getData = async () => {
   isLoading.value = true;
   const data = await postData(
@@ -140,7 +199,10 @@ onMounted(async () => {
     refresher.value = refresher.value + 1;
   }
 
-  if (store.msLoginDet.length > 0) {
+  if (
+    store.msLoginDet.length > 0 &&
+    store.msLoginDet.username === store.authDet.username
+  ) {
     getMSOneDriveFolder();
   }
   // findChoosedFolder(folders, selectedPath);
@@ -172,6 +234,7 @@ const onSelectFiles = async (val) => {
     files.value = val.doc;
     refresher.value = refresher.value + 1;
   } else {
+    isLoading.value = true;
     const getFiles = await postData(
       "get",
       null,
@@ -182,6 +245,8 @@ const onSelectFiles = async (val) => {
     );
 
     if (getFiles) {
+      console.log(getFiles);
+      isLoading.value = false;
       console.log(getFiles);
       $q.dialog({
         component: openFiles,
@@ -213,6 +278,8 @@ const findChoosedFolder = (arr, id) => {
 };
 
 const checkMounted = (val) => {
+  selectedItems.value = [];
+  selectedFiles.value = [];
   isLoading.value = false;
 };
 
@@ -326,8 +393,15 @@ const refreshCurrentPath = async () => {
       getSelected
     );
 
-    folders.value = foldernya[foldernya.length - 1].child_folders;
-    files.value = foldernya[foldernya.length - 1].doc;
+    console.log(foldernya);
+
+    if (foldernya.length > 0) {
+      folders.value = foldernya[foldernya.length - 1].child_folders;
+      files.value = foldernya[foldernya.length - 1].doc;
+    } else {
+      folders.value = getDatas.data.child_folders;
+      files.value = getDatas.data.doc;
+    }
     refresher.value = refresher.value + 1;
   }
 };
@@ -378,5 +452,47 @@ const deleteItems = async (id, idFiles = null) => {
   if (datas) {
     refreshCurrentPath();
   }
+};
+
+const moveItems = () => {
+  console.log(selectedFiles.value);
+  console.log(selectedPath.value);
+};
+
+const renameItems = () => {
+  console.log(selectedItems.value);
+  console.log(selectedFiles.value);
+  const cariFolder = findChoosedFolder(
+    rootData.value.child_folders,
+    selectedFiles.value[0]
+  );
+
+  let data = 0;
+  let getFiles = null;
+  if (selectedItems.value.length === 1) {
+    data = cariFolder[0].dfm_folder_name;
+  }
+
+  if (selectedFiles.value.length === 1) {
+    console.log(cariFolder);
+    getFiles = cariFolder[0].doc.filter((fil) => {
+      fil.id === selectedFiles.value[0];
+    });
+
+    data = getFiles.ddm_doc_real_name;
+  }
+
+  $q.dialog({
+    title: "Rename Items",
+    message: "rename your items",
+    prompt: {
+      model: data,
+      type: "text", // optional
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (datas) => {
+    console.log(datas);
+  });
 };
 </script>

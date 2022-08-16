@@ -75,6 +75,7 @@ const apiRequest = () => {
         }
 
         if (e.response) {
+          console.log(e.response.status);
           if (e.response.status == 422) {
             // console.log(e.response.data);
             let errors = e.response.data.errors;
@@ -122,12 +123,15 @@ const apiRequest = () => {
           }
 
           if (e.response.status == 500) {
+            // window.open(apiURL, "_blank");
             $q.notify({
               color: "negative",
               message: e.response.data.message,
               timeout: 10000,
             });
           }
+
+          return e.response;
         }
       });
 

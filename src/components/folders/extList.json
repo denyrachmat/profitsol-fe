@@ -83,5 +83,25 @@
     "ext": "pdf",
     "icon": "la-file-pdf",
     "color": "red"
+  },
+  {
+    "ext": "db",
+    "icon": "la-file",
+    "color": "grey"
+  },
+  {
+    "ext": "ppt",
+    "icon": "la-file-powerpoint",
+    "color": "orange"
+  },
+  {
+    "ext": "pptx",
+    "icon": "la-file-powerpoint",
+    "color": "orange"
+  },
+  {
+    "ext": "pptm",
+    "icon": "la-file-powerpoint",
+    "color": "orange"
   }
 ]
