@@ -21,6 +21,11 @@
           class="full-width window-height"
         ></iframe>
         <component :is="dyne" v-else />
+
+        <GoogleSignInButton
+          @success="handleLoginSuccess"
+          @error="handleLoginError"
+        ></GoogleSignInButton>
       </div>
     </q-card>
   </q-dialog>
@@ -29,6 +34,8 @@
 import { ref, onMounted, defineAsyncComponent, computed } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
 import { useRouter } from "vue-router";
+
+import { GoogleSignInButton } from "vue3-google-signin";
 
 import DMSUploadDocument from "../DMS/uploadDocument.vue";
 
@@ -49,6 +56,15 @@ const dyne = computed(() => {
   const urlCompile = "../" + url.value + ".vue";
   return defineAsyncComponent(() => import("../" + url.value + ".vue"));
 });
+
+const handleLoginSuccess = () => {
+  const { credential } = response;
+  console.log("Access Token", credential);
+};
+// handle an error event
+const handleLoginError = () => {
+  console.error("Login failed");
+};
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();

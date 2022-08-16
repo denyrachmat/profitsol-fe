@@ -6,33 +6,44 @@
       </div>
       <div class="col-2 text-right">
         <q-btn-group spread flat>
-          <q-btn flat color="green" icon="upload" @click="uploadExcel" />
+          <q-btn flat color="green" icon="upload" @click="uploadExcel">
+            <q-tooltip> Upload Items </q-tooltip>
+          </q-btn>
           <q-btn
             flat
             color="cyan"
             icon="create_new_folder"
             @click="addFolder()"
-          />
-          <q-btn
-            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
-            flat
-            color="orange"
-            icon="edit"
-          />
+          >
+            <q-tooltip> New Folder </q-tooltip>
+          </q-btn>
+          <q-btn :disabled="true" flat color="orange" icon="edit" />
           <q-btn
             :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
             flat
             color="red"
             icon="delete"
             @click="deleteItemsCheck()"
-          />
+          >
+            <q-tooltip> Delete Items </q-tooltip>
+          </q-btn>
           <q-btn
-            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+            :disabled="true"
             flat
             color="brown"
             icon="open_with"
             @click="moveItems()"
-          />
+          >
+            <q-tooltip> Move Items </q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            color="primary"
+            icon="refresh"
+            @click="refreshCurrentPath()"
+          >
+            <q-tooltip> Refresh </q-tooltip></q-btn
+          >
         </q-btn-group>
       </div>
     </div>
@@ -84,15 +95,13 @@
             <q-item clickable v-close-popup @click="addFolder">
               <q-item-section>New Folder</q-item-section>
             </q-item>
+            <q-item clickable v-close-popup @click="refreshCurrentPath">
+              <q-item-section>Refresh</q-item-section>
+            </q-item>
 
             <q-separator />
 
-            <q-item
-              clickable
-              v-close-popup
-              @click="addFolder"
-              :disable="!(selectedItems.length > 0 || selectedFiles.length > 0)"
-            >
+            <q-item clickable v-close-popup @click="addFolder" :disable="true">
               <q-item-section>Move Items</q-item-section>
             </q-item>
             <q-item
@@ -107,8 +116,7 @@
             </q-item>
             <q-item
               clickable
-              v-close-popup
-              @click="addFolder"
+              @click="deleteItemsCheck()"
               :disable="!(selectedItems.length > 0 || selectedFiles.length > 0)"
             >
               <q-item-section>Delete</q-item-section>
@@ -408,7 +416,7 @@ const refreshCurrentPath = async () => {
 
 const deleteItemsCheck = () => {
   $q.dialog({
-    title: "Delte Folder",
+    title: "Delete Folder",
     message: "Are you sure want to delete selected items ?",
     cancel: true,
   }).onOk(() => {
@@ -464,9 +472,10 @@ const renameItems = () => {
   console.log(selectedFiles.value);
   const cariFolder = findChoosedFolder(
     rootData.value.child_folders,
-    selectedFiles.value[0]
+    selectedFiles.value
   );
 
+  console.log(cariFolder);
   let data = 0;
   let getFiles = null;
   if (selectedItems.value.length === 1) {
