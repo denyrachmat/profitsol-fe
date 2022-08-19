@@ -103,5 +103,20 @@
     "ext": "pptm",
     "icon": "la-file-powerpoint",
     "color": "orange"
+  },
+  {
+    "ext": "zip",
+    "icon": "la-file-archive",
+    "color": "grey"
+  },
+  {
+    "ext": "rar",
+    "icon": "la-file-archive",
+    "color": "grey"
+  },
+  {
+    "ext": "7z",
+    "icon": "la-file-archive",
+    "color": "grey"
   }
 ]

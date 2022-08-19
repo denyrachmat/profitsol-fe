@@ -20,9 +20,19 @@
           </div>
         </div>
       </div>
-      <div class="row bg-white text-center q-pt-md" style="bottom: 0">
-        <div class="col-5 text-right">
-          <q-btn dense icon="zoom_out" @click="zoom = zoom - 10" />
+      <div class="row bg-white q-pt-md" style="bottom: 0">
+        <div class="col-5">
+          <div class="row">
+            <div class="col">
+              <GoogleSignInButton
+                @success="handleLoginSuccess"
+                @error="handleLoginError"
+              ></GoogleSignInButton>
+            </div>
+            <div class="col text-right">
+              <q-btn dense icon="zoom_out" @click="zoom = zoom - 10" />
+            </div>
+          </div>
         </div>
         <div class="col q-px-lg">
           <q-slider v-model="zoom" :min="0" :max="100" style="width: 50%" />
@@ -50,6 +60,8 @@
 <script setup>
 import { ref, onMounted, defineAsyncComponent, computed, watch } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
+
+import { GoogleSignInButton } from "vue3-google-signin";
 
 import VuePdfEmbed from "vue-pdf-embed";
 
