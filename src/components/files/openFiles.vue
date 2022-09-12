@@ -15,6 +15,16 @@
             :source="props.base64File"
             :style="`width: ${zoom * 10 + 100}%;`"
           />
+          <img
+            :src="props.base64File"
+            :style="`width: ${zoom * 10 + 100}%;`"
+            v-else-if="
+              getExt() === 'png' ||
+              getExt() === 'jpg' ||
+              getExt() === 'jpeg' ||
+              getExt() === 'gif'
+            "
+          />
           <div v-else>
             <span class="text-h4">Sorry, no viewer for this file :(</span>
           </div>

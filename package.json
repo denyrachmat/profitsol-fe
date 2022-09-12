@@ -16,6 +16,7 @@
     "@azure/storage-blob": "^12.11.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.1",
     "@microsoft/mgt": "^2.6.0",
+    "@microsoft/office-js": "^1.1.78",
     "@quasar/extras": "^1.0.0",
     "axios": "^0.21.1",
     "core-js": "^3.6.5",

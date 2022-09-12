@@ -118,5 +118,25 @@
     "ext": "7z",
     "icon": "la-file-archive",
     "color": "grey"
+  },
+  {
+    "ext": "jpg",
+    "icon": "la-file-image",
+    "color": "cyan"
+  },
+  {
+    "ext": "jpeg",
+    "icon": "la-file-image",
+    "color": "cyan"
+  },
+  {
+    "ext": "png",
+    "icon": "la-file-image",
+    "color": "cyan"
+  },
+  {
+    "ext": "gif",
+    "icon": "la-file-image",
+    "color": "cyan"
   }
 ]
