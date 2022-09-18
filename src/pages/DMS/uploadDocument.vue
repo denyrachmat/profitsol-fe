@@ -208,7 +208,7 @@ onMounted(async () => {
   }
 
   if (
-    store.msLoginDet.length > 0 &&
+    Object.values(store.msLoginDet).length > 0 &&
     store.msLoginDet.username === store.authDet.username
   ) {
     getMSOneDriveFolder();
@@ -299,7 +299,7 @@ const getMSOneDriveFolder = async () => {
     false,
     false,
     false,
-    process.env.GRAPH_API + `me/drive/root/children`,
+    process.env.GRAPH_API + `me/drives`,
     true
   );
 

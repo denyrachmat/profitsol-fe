@@ -15,21 +15,31 @@
             :source="props.base64File"
             :style="`width: ${zoom * 10 + 100}%;`"
           />
+          <img
+            :src="props.base64File"
+            :style="`width: ${zoom * 10 + 100}%;`"
+            v-else-if="
+              getExt() === 'png' ||
+              getExt() === 'jpg' ||
+              getExt() === 'jpeg' ||
+              getExt() === 'gif'
+            "
+          />
           <div v-else>
             <span class="text-h4">Sorry, no viewer for this file :(</span>
           </div>
         </div>
       </div>
-      <div class="row bg-white text-center q-pt-md" style="bottom: 0">
+      <div class="row bg-white q-pt-md" style="bottom: 0">
         <div class="col-5">
           <div class="row">
-            <div class="col-6">
+            <div class="col">
               <GoogleSignInButton
                 @success="handleLoginSuccess"
                 @error="handleLoginError"
               ></GoogleSignInButton>
             </div>
-            <div class="col-6 text-right">
+            <div class="col text-right">
               <q-btn dense icon="zoom_out" @click="zoom = zoom - 10" />
             </div>
           </div>
