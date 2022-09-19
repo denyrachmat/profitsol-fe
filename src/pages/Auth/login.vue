@@ -174,13 +174,22 @@ export default defineComponent({
     },
     onReset() {},
     async SignInMs() {
+      const scopes = [
+        "user.read",
+        "mail.send",
+        "Files.ReadWrite.All",
+        "Sites.ReadWrite.All",
+      ];
+
       await this.$msalInstance
-        .loginPopup({})
+        .loginPopup({
+          scopes,
+        })
         .then(async (val) => {
           const myAccounts = this.$msalInstance.getAllAccounts();
           const logs = myAccounts[0];
           const tokenRequest = {
-            scopes: ["user.read", "mail.send"],
+            scopes,
             account: logs.username,
           };
 

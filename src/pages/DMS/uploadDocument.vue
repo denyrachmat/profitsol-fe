@@ -206,14 +206,6 @@ onMounted(async () => {
     rootData.value = data.data;
     refresher.value = refresher.value + 1;
   }
-
-  if (
-    Object.values(store.msLoginDet).length > 0 &&
-    store.msLoginDet.username === store.authDet.username
-  ) {
-    getMSOneDriveFolder();
-  }
-  // findChoosedFolder(folders, selectedPath);
 });
 
 watch(
@@ -261,7 +253,9 @@ const onSelectFiles = async (val) => {
 
         // props forwarded to your custom component
         componentProps: {
-          base64File: getFiles.data,
+          base64File: getFiles.data.base64Files,
+          ext: getFiles.data.ext,
+          mime: getFiles.data.mime,
           title: val.ddm_doc_real_name,
           // ...more..props...
         },
@@ -299,7 +293,7 @@ const getMSOneDriveFolder = async () => {
     false,
     false,
     false,
-    process.env.GRAPH_API + `me/drives`,
+    process.env.GRAPH_API + `me/drive/root:/Documents/Kerjaan/`,
     true
   );
 
