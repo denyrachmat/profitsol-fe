@@ -5,12 +5,13 @@
     maximized
     transition-show="slide-up"
     transition-hide="slide-down"
+    no-esc-dismiss
   >
     <q-card class="q-dialog-plugin">
       <q-bar>
         {{ title }}
         <q-space />
-        <q-btn dense flat icon="close" v-close-popup>
+        <q-btn dense flat icon="close" @click="closeProgram">
           <q-tooltip class="bg-white text-primary">Close</q-tooltip>
         </q-btn>
       </q-bar>
@@ -27,11 +28,12 @@
 </template>
 <script setup>
 import { ref, onMounted, defineAsyncComponent, computed } from "vue";
-import { useDialogPluginComponent, date } from "quasar";
+import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 
 import DMSUploadDocument from "../DMS/uploadDocument.vue";
 
+const $q = useQuasar();
 const router = useRouter();
 const props = defineProps({
   dataProps: String,
@@ -57,6 +59,18 @@ const handleLoginSuccess = () => {
 // handle an error event
 const handleLoginError = () => {
   console.error("Login failed");
+};
+
+const closeProgram = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Would you like to close this program ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    onDialogCancel();
+    // console.log('>>>> OK')
+  });
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
