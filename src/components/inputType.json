@@ -1,0 +1,108 @@
+[
+  {
+    "label": "Normal Answer",
+    "children": [
+      {
+        "label": "Single Answer",
+        "answer": "normal",
+        "value": {
+          "type": "text",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Long Answer",
+        "answer": "normal",
+        "value": {
+          "type": "textarea",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Date Picker",
+        "answer": "normal",
+        "value": {
+          "type": "date",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Time Picker",
+        "answer": "normal",
+        "value": {
+          "type": "time",
+          "comp": "q-input"
+        }
+      }
+    ]
+  },
+  {
+    "label": "Choose Answer",
+    "children": [
+      {
+        "label": "Dropdown Select",
+        "answer": "multiple",
+        "value": {
+          "type": "multiple-select",
+          "comp": "q-select"
+        }
+      },
+      {
+        "label": "Multiple Checkbox",
+        "answer": "multiple",
+        "value": {
+          "type": "multiple-checkbox",
+          "comp": "q-checkbox"
+        }
+      },
+      {
+        "label": "Multiple Choice",
+        "answer": "multiple",
+        "value": {
+          "type": "multiple-radio",
+          "comp": "q-radio"
+        }
+      }
+    ]
+  },
+  {
+    "label": "Username Choice",
+    "children": [
+      {
+        "label": "Own User Fullname Choose",
+        "value": {
+          "type": "username-own-fullname-select",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Own User Username Choose",
+        "value": {
+          "type": "username-own-username-select",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Own User Username Dept",
+        "value": {
+          "type": "username-own-dept-select",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Username All Dept",
+        "value": {
+          "type": "username-all-select",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Username From User Dept",
+        "value": {
+          "type": "username-dept-select",
+          "comp": "q-input"
+        }
+      }
+    ]
+  }
+]
