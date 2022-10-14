@@ -6,14 +6,27 @@
       </div>
       <div class="col-2 text-right">
         <q-btn-group>
-          <q-btn color="green" icon="save" @click="onAddRows">
+          <q-btn
+            color="green"
+            icon="save"
+            @click="onClickSave"
+            :disable="!formTitle"
+          >
             <q-tooltip>Save this forms</q-tooltip>
           </q-btn>
-          <q-btn color="purple" icon="add" @click="onAddRows">
+          <q-btn
+            color="purple"
+            icon="add"
+            @click="onAddRows"
+            :disable="!formTitle"
+          >
             <q-tooltip>Add rows </q-tooltip>
           </q-btn>
           <q-btn color="cyan" icon="search">
             <q-tooltip>Open created forms</q-tooltip>
+          </q-btn>
+          <q-btn color="orange" icon="visibility" :disable="!formTitle">
+            <q-tooltip>Preview Forms</q-tooltip>
           </q-btn>
         </q-btn-group>
       </div>
@@ -34,7 +47,7 @@
             <q-input
               borderless
               class="q-ml-md"
-              v-model="form.rows_seq_name"
+              v-model="form.seq_name"
               input-class="text-h6"
             ></q-input>
             <!-- <div class="col text-h4 text-bold">Rows 1</div> -->
@@ -43,7 +56,7 @@
                 <q-btn
                   color="green"
                   icon="add"
-                  @click="onAddCols(idxForm)"
+                  @click="onAddcontent(idxForm)"
                   outline
                 >
                   <q-tooltip>Add columns </q-tooltip>
@@ -63,18 +76,18 @@
           <!-- Rows Content -->
           <div class="row q-pt-md">
             <div
-              class="col text-center q-pa-md"
+              class="col q-pa-md"
               style="border: 1px dashed #ccc !important; border-radius: 5px"
-              v-for="(col, idxCol) in form.cols"
+              v-for="(col, idxCol) in form.content"
               :key="idxCol + 'col'"
             >
-              <div>
+              <div class="text-center">
                 <q-btn-group flat>
                   <q-btn
                     color="green"
                     icon="list_alt"
                     flat
-                    @click="onClickChooseComponent(idxForm, idxCol)"
+                    @click="onClickChooseComponent(col.type, idxForm, idxCol)"
                   >
                     <q-tooltip>Add forms component here</q-tooltip>
                   </q-btn>
@@ -82,7 +95,7 @@
                     color="cyan"
                     icon="integration_instructions"
                     flat
-                    @click="onClickAddContent(idxForm, idxCol)"
+                    @click="onClickAddContent(col.type, idxForm, idxCol)"
                   >
                     <q-tooltip>Add HTML content here</q-tooltip>
                   </q-btn>
@@ -90,23 +103,25 @@
                     color="red"
                     icon="delete"
                     flat
-                    @click="form.cols.splice(idxCol, 1)"
+                    @click="form.content.splice(idxCol, 1)"
                   >
                     <q-tooltip>Delete this column</q-tooltip>
                   </q-btn>
                 </q-btn-group>
               </div>
-              <template v-if="!col.type">
-                <div class="q-pt-md text-italic">Add form component here</div>
+              <template v-if="!col.type || col.type === ''">
+                <div class="q-pt-md text-italic text-center">
+                  Add form component here
+                </div>
               </template>
 
               <template v-if="col.type === 'form'">
                 <componentViewVue
-                  :type="col.content.component.answer"
+                  :type="col.content.component.category"
                   :comp="col.content.component.value.comp"
                   :label="col.content.label"
                   :detail="col.content.detail_data"
-                  :mode="live"
+                  mode="live"
                 />
               </template>
               <div v-if="col.type === 'html'" v-html="col.content"></div>
@@ -133,44 +148,105 @@ const $q = useQuasar();
 const formTitle = ref("");
 const forms = ref([]);
 const formsInit = {
-  rows_seq_name: "",
-  cols: [],
+  seq_name: "",
+  content: [],
 };
 
 const onAddRows = () => {
-  // formsInit.rows_seq_name = `Rows ${forms.value.length + 1}`;
+  // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
   forms.value.push({
-    rows_seq_name: `${forms.value.length + 1}`,
-    cols: [
+    type: "row",
+    seq_name: `${forms.value.length + 1}`,
+    content: [
       {
         type: "",
+        seq_name: "",
         content: {},
       },
     ],
   });
 };
 
-const onAddCols = (idx) => {
-  forms.value[idx].cols.push({
+const onAddcontent = (idx) => {
+  forms.value[idx].content.push({
     content: {},
   });
 };
 
-const onClickChooseComponent = (idxForm, idxCol) => {
-  $q.dialog({
-    component: chooseComponent,
-  }).onOk(async (val) => {
-    console.log(val);
-    forms.value[idxForm].cols[idxCol] = val;
-  });
+const onClickChooseComponent = (type, idxForm, idxCol) => {
+  if (!type) {
+    $q.dialog({
+      component: chooseComponent,
+    }).onOk(async (val) => {
+      console.log(val);
+      forms.value[idxForm].content[idxCol] = val;
+    });
+  } else {
+    if (type !== "form") {
+      $q.dialog({
+        title: "Confirm",
+        message:
+          "This action will replace your current Content with Forms, do you want to continue ?",
+        cancel: true,
+        persistent: true,
+      }).onOk(() => {
+        $q.dialog({
+          component: chooseComponent,
+        }).onOk(async (val) => {
+          console.log(val);
+          forms.value[idxForm].content[idxCol] = val;
+        });
+      });
+    } else {
+      $q.dialog({
+        component: chooseComponent,
+      }).onOk(async (val) => {
+        console.log(val);
+        forms.value[idxForm].content[idxCol] = val;
+      });
+    }
+  }
 };
 
-const onClickAddContent = (idxForm, idxCol) => {
-  $q.dialog({
-    component: addContentComponent,
-  }).onOk(async (val) => {
-    console.log(val);
-    forms.value[idxForm].cols[idxCol] = val;
-  });
+const onClickAddContent = (type, idxForm, idxCol) => {
+  if (!type) {
+    $q.dialog({
+      component: addContentComponent,
+    }).onOk(async (val) => {
+      if (val.content) {
+        forms.value[idxForm].content[idxCol] = val;
+      }
+    });
+  } else {
+    if (type !== "html") {
+      $q.dialog({
+        title: "Confirm",
+        message:
+          "This action will replace your current Forms with Content, do you want to continue ?",
+        cancel: true,
+        persistent: true,
+      }).onOk(() => {
+        $q.dialog({
+          component: addContentComponent,
+        }).onOk(async (val) => {
+          if (val.content) {
+            forms.value[idxForm].content[idxCol] = val;
+          }
+        });
+      });
+    } else {
+      $q.dialog({
+        component: addContentComponent,
+      }).onOk(async (val) => {
+        if (val.content) {
+          forms.value[idxForm].content[idxCol] = val;
+        }
+      });
+    }
+  }
+};
+
+const onClickSave = () => {
+  console.log(forms.value);
 };
 </script>

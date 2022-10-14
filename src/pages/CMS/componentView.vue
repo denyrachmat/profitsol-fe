@@ -9,7 +9,7 @@
       />
     </template>
     <template v-else-if="props.type === 'multiple'">
-      <template v-if="props.mode === 'edit'">
+      <template v-if="props.mode == 'edit'">
         <div class="row q-pb-md" v-for="(opt, idx) in detailData" :key="idx">
           <div class="col-5">
             <q-input
@@ -61,15 +61,21 @@
                   <q-option-group
                     :options="detailData"
                     type="checkbox"
-                    v-model="modelData"
+                    v-model="modelDataArr"
                   />
+                </div>
+              </template>
+
+              <template v-else-if="props.comp === 'q-radio'">
+                <span v-html="props.label" />
+                <div class="q-gutter-sm">
+                  <q-option-group :options="detailData" v-model="modelData" />
                 </div>
               </template>
             </div>
           </div>
         </fieldset>
       </template>
-
       <template v-else>
         <div>
           <q-select
@@ -86,10 +92,17 @@
             <span v-html="props.label" />
             <div class="q-gutter-sm">
               <q-option-group
-                :options="detailData"
+                :options="props.detail"
                 type="checkbox"
-                v-model="modelData"
+                v-model="modelDataArr"
               />
+            </div>
+          </template>
+
+          <template v-else-if="props.comp === 'q-radio'">
+            <span v-html="props.label" />
+            <div class="q-gutter-sm">
+              <q-option-group :options="props.detail" v-model="modelData" />
             </div>
           </template>
         </div>
@@ -103,6 +116,7 @@ import { defineProps, onMounted, ref, watch } from "vue";
 const emit = defineEmits(["onDeleted"]);
 
 const modelData = ref("");
+const modelDataArr = ref([]);
 const props = defineProps({
   type: String,
   comp: String,
@@ -122,6 +136,23 @@ watch(
   () => JSON.stringify(props.detail),
   (val) => {
     detailData.value = JSON.parse(val);
+    // emit("onDeleted", JSON.parse(val));
+  }
+);
+
+watch(
+  () => JSON.stringify(detailData.value),
+  (val) => {
+    emit("onDeleted", JSON.parse(val));
+  }
+);
+
+watch(
+  () => props.type,
+  (val) => {
+    if (val === "multiple") {
+      detailData.value = [];
+    }
   }
 );
 </script>

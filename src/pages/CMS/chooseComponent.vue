@@ -64,7 +64,9 @@
 
             <template
               v-slot:after
-              v-if="componentChoosed && componentChoosed.answer === 'multiple'"
+              v-if="
+                componentChoosed && componentChoosed.category === 'multiple'
+              "
             >
               <q-btn
                 round
@@ -83,12 +85,12 @@
         <div class="col">
           <template v-if="componentChoosed">
             <componentViewVue
-              :type="componentChoosed.answer"
+              :type="componentChoosed.category"
               :comp="componentChoosed.value.comp"
               :label="label"
               :detail="detailData"
               @onDeleted="onDeleteOpt"
-              :mode="edit"
+              mode="edit"
             />
           </template>
           <template v-else>
@@ -134,7 +136,7 @@ const addDetail = () => {
   detailData.value.push({
     col_det_id: "opt-" + (parseInt(detailData.value.length) + 1),
     col_det_label: "",
-    value: "",
+    value: parseInt(detailData.value.length) + 1,
     label: "",
   });
 };
