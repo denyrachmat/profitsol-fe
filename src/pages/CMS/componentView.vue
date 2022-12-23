@@ -1,31 +1,16 @@
 <template>
   <div class="q-pa-md">
     <template v-if="props.type === 'normal'">
-      <q-input
-        :type="props.type"
-        v-model="modelData"
-        :label="props.label"
-        dense
-      />
+      <q-input :type="props.typeInput" v-model="modelData" :label="props.label" dense />
     </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">
         <div class="row q-pb-md" v-for="(opt, idx) in detailData" :key="idx">
           <div class="col-5">
-            <q-input
-              label="Value of this options"
-              v-model="opt.value"
-              outlined
-              dense
-            />
+            <q-input label="Value of this options" v-model="opt.value" outlined dense />
           </div>
           <div class="col-6 q-pl-md">
-            <q-input
-              label="Label of this options"
-              v-model="opt.label"
-              outlined
-              dense
-            />
+            <q-input label="Label of this options" v-model="opt.label" outlined dense />
           </div>
 
           <div class="col-1 text-right">
@@ -34,35 +19,22 @@
         </div>
 
         <!-- Preview -->
-        <fieldset
-          style="
+        <fieldset style="
             border: 1px dashed #ccc !important;
             border-radius: 16px;
             max-height: 80vh;
             overflow: auto;
-          "
-        >
+          ">
           <legend>Preview component here</legend>
-          <div class="row q-pa-md">
+          <div class="row q-pa-md" :key="refreshDetail">
             <div class="col">
-              <q-select
-                outlined
-                v-model="modelData"
-                :options="detailData"
-                :label="props.label"
-                emit-value
-                map-options
-                v-if="props.comp === 'q-select'"
-              />
+              <q-select outlined v-model="modelData" :options="detailData" :label="props.label" emit-value map-options
+                v-if="props.comp === 'q-select'" />
 
               <template v-else-if="props.comp === 'q-checkbox'">
                 <span v-html="props.label" />
                 <div class="q-gutter-sm">
-                  <q-option-group
-                    :options="detailData"
-                    type="checkbox"
-                    v-model="modelDataArr"
-                  />
+                  <q-option-group :options="detailData" type="checkbox" v-model="modelDataArr" />
                 </div>
               </template>
 
@@ -78,24 +50,13 @@
       </template>
       <template v-else>
         <div>
-          <q-select
-            outlined
-            v-model="modelData"
-            :options="detailData"
-            :label="props.label"
-            emit-value
-            map-options
-            v-if="props.comp === 'q-select'"
-          />
+          <q-select outlined v-model="modelData" :options="detailData" :label="props.label" emit-value map-options
+            v-if="props.comp === 'q-select'" />
 
           <template v-else-if="props.comp === 'q-checkbox'">
             <span v-html="props.label" />
             <div class="q-gutter-sm">
-              <q-option-group
-                :options="props.detail"
-                type="checkbox"
-                v-model="modelDataArr"
-              />
+              <q-option-group :options="props.detail" type="checkbox" v-model="modelDataArr" />
             </div>
           </template>
 
@@ -116,9 +77,11 @@ import { defineProps, onMounted, ref, watch } from "vue";
 const emit = defineEmits(["onDeleted"]);
 
 const modelData = ref("");
+const refreshDetail = ref(0);
 const modelDataArr = ref([]);
 const props = defineProps({
   type: String,
+  typeInput: String,
   comp: String,
   label: String,
   detail: Array,
@@ -132,10 +95,16 @@ const onDeleteData = (idx) => {
   emit("onDeleted", detailData.value);
 };
 
+onMounted(() => {
+  console.log('masuk sini')
+  detailData.value = props.detail;
+})
+
 watch(
   () => JSON.stringify(props.detail),
   (val) => {
     detailData.value = JSON.parse(val);
+    // refreshDetail.value = refreshDetail.value + 1;
     // emit("onDeleted", JSON.parse(val));
   }
 );
@@ -143,16 +112,21 @@ watch(
 watch(
   () => JSON.stringify(detailData.value),
   (val) => {
-    emit("onDeleted", JSON.parse(val));
+    detailData.value = JSON.parse(val);
+    emit("onDeleted", JSON.parse(val)); refreshDetail.value = refreshDetail.value + 1;
   }
 );
 
-watch(
-  () => props.type,
-  (val) => {
-    if (val === "multiple") {
-      detailData.value = [];
-    }
-  }
-);
+// watch(
+//   () => props.type,
+//   (val) => {
+//     if (val === "multiple") {
+//       detailData.value = [];
+
+//       if (props.detail.length > 0) {
+//         detailData.value = props.detail;
+//       }
+//     }
+//   }
+// );
 </script>

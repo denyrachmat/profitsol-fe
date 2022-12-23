@@ -86,6 +86,7 @@
           <template v-if="componentChoosed">
             <componentViewVue
               :type="componentChoosed.category"
+              :typeInput="componentChoosed.value.type"
               :comp="componentChoosed.value.comp"
               :label="label"
               :detail="detailData"
@@ -107,7 +108,7 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import inputType from "../../components/inputType.json";
 
@@ -117,12 +118,23 @@ const $q = useQuasar();
 
 const props = defineProps({
   mode: String,
+  currComponent: Object
 });
 
 const componentChoosed = ref(null);
 const optComponents = ref(inputType);
 const label = ref("");
 const detailData = ref([]);
+
+onMounted(() => {
+  console.log(props)
+  if (props.currComponent && props.currComponent.content) {
+    console.log(Object.values(props.currComponent.content.detail_data))
+    componentChoosed.value = props.currComponent.content.component
+    label.value = props.currComponent.content.label
+    detailData.value = Object.values(props.currComponent.content.detail_data)
+  }
+})
 
 const onDeleteOpt = (val) => {
   detailData.value = val;
@@ -152,6 +164,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 
 // this is part of our example (so not required)
 function onOKClick() {
+  console.log(componentChoosed.value)
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
   onDialogOK({
