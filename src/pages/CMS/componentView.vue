@@ -1,40 +1,75 @@
 <template>
   <div class="q-pa-md">
     <template v-if="props.type === 'normal'">
-      <q-input :type="props.typeInput" v-model="modelData" :label="props.label" dense />
+      <q-input
+        :type="props.typeInput"
+        v-model="modelData"
+        :label="props.label"
+        dense
+      />
     </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">
-        <div class="row q-pb-md" v-for="(opt, idx) in detailData" :key="idx">
-          <div class="col-5">
-            <q-input label="Value of this options" v-model="opt.value" outlined dense />
-          </div>
-          <div class="col-6 q-pl-md">
-            <q-input label="Label of this options" v-model="opt.label" outlined dense />
-          </div>
+        <div style="max-height: 20vh; overflow: auto">
+          <div class="row q-pb-md" v-for="(opt, idx) in detailData" :key="idx">
+            <div class="col-5">
+              <q-input
+                label="Value of this options"
+                v-model="opt.value"
+                outlined
+                dense
+              />
+            </div>
+            <div class="col-6 q-pl-md">
+              <q-input
+                label="Label of this options"
+                v-model="opt.label"
+                outlined
+                dense
+              />
+            </div>
 
-          <div class="col-1 text-right">
-            <q-btn icon="delete" color="red" flat @click="onDeleteData(idx)" />
+            <div class="col-1 text-right">
+              <q-btn
+                icon="delete"
+                color="red"
+                flat
+                @click="onDeleteData(idx)"
+              />
+            </div>
           </div>
         </div>
 
         <!-- Preview -->
-        <fieldset style="
+        <fieldset
+          style="
             border: 1px dashed #ccc !important;
             border-radius: 16px;
-            max-height: 80vh;
+            max-height: 20vh;
             overflow: auto;
-          ">
+          "
+        >
           <legend>Preview component here</legend>
           <div class="row q-pa-md" :key="refreshDetail">
             <div class="col">
-              <q-select outlined v-model="modelData" :options="detailData" :label="props.label" emit-value map-options
-                v-if="props.comp === 'q-select'" />
+              <q-select
+                outlined
+                v-model="modelData"
+                :options="detailData"
+                :label="props.label"
+                emit-value
+                map-options
+                v-if="props.comp === 'q-select'"
+              />
 
               <template v-else-if="props.comp === 'q-checkbox'">
                 <span v-html="props.label" />
                 <div class="q-gutter-sm">
-                  <q-option-group :options="detailData" type="checkbox" v-model="modelDataArr" />
+                  <q-option-group
+                    :options="detailData"
+                    type="checkbox"
+                    v-model="modelDataArr"
+                  />
                 </div>
               </template>
 
@@ -50,13 +85,24 @@
       </template>
       <template v-else>
         <div>
-          <q-select outlined v-model="modelData" :options="detailData" :label="props.label" emit-value map-options
-            v-if="props.comp === 'q-select'" />
+          <q-select
+            outlined
+            v-model="modelData"
+            :options="detailData"
+            :label="props.label"
+            emit-value
+            map-options
+            v-if="props.comp === 'q-select'"
+          />
 
           <template v-else-if="props.comp === 'q-checkbox'">
             <span v-html="props.label" />
             <div class="q-gutter-sm">
-              <q-option-group :options="props.detail" type="checkbox" v-model="modelDataArr" />
+              <q-option-group
+                :options="props.detail"
+                type="checkbox"
+                v-model="modelDataArr"
+              />
             </div>
           </template>
 
@@ -96,9 +142,9 @@ const onDeleteData = (idx) => {
 };
 
 onMounted(() => {
-  console.log('masuk sini')
+  console.log("masuk sini");
   detailData.value = props.detail;
-})
+});
 
 watch(
   () => JSON.stringify(props.detail),
@@ -113,7 +159,8 @@ watch(
   () => JSON.stringify(detailData.value),
   (val) => {
     detailData.value = JSON.parse(val);
-    emit("onDeleted", JSON.parse(val)); refreshDetail.value = refreshDetail.value + 1;
+    emit("onDeleted", JSON.parse(val));
+    refreshDetail.value = refreshDetail.value + 1;
   }
 );
 

@@ -6,10 +6,20 @@
       </div>
       <div class="col-2 text-right">
         <q-btn-group>
-          <q-btn color="green" icon="save" @click="onClickSave" :disable="!formTitle">
+          <q-btn
+            color="green"
+            icon="save"
+            @click="onClickSave"
+            :disable="!formTitle"
+          >
             <q-tooltip>Save this forms</q-tooltip>
           </q-btn>
-          <q-btn color="purple" icon="add" @click="onAddRows" :disable="!formTitle">
+          <q-btn
+            color="purple"
+            icon="add"
+            @click="onAddRows"
+            :disable="!formTitle"
+          >
             <q-tooltip>Add rows </q-tooltip>
           </q-btn>
           <q-btn color="cyan" icon="search">
@@ -22,24 +32,41 @@
       </div>
     </div>
     <hr />
-    <fieldset style="
+    <fieldset
+      style="
         border: 1px solid #ccc !important;
         border-radius: 16px;
         max-height: 80vh;
         overflow: auto;
-      ">
+      "
+    >
       <legend>Create forms here</legend>
       <template v-if="forms.length > 0">
         <template v-for="(form, idxForm) in forms" :key="idxForm">
           <div class="row q-pt-md">
-            <q-input borderless class="q-ml-md" v-model="form.seq_name" input-class="text-h6"></q-input>
+            <q-input
+              borderless
+              class="q-ml-md"
+              v-model="form.seq_name"
+              input-class="text-h6"
+            ></q-input>
             <!-- <div class="col text-h4 text-bold">Rows 1</div> -->
             <div class="col text-right">
               <q-btn-group outline>
-                <q-btn color="green" icon="add" @click="onAddcontent(idxForm)" outline>
+                <q-btn
+                  color="green"
+                  icon="add"
+                  @click="onAddcontent(idxForm)"
+                  outline
+                >
                   <q-tooltip>Add columns </q-tooltip>
                 </q-btn>
-                <q-btn color="red" icon="delete" @click="forms.splice(idxForm, 1)" outline>
+                <q-btn
+                  color="red"
+                  icon="delete"
+                  @click="forms.splice(idxForm, 1)"
+                  outline
+                >
                   <q-tooltip>Remove this rows </q-tooltip>
                 </q-btn>
               </q-btn-group>
@@ -48,18 +75,38 @@
 
           <!-- Rows Content -->
           <div class="row q-pt-md">
-            <div class="col q-pa-md" style="border: 1px dashed #ccc !important; border-radius: 5px"
-              v-for="(col, idxCol) in form.content" :key="idxCol + 'col'">
+            <div
+              class="col q-pa-md"
+              style="border: 1px dashed #ccc !important; border-radius: 5px"
+              v-for="(col, idxCol) in form.content"
+              :key="idxCol + 'col'"
+            >
+              {{ form }}
               <div class="text-center">
                 <q-btn-group flat>
-                  <q-btn color="green" icon="list_alt" flat @click="onClickChooseComponent(col.type, idxForm, idxCol)">
+                  <q-btn
+                    color="green"
+                    icon="list_alt"
+                    flat
+                    @click="onClickChooseComponent(col.type, idxForm, idxCol)"
+                  >
                     <q-tooltip>Add forms component here</q-tooltip>
                   </q-btn>
-                  <q-btn color="cyan" icon="integration_instructions" flat
-                    @click="onClickAddContent(col.type, idxForm, idxCol)">
+                  <q-btn
+                    color="cyan"
+                    icon="integration_instructions"
+                    flat
+                    @click="onClickAddContent(col.type, idxForm, idxCol)"
+                  >
                     <q-tooltip>Add HTML content here</q-tooltip>
                   </q-btn>
-                  <q-btn color="red" icon="delete" flat @click="form.content.splice(idxCol, 1)" :disable="idxCol === 0">
+                  <q-btn
+                    color="red"
+                    icon="delete"
+                    flat
+                    @click="form.content.splice(idxCol, 1)"
+                    :disable="idxCol === 0"
+                  >
                     <q-tooltip>Delete this column</q-tooltip>
                   </q-btn>
                 </q-btn-group>
@@ -71,9 +118,14 @@
               </template>
 
               <template v-if="col.type === 'form'">
-                <componentViewVue :type="col.content.component.category" :type-input="col.content.component.value.type"
-                  :comp="col.content.component.value.comp" :label="col.content.label" :detail="col.content.detail_data"
-                  mode="live" />
+                <componentViewVue
+                  :type="col.content.component.category"
+                  :type-input="col.content.component.value.type"
+                  :comp="col.content.component.value.comp"
+                  :label="col.content.label"
+                  :detail="col.content.detail_data"
+                  mode="live"
+                />
               </template>
               <div v-if="col.type === 'html'" v-html="col.content"></div>
             </div>
@@ -127,7 +179,7 @@ const onAddcontent = (idx) => {
 const onClickChooseComponent = (type, idxForm, idxCol) => {
   if (!type) {
     $q.dialog({
-      component: chooseComponent
+      component: chooseComponent,
     }).onOk(async (val) => {
       console.log(val);
       forms.value[idxForm].content[idxCol] = val;

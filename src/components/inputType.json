@@ -1,6 +1,7 @@
 [
   {
     "label": "Normal Answer",
+    "category": "single",
     "children": [
       {
         "label": "Single Answer",
@@ -38,9 +39,10 @@
   },
   {
     "label": "Choose Answer",
+    "category": "multiple",
     "children": [
       {
-        "label": "Dropdown Select",
+        "label": "Dropdown Select (Single choice only)",
         "category": "multiple",
         "value": {
           "type": "multiple-select",
@@ -48,7 +50,7 @@
         }
       },
       {
-        "label": "Multiple Checkbox",
+        "label": "Multiple Checkbox (Multiple choice)",
         "category": "multiple",
         "value": {
           "type": "multiple-checkbox",
@@ -56,7 +58,7 @@
         }
       },
       {
-        "label": "Multiple Choice",
+        "label": "Multiple Choice (Single choice only)",
         "category": "multiple",
         "value": {
           "type": "multiple-radio",
