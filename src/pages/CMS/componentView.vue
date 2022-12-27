@@ -115,12 +115,15 @@
         </div>
       </template>
     </template>
+
+    {{ modelData }}
+    {{ modelDataArr }}
   </div>
 </template>
 <script setup>
 import { defineProps, onMounted, ref, watch } from "vue";
 
-const emit = defineEmits(["onDeleted"]);
+const emit = defineEmits(["onDeleted", "customChange"]);
 
 const modelData = ref("");
 const refreshDetail = ref(0);
@@ -164,16 +167,20 @@ watch(
   }
 );
 
-// watch(
-//   () => props.type,
-//   (val) => {
-//     if (val === "multiple") {
-//       detailData.value = [];
+// Jawaban yang di pilih
+watch(
+  () => JSON.stringify(modelDataArr.value),
+  (val) => {
+    console.log("masuk ke 1");
+    emit("customChange", JSON.parse(val));
+  }
+);
 
-//       if (props.detail.length > 0) {
-//         detailData.value = props.detail;
-//       }
-//     }
-//   }
-// );
+watch(
+  () => modelData.value,
+  (val) => {
+    console.log("masuk ke 2");
+    emit("customChange", val);
+  }
+);
 </script>

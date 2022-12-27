@@ -132,7 +132,6 @@ const optComponents = ref(inputType);
 const label = ref("");
 const detailData = ref([]);
 const multipleOnly = ref(false);
-
 onMounted(() => {
   console.log(props.currComponent);
   if (props.currComponent && props.currComponent.content) {
@@ -190,6 +189,7 @@ function onOKClick() {
       detail_data: detailData.value,
       label: label.value,
     },
+    value: null,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
