@@ -10,7 +10,7 @@
             color="green"
             icon="save"
             @click="onSaveQuestion"
-            :disable="!title"
+            :disable="!title || valueSubmited.length !== forms.length"
           >
             <q-tooltip> Save question bank. </q-tooltip>
           </q-btn>
@@ -67,7 +67,18 @@
               >
                 <div class="row">
                   <div class="col">
-                    <q-icon name="check" class="text-orange" size="2em" />
+                    <q-icon
+                      name="check"
+                      class="text-blue"
+                      size="2em"
+                      v-if="valueSubmited[idxCol]"
+                    />
+                    <q-icon
+                      name="cancel"
+                      class="text-orange"
+                      size="2em"
+                      v-else
+                    />
                   </div>
 
                   <div class="col q-px-md text-right">
@@ -119,8 +130,6 @@
         </fieldset>
       </div>
     </div>
-
-    {{ forms }}
   </div>
 </template>
 <script setup>
@@ -128,10 +137,12 @@ import { ref, watch } from "vue";
 import { useQuasar } from "quasar";
 import componentViewVue from "../componentView.vue";
 import chooseComponent from "../chooseComponent.vue";
+import apiRequest from "src/components/apiRequest";
 
 import setupTraining from "./setupTraining.vue";
 
 const $q = useQuasar();
+const { postData } = apiRequest();
 
 const title = ref("");
 const forms = ref([]);
@@ -143,6 +154,8 @@ const setupTrainingSetup = ref({
   showRightKeysAnswer: true,
   showRightKeysAnswerLocation: "end",
 });
+
+const valueSubmited = ref([]);
 
 const initChoice = ref({
   content: {
@@ -160,7 +173,8 @@ const initChoice = ref({
 
 const onChooseValue = (val, idx) => {
   console.log([val, idx]);
-  forms.value[idx].value = val;
+  valueSubmited.value[idx] = val;
+  // forms.value[idx].value = val;
 };
 
 const onClickChooseComponent = (idxForm = {}) => {
@@ -205,10 +219,29 @@ const duplicateQuestion = (data) => {
 
 const deleteQuestion = (idx) => {
   forms.value.splice(idx, 1);
+  valueSubmited.value.splice(idx, 1);
 };
 
-const onSaveQuestion = () => {
-  console.log(forms.value);
+const onSaveQuestion = async () => {
+  const data = await postData(
+    "post",
+    {
+      forms: forms.value,
+      ans: valueSubmited.value,
+      uname: "",
+      title: title.value,
+      isQuiz: true,
+    },
+    `cms/forms`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    console.log(data);
+  }
+  // console.log(forms.value);
 };
 
 watch(

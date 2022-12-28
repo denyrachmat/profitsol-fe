@@ -115,9 +115,6 @@
         </div>
       </template>
     </template>
-
-    {{ modelData }}
-    {{ modelDataArr }}
   </div>
 </template>
 <script setup>
