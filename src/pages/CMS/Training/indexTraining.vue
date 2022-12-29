@@ -22,7 +22,7 @@
           >
             <q-tooltip> Add more question. </q-tooltip>
           </q-btn>
-          <q-btn color="primary" icon="search">
+          <q-btn color="primary" icon="search" @click="openTraining">
             <q-tooltip> Find & Edit saved question bank. </q-tooltip>
           </q-btn>
           <q-btn color="orange" icon="visibility">
@@ -121,6 +121,7 @@
                   mode="live"
                   @custom-change="(val) => onChooseValue(val, idxCol)"
                   :key="idxCol + 'color'"
+                  :ans="valueSubmited[idxCol]"
                 />
               </div></div
           ></template>
@@ -140,10 +141,12 @@ import chooseComponent from "../chooseComponent.vue";
 import apiRequest from "src/components/apiRequest";
 
 import setupTraining from "./setupTraining.vue";
+import openTrainingVue from "./openTraining.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
 
+const idRef = ref("");
 const title = ref("");
 const forms = ref([]);
 const setupTrainingSetup = ref({
@@ -222,26 +225,60 @@ const deleteQuestion = (idx) => {
   valueSubmited.value.splice(idx, 1);
 };
 
-const onSaveQuestion = async () => {
-  const data = await postData(
-    "post",
-    {
-      forms: forms.value,
-      ans: valueSubmited.value,
-      uname: "",
-      title: title.value,
-      isQuiz: true,
-    },
-    `cms/forms`,
-    false,
-    false,
-    true
-  );
+const onSaveQuestion = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to save this quiz ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idRef.value,
+        forms: forms.value,
+        ans: valueSubmited.value,
+        uname: "",
+        title: title.value,
+        isQuiz: true,
+      },
+      `cms/forms`,
+      false,
+      false,
+      true
+    );
 
-  if (data) {
-    console.log(data);
-  }
+    if (data) {
+      $q.dialog({
+        title: "Confirm",
+        message: "Save Success, Do you want to continue edit this quiz ?",
+        cancel: true,
+        persistent: true,
+      })
+        .onOk(async () => {})
+        .onCancel(() => {
+          title.value = "";
+          forms.value = [];
+        });
+      console.log(data);
+    }
+  });
   // console.log(forms.value);
+};
+
+const openTraining = () => {
+  $q.dialog({
+    component: openTrainingVue,
+    componentProps: {
+      type: "quiz",
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+    idRef.value = val.id;
+    title.value = val.title;
+    forms.value = val.forms;
+    valueSubmited.value = val.ans;
+  });
 };
 
 watch(

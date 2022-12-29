@@ -132,6 +132,8 @@ const props = defineProps({
   label: String,
   detail: Array,
   mode: String,
+  ans: String,
+  ansArr: Array,
 });
 
 const detailData = ref([]);
@@ -144,12 +146,17 @@ const onDeleteData = (idx) => {
 onMounted(() => {
   console.log("masuk sini");
   detailData.value = props.detail;
+  modelData.value = props.ans.toString();
+  modelDataArr.value = props.ansArr;
 });
 
 watch(
   () => JSON.stringify(props.detail),
   (val) => {
+    console.log(props);
     detailData.value = JSON.parse(val);
+
+    modelDataArr.value = props.ansArr;
     // refreshDetail.value = refreshDetail.value + 1;
     // emit("onDeleted", JSON.parse(val));
   }
@@ -164,12 +171,29 @@ watch(
   }
 );
 
+watch(
+  () => props.ans,
+  (val) => {
+    console.log("masuk cek jawaban 1");
+    modelData.value = val.toString();
+  }
+);
+
+watch(
+  () => JSON.stringify(props.ansArr),
+  (val) => {
+    console.log("masuk cek jawaban 2");
+    modelDataArr.value = JSON.parse(val);
+  }
+);
+
 // Jawaban yang di pilih
 watch(
   () => JSON.stringify(modelDataArr.value),
   (val) => {
-    console.log("masuk ke 1");
-    emit("customChange", JSON.parse(val));
+    if (modelDataArr.value) {
+      emit("customChange", JSON.parse(val));
+    }
   }
 );
 

@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row">
       <div class="col q-pr-md">
-        <q-input label="Form Title" dense outlined v-model="formTitle" />
+        <q-input label="Form Title" dense outlined v-model="title" />
       </div>
       <div class="col-2 text-right">
         <q-btn-group>
@@ -10,22 +10,17 @@
             color="green"
             icon="save"
             @click="onClickSave"
-            :disable="!formTitle"
+            :disable="!title"
           >
             <q-tooltip>Save this forms</q-tooltip>
           </q-btn>
-          <q-btn
-            color="purple"
-            icon="add"
-            @click="onAddRows"
-            :disable="!formTitle"
-          >
+          <q-btn color="purple" icon="add" @click="onAddRows" :disable="!title">
             <q-tooltip>Add rows </q-tooltip>
           </q-btn>
-          <q-btn color="cyan" icon="search">
+          <q-btn color="cyan" icon="search" @click="openTraining">
             <q-tooltip>Open created forms</q-tooltip>
           </q-btn>
-          <q-btn color="orange" icon="visibility" :disable="!formTitle">
+          <q-btn color="orange" icon="visibility" :disable="!title">
             <q-tooltip>Preview Forms</q-tooltip>
           </q-btn>
         </q-btn-group>
@@ -81,7 +76,6 @@
               v-for="(col, idxCol) in form.content"
               :key="idxCol + 'col'"
             >
-              {{ form }}
               <div class="text-center">
                 <q-btn-group flat>
                   <q-btn
@@ -145,10 +139,15 @@ import { useQuasar } from "quasar";
 import chooseComponent from "./chooseComponent.vue";
 import addContentComponent from "./addContentComponent.vue";
 import componentViewVue from "./componentView.vue";
+import apiRequest from "src/components/apiRequest";
+import openTrainingVue from "./Training/openTraining.vue";
+
+const { postData } = apiRequest();
 
 const $q = useQuasar();
 
-const formTitle = ref("");
+const idRef = ref("");
+const title = ref("");
 const forms = ref([]);
 const formsInit = {
   seq_name: "",
@@ -253,6 +252,52 @@ const onClickAddContent = (type, idxForm, idxCol) => {
 };
 
 const onClickSave = () => {
-  console.log(forms.value);
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to save this content ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idRef.value,
+        forms: forms.value,
+        ans: [],
+        title: title.value,
+        isQuiz: false,
+      },
+      `cms/forms`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      $q.dialog({
+        title: "Confirm",
+        message: "Save Success, Do you want to continue edit this content ?",
+        cancel: true,
+        persistent: true,
+      })
+        .onOk(async () => {})
+        .onCancel(() => {
+          title.value = "";
+          forms.value = [];
+        });
+    }
+  });
+};
+
+const openTraining = () => {
+  $q.dialog({
+    component: openTrainingVue,
+    componentProps: {
+      type: "form",
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+    // forms.value[idxForm].content = val;
+  });
 };
 </script>

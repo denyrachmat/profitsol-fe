@@ -35,6 +35,9 @@ export const useAuthStore = defineStore("auth", {
     storeAuthDet(data) {
       this.authDet = data;
     },
+    storeMenu(data) {
+      this.authDet.menus = data;
+    },
     storeMSLoginDet(data) {
       this.msLoginDet = data;
     },

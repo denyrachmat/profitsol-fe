@@ -14,7 +14,27 @@
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
         <q-toolbar-title> PT Sumitronics Indonesia </q-toolbar-title>
 
+        <div>{{ store.choosedRoles.role.rm_role_name }}</div>
+        <q-space />
         <div>Portal Application v2.0.0</div>
+        <q-btn flat dense aria-label="Roles" icon-right="group">
+          <q-menu>
+            <q-list style="min-width: 100px">
+              <q-item
+                clickable
+                v-close-popup
+                v-for="(role, idx) in listRoles"
+                :key="idx"
+                @click="changeRoles(role)"
+                :active="role.id === store.choosedRoles.id"
+                :disable="role.id === store.choosedRoles.id"
+              >
+                <q-item-section>{{ role.role.rm_role_name }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
             <q-list style="min-width: 100px">
@@ -133,6 +153,9 @@ export default defineComponent({
     authDetail() {
       return this.store.getDetail;
     },
+    listRoles() {
+      return this.store.authDet.rolesGroup.roles;
+    },
   },
   methods: {
     async logout() {
@@ -166,6 +189,26 @@ export default defineComponent({
         })
         .onOk(async (val) => {
           console.log(val);
+        });
+    },
+    changeRoles(data) {
+      this.$q
+        .dialog({
+          title: "Confirm",
+          message: `Are you sure want to change roles to ${data.role.rm_role_name} ?`,
+          cancel: true,
+          persistent: true,
+        })
+        .onOk(async () => {
+          this.$q.notify({
+            message: `You're on ${data.role.rm_role_name} now !`,
+            caption: "Role Changed !",
+            color: "green",
+            timeout: 5000,
+          });
+
+          this.store.storeChoosedRole(data);
+          this.store.storeMenu(data.role.role_app_map);
         });
     },
   },
