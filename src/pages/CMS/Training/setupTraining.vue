@@ -53,7 +53,7 @@
               <q-radio v-model="showRightKeysAnswer" :val="false" label="No" />
             </div>
           </div>
-          <div class="col">
+          <div class="col" v-if="showRightKeysAnswer">
             <div class="text-bold">Right Answers Location</div>
             <div class="q-gutter-sm">
               <q-radio
@@ -69,6 +69,41 @@
             </div>
           </div>
         </div>
+
+        <q-separator />
+
+        <div class="row q-pt-md">
+          <div class="col">
+            <div class="text-bold">Using Timer ?</div>
+            <div class="q-gutter-sm">
+              <q-radio v-model="setUpTimer" :val="true" label="Yes" />
+              <q-radio v-model="setUpTimer" :val="false" label="No" />
+            </div>
+          </div>
+        </div>
+        <template v-if="setUpTimer">
+          <div class="row q-pt-md">
+            <div class="col">
+              <div class="text-bold">Using timer on every question ?</div>
+              <div class="q-gutter-sm">
+                <q-radio v-model="timerEveryQuestion" :val="true" label="Yes" />
+                <q-radio v-model="timerEveryQuestion" :val="false" label="No" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row q-pt-md">
+            <div class="col">
+              <q-input label="Hours" type="number" v-model="hourTimer" dense />
+            </div>
+            <div class="col q-pl-md">
+              <q-input label="Minutes" type="number" v-model="minTimer" dense />
+            </div>
+            <div class="col q-pl-md">
+              <q-input label="Seconds" type="number" v-model="secTimer" dense />
+            </div>
+          </div>
+        </template>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -93,9 +128,25 @@ const showResult = ref(true);
 const randomizeQuestion = ref(false);
 const showRightKeysAnswer = ref(true);
 const showRightKeysAnswerLocation = ref("end");
+const setUpTimer = ref(false);
+const timerEveryQuestion = ref(false);
+const hourTimer = ref(0);
+const minTimer = ref(0);
+const secTimer = ref(0);
 
 onMounted(() => {
-  console.log(props.setupTrainingSetup);
+  defaultTypeChoice.value = props.setupTrainingSetup.defaultTypeChoice;
+  defaultNumberOfChoice.value = props.setupTrainingSetup.defaultNumberOfChoice;
+  showResult.value = props.setupTrainingSetup.showResult;
+  randomizeQuestion.value = props.setupTrainingSetup.randomizeQuestion;
+  showRightKeysAnswer.value = props.setupTrainingSetup.showRightKeysAnswer;
+  showRightKeysAnswerLocation.value =
+    props.setupTrainingSetup.showRightKeysAnswerLocation;
+  setUpTimer.value = props.setupTrainingSetup.setUpTimer;
+  timerEveryQuestion.value = props.setupTrainingSetup.timerEveryQuestion;
+  hourTimer.value = props.setupTrainingSetup.hourTimer;
+  minTimer.value = props.setupTrainingSetup.minTimer;
+  secTimer.value = props.setupTrainingSetup.secTimer;
 });
 
 const defaultTypeChoiceOpt = ref([
@@ -128,6 +179,11 @@ function onOKClick() {
     randomizeQuestion: randomizeQuestion.value,
     showRightKeysAnswer: showRightKeysAnswer.value,
     showRightKeysAnswerLocation: showRightKeysAnswerLocation.value,
+    setUpTimer: setUpTimer.value,
+    timerEveryQuestion: timerEveryQuestion.value,
+    hourTimer: hourTimer.value,
+    minTimer: minTimer.value,
+    secTimer: secTimer.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

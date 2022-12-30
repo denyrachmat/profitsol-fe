@@ -14,8 +14,6 @@
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
         <q-toolbar-title> PT Sumitronics Indonesia </q-toolbar-title>
 
-        <div>{{ store.choosedRoles.role.rm_role_name }}</div>
-        <q-space />
         <div>Portal Application v2.0.0</div>
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>
@@ -65,6 +63,14 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-footer reveal elevated class="bg-cyan">
+      <q-toolbar>
+        <q-toolbar-title>
+          <div>{{ store.choosedRoles.role.rm_role_name }}</div></q-toolbar-title
+        >
+      </q-toolbar>
+    </q-footer>
   </q-layout>
 </template>
 

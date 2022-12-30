@@ -20,7 +20,12 @@
           <q-btn color="cyan" icon="search" @click="openTraining">
             <q-tooltip>Open created forms</q-tooltip>
           </q-btn>
-          <q-btn color="orange" icon="visibility" :disable="!title">
+          <q-btn
+            color="orange"
+            icon="visibility"
+            :disable="!title || forms.length === 0"
+            @click="openPreview"
+          >
             <q-tooltip>Preview Forms</q-tooltip>
           </q-btn>
         </q-btn-group>
@@ -104,6 +109,14 @@
                     <q-tooltip>Delete this column</q-tooltip>
                   </q-btn>
                 </q-btn-group>
+                <q-toggle
+                  v-model="col.required"
+                  color="red"
+                  label="Is Required ?"
+                  right-label
+                  v-if="col.type === 'form'"
+                  disable
+                />
               </div>
               <template v-if="!col.type || col.type === ''">
                 <div class="q-pt-md text-italic text-center">
@@ -141,6 +154,7 @@ import addContentComponent from "./addContentComponent.vue";
 import componentViewVue from "./componentView.vue";
 import apiRequest from "src/components/apiRequest";
 import openTrainingVue from "./Training/openTraining.vue";
+import PreviewComponent from "./Forms/previewComponent.vue";
 
 const { postData } = apiRequest();
 
@@ -296,8 +310,21 @@ const openTraining = () => {
       type: "form",
     },
   }).onOk(async (val) => {
-    console.log(val);
+    idRef.value = val.id;
+    title.value = val.title;
+    forms.value = val.forms;
     // forms.value[idxForm].content = val;
+  });
+};
+
+const openPreview = () => {
+  $q.dialog({
+    component: PreviewComponent,
+    componentProps: {
+      data: forms.value,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
   });
 };
 </script>

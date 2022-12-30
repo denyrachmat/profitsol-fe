@@ -15,74 +15,102 @@
       <q-card-section class="q-pa-md">
         <div class="row">
           <div class="col">
-            <!-- <q-input
-            label="Component Label"
-            v-model="label"
-            dense
-            rounded
-            outlined
-          /> -->
-            <span class="text-bold">Component Label</span>
-            <q-editor v-model="label" min-height="5rem" />
+            <div class="row">
+              <div class="col">
+                <q-toggle
+                  v-model="customizeLabel"
+                  color="red"
+                  label="Customized Label ?"
+                  left-label
+                />
+                *<i><b>Normal Answer</b> label cannot be customized</i>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-editor
+                  v-model="label"
+                  min-height="5rem"
+                  v-if="customizeLabel"
+                />
+                <q-input dense v-model="label" v-else />
+              </div>
+            </div>
           </div>
           <div class="col q-pl-sm">
-            <q-select
-              rounded
-              outlined
-              v-model="componentChoosed"
-              :options="optComponents"
-              label="Choose Components"
-              behavior="dialog"
-              dense
-            >
-              <template v-slot:option="scope">
-                <q-expansion-item
-                  expand-separator
-                  group="somegroup"
-                  :default-opened="hasChild(scope)"
-                  header-class="text-weight-bold"
-                  :label="scope.opt.label"
-                >
-                  <template
-                    v-for="child in scope.opt.children"
-                    :key="child.label"
-                  >
-                    <q-item
-                      clickable
-                      v-ripple
-                      v-close-popup
-                      @click="componentChoosed = child"
-                      :class="{
-                        'bg-light-blue-1': componentChoosed === child,
-                      }"
-                    >
-                      <q-item-section>
-                        <q-item-label
-                          v-html="child.label"
-                          class="q-ml-md"
-                        ></q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-expansion-item>
-              </template>
-
-              <template
-                v-slot:after
-                v-if="
-                  componentChoosed && componentChoosed.category === 'multiple'
-                "
-              >
-                <q-btn
-                  round
+            <div class="row">
+              <div class="col">Choose Components</div>
+            </div>
+            <div class="row q-pt-md">
+              <div class="col">
+                <q-select
+                  rounded
+                  outlined
+                  v-model="componentChoosed"
+                  :options="optComponents"
+                  label="Choose Components"
+                  behavior="dialog"
                   dense
-                  flat
-                  icon="add"
-                  @click="addDetail()"
-                  color="green"
+                >
+                  <template v-slot:option="scope">
+                    <q-expansion-item
+                      expand-separator
+                      group="somegroup"
+                      :default-opened="hasChild(scope)"
+                      header-class="text-weight-bold"
+                      :label="scope.opt.label"
+                    >
+                      <template
+                        v-for="child in scope.opt.children"
+                        :key="child.label"
+                      >
+                        <q-item
+                          clickable
+                          v-ripple
+                          v-close-popup
+                          @click="componentChoosed = child"
+                          :class="{
+                            'bg-light-blue-1': componentChoosed === child,
+                          }"
+                        >
+                          <q-item-section>
+                            <q-item-label
+                              v-html="child.label"
+                              class="q-ml-md"
+                            ></q-item-label>
+                          </q-item-section>
+                        </q-item>
+                      </template>
+                    </q-expansion-item>
+                  </template>
+
+                  <template
+                    v-slot:after
+                    v-if="
+                      componentChoosed &&
+                      componentChoosed.category === 'multiple'
+                    "
+                  >
+                    <q-btn
+                      round
+                      dense
+                      flat
+                      icon="add"
+                      @click="addDetail()"
+                      color="green"
+                    />
+                  </template>
+                </q-select>
+              </div>
+              <div class="col-3">
+                <q-toggle
+                  v-model="isRequired"
+                  color="blue"
+                  label="Required ?"
+                  left-right
                 />
-              </template>
-            </q-select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -132,6 +160,9 @@ const optComponents = ref(inputType);
 const label = ref("");
 const detailData = ref([]);
 const multipleOnly = ref(false);
+const isRequired = ref(false);
+const customizeLabel = ref(false);
+
 onMounted(() => {
   console.log(props.currComponent);
   if (props.currComponent && props.currComponent.content) {
@@ -189,7 +220,7 @@ function onOKClick() {
       detail_data: detailData.value,
       label: label.value,
     },
-    value: null,
+    required: isRequired.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

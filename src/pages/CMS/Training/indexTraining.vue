@@ -156,6 +156,11 @@ const setupTrainingSetup = ref({
   randomizeQuestion: true,
   showRightKeysAnswer: true,
   showRightKeysAnswerLocation: "end",
+  setUpTimer: false,
+  timerEveryQuestion: false,
+  hourTimer: 0,
+  minTimer: 0,
+  secTimer: 0,
 });
 
 const valueSubmited = ref([]);
@@ -207,7 +212,9 @@ const onClickChooseComponent = (idxForm = {}) => {
 const onClickSetupTraining = () => {
   $q.dialog({
     component: setupTraining,
-    componentProps: setupTrainingSetup,
+    componentProps: {
+      setupTrainingSetup: setupTrainingSetup.value,
+    },
   }).onOk(async (val) => {
     setupTrainingSetup.value = val;
     // forms.value[idxForm].content = val;
@@ -241,6 +248,7 @@ const onSaveQuestion = () => {
         uname: "",
         title: title.value,
         isQuiz: true,
+        setupTraining: setupTrainingSetup.value,
       },
       `cms/forms`,
       false,

@@ -146,8 +146,14 @@ const onDeleteData = (idx) => {
 onMounted(() => {
   console.log("masuk sini");
   detailData.value = props.detail;
-  modelData.value = props.ans.toString();
-  modelDataArr.value = props.ansArr;
+
+  if (props.ans) {
+    modelData.value = props.ans.toString();
+  }
+
+  if (props.ansArr && props.ansArr.length > 0) {
+    modelDataArr.value = props.ansArr;
+  }
 });
 
 watch(
