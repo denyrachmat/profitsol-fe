@@ -12,7 +12,13 @@
             mode="live"
             v-if="col.type === 'form'"
           />
-          <div v-html="col.content" v-else></div>
+          <div v-html="col.content" v-else-if="col.type === 'html'"></div>
+          <div v-else>
+            <showQuizComponentVue
+              :data="col.content.forms"
+              :setup="col.content.setupTraining"
+            />
+          </div>
         </div>
       </div>
     </template>
@@ -33,13 +39,13 @@
           <q-btn
             color="green"
             icon="save"
-            :disable="getNextData.length !== 0"
+            :disable="getNextData && getNextData.length !== 0"
           />
           <q-btn
             color="accent"
             icon="arrow_forward"
             @click="nextPage"
-            :disable="getNextData.length === 0"
+            :disable="!getNextData || getNextData.length === 0"
           />
         </q-btn-group>
       </div>
@@ -51,6 +57,7 @@ import { ref, defineProps, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
+import showQuizComponentVue from "./showQuizComponent.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -70,6 +77,10 @@ const getNowData = computed(() =>
 
 const getNextData = computed(() =>
   props.data.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
+);
+
+const getRequired = computed(() =>
+  getNowData.value.filter((x) => x.content.filter((y) => y.required).length > 0)
 );
 
 onMounted(() => {

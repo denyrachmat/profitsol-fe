@@ -92,12 +92,20 @@
                     <q-tooltip>Add forms component here</q-tooltip>
                   </q-btn>
                   <q-btn
-                    color="cyan"
+                    color="indigo"
                     icon="integration_instructions"
                     flat
                     @click="onClickAddContent(col.type, idxForm, idxCol)"
                   >
                     <q-tooltip>Add HTML content here</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    color="cyan"
+                    icon="psychology"
+                    flat
+                    @click="onClickChooseQuiz(idxForm, idxCol)"
+                  >
+                    <q-tooltip>Add Quiz content here</q-tooltip>
                   </q-btn>
                   <q-btn
                     color="red"
@@ -135,6 +143,9 @@
                 />
               </template>
               <div v-if="col.type === 'html'" v-html="col.content"></div>
+              <div v-if="col.type === 'quiz'">
+                {{ col.content.title }} quiz will be show here.
+              </div>
             </div>
           </div>
         </template>
@@ -172,7 +183,7 @@ const onAddRows = () => {
   // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
   forms.value.push({
     type: "row",
-    seq_name: `${forms.value.length + 1}`,
+    seq_name: `${parseInt(forms.value[forms.value.length - 1].seq_name) + 1}`,
     content: [
       {
         type: "",
@@ -325,6 +336,20 @@ const openPreview = () => {
     },
   }).onOk(async (val) => {
     console.log(val);
+  });
+};
+
+const onClickChooseQuiz = (idxForm, idxCol) => {
+  $q.dialog({
+    component: openTrainingVue,
+    componentProps: {
+      type: "quiz",
+    },
+  }).onOk(async (val) => {
+    forms.value[idxForm].content[idxCol] = {
+      type: "quiz",
+      content: val,
+    };
   });
 };
 </script>

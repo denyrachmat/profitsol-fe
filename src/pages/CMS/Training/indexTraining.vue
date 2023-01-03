@@ -281,11 +281,11 @@ const openTraining = () => {
       type: "quiz",
     },
   }).onOk(async (val) => {
-    console.log(val);
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;
     valueSubmited.value = val.ans;
+    setupTrainingSetup.value = val.setupTraining;
   });
 };
 
