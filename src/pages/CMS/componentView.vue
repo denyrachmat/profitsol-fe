@@ -181,7 +181,7 @@ watch(
   () => props.ans,
   (val) => {
     console.log("masuk cek jawaban 1");
-    modelData.value = val.toString();
+    modelData.value = val;
   }
 );
 

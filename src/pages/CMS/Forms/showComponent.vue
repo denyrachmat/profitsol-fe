@@ -10,6 +10,18 @@
             :label="col.content.label"
             :detail="col.content.detail_data"
             mode="live"
+            @customChange="(val) => getAnswers(idx, idx2, val)"
+            :ans="
+              getUserAnswers[idx] &&
+              !Array.isArray(getUserAnswers[idx] && getUserAnswers[idx][idx2])
+                ? getUserAnswers[idx][idx2]
+                : ''
+            "
+            :ansArr="
+              Array.isArray(getUserAnswers[idx] && getUserAnswers[idx][idx2])
+                ? getUserAnswers[idx][idx2]
+                : []
+            "
             v-if="col.type === 'form'"
           />
           <div v-html="col.content" v-else-if="col.type === 'html'"></div>
@@ -27,7 +39,7 @@
         <div class="col">Nothing to show.</div>
       </div>
     </template>
-    <div class="row">
+    <div class="row q-pt-md">
       <div class="col">
         <q-btn-group spread>
           <q-btn
@@ -58,7 +70,9 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
 import showQuizComponentVue from "./showQuizComponent.vue";
+import { useFormStore } from "stores/formStore";
 
+const store = useFormStore();
 const $q = useQuasar();
 const { postData } = apiRequest();
 
@@ -82,6 +96,14 @@ const getNextData = computed(() =>
 const getRequired = computed(() =>
   getNowData.value.filter((x) => x.content.filter((y) => y.required).length > 0)
 );
+
+const getUserAnswers = computed(() => {
+  return store.getUsersAnswerForm;
+});
+
+const getAnswers = (row, col, val) => {
+  store.addAnswersForm(row, col, val);
+};
 
 onMounted(() => {
   nowSeq.value = props.data[0].seq_name;
