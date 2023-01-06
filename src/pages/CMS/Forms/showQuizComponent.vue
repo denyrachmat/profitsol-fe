@@ -88,6 +88,7 @@ const { postData } = apiRequest();
 const nowSeq = ref(0);
 const runningTimes = ref({});
 const props = defineProps({
+  id: String,
   data: Array,
   setup: Object,
 });
@@ -118,16 +119,38 @@ const onClickSubmit = () => {
     message: "Are you sure want to submit this quiz ?",
     cancel: true,
     persistent: true,
-  }).onOk(() => {
-    $q.dialog({
-      component: showQuizResultVue,
-      componentProps: {
-        resShow: parseInt(props.setup.showResult),
-        answerShow: parseInt(props.setup.showRightKeysAnswer),
-        dataQuiz: props.data,
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        id: props.id,
+        ans: getUserAnswers.value,
       },
-      persistent: true,
-    });
+      `cms/quiz`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      if (data.status) {
+        $q.notify({
+          message: data.message,
+          color: "green",
+        });
+
+        $q.dialog({
+          component: showQuizResultVue,
+          componentProps: {
+            resShow: parseInt(props.setup.showResult),
+            answerShow: parseInt(props.setup.showRightKeysAnswer),
+            dataQuiz: props.data,
+            idQuiz: props.id,
+          },
+          persistent: true,
+        });
+      }
+    }
   });
 };
 

@@ -333,6 +333,7 @@ const openPreview = () => {
     component: PreviewComponent,
     componentProps: {
       data: forms.value,
+      mode: "form",
     },
   }).onOk(async (val) => {
     console.log(val);

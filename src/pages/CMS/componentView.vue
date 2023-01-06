@@ -92,6 +92,7 @@
             :label="props.label"
             emit-value
             map-options
+            :readonly="props.mode == 'live-read'"
             v-if="props.comp === 'q-select'"
           />
 
@@ -102,14 +103,21 @@
                 :options="props.detail"
                 type="checkbox"
                 v-model="modelDataArr"
+                :disable="props.mode == 'live-read'"
               />
             </div>
+
+            {{ modelDataArr }}
           </template>
 
           <template v-else-if="props.comp === 'q-radio'">
             <span v-html="props.label" />
             <div class="q-gutter-sm">
-              <q-option-group :options="props.detail" v-model="modelData" />
+              <q-option-group
+                :options="props.detail"
+                v-model="modelData"
+                :disable="props.mode == 'live-read'"
+              />
             </div>
           </template>
         </div>
@@ -152,6 +160,7 @@ onMounted(() => {
   }
 
   if (props.ansArr && props.ansArr.length > 0) {
+    console.log(props.ansArr);
     modelDataArr.value = props.ansArr;
   }
 });

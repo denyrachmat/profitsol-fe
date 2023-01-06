@@ -72,6 +72,7 @@ const getData = async () => {
 function onOKClick() {
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
+  console.log(choosedData.value);
   onDialogOK(choosedData.value);
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

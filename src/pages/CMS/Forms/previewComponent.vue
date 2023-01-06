@@ -12,7 +12,13 @@
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <showComponentVue :data="props.data" />
+        <showComponentVue :data="props.data" v-if="props.mode === 'form'" />
+        <showQuizComponentVue
+          :id="props.id"
+          :data="props.data"
+          :setup="props.setup"
+          v-else
+        />
       </q-card-section>
 
       <q-card-actions align="right">
@@ -27,6 +33,7 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
 import showComponentVue from "./showComponent.vue";
+import showQuizComponentVue from "./showQuizComponent.vue";
 import { useFormStore } from "stores/formStore";
 
 const store = useFormStore();
@@ -34,7 +41,10 @@ const $q = useQuasar();
 const { postData } = apiRequest();
 
 const props = defineProps({
+  id: String,
   data: Array,
+  setup: Object,
+  mode: String,
 });
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =

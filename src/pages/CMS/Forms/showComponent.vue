@@ -29,6 +29,7 @@
             <showQuizComponentVue
               :data="col.content.forms"
               :setup="col.content.setupTraining"
+              :id="col.content.id"
             />
           </div>
         </div>
@@ -101,6 +102,54 @@ const getUserAnswers = computed(() => {
   return store.getUsersAnswerForm;
 });
 
+const getQuizData = (data, key = 0, hasil = []) => {
+  if (data[key]) {
+    if (data[key].type == "quiz") {
+      hasil.push(data[key]);
+    } else {
+      if (data[key].type === "row") {
+        getQuizData(data[key].content, 0, hasil);
+      } else {
+        getQuizData(data, key + 1, hasil);
+      }
+    }
+
+    if (data[key + 1]) {
+      getQuizData(data, key + 1, hasil);
+    } else {
+      return hasil;
+    }
+  }
+
+  return hasil;
+};
+
+const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
+  if (data[key]) {
+    if (data[key].type == "form" && data[key].required === true) {
+      hasil.push({
+        data: data[key],
+        answers: getUserAnswers.value[rows]
+          ? getUserAnswers.value[rows][key]
+          : "",
+      });
+    } else {
+      if (data[key].type === "row") {
+        getRequiredForm(data[key].content, 0, key, hasil);
+      } else {
+        getRequiredForm(data, key + 1, rows, hasil);
+      }
+    }
+
+    // console.log(data[key + 1]);
+    if (data[key + 1]) {
+      getRequiredForm(data, key + 1, rows, hasil);
+    }
+  }
+
+  return hasil;
+};
+
 const getAnswers = (row, col, val) => {
   store.addAnswersForm(row, col, val);
 };
@@ -110,7 +159,33 @@ onMounted(() => {
 });
 
 const nextPage = () => {
-  nowSeq.value = parseInt(nowSeq.value) + 1;
+  if (
+    getRequiredForm(getNowData.value).filter((val) => val.answers === "")
+      .length > 0
+  ) {
+    getRequiredForm(getNowData.value).map((valMap) => {
+      console.log(valMap);
+      $q.notify({
+        message: `<b>${valMap.data.content.label}</b> is still empty, please fill this field`,
+        color: "red",
+        html: true,
+      });
+    });
+  } else {
+    if (getQuizData(getNextData.value).length > 0) {
+      $q.dialog({
+        title: "Quiz Start",
+        message:
+          "If you click ok, quiz will be started immediately, do you want to continue ?",
+        cancel: true,
+        persistent: true,
+      }).onOk(async () => {
+        nowSeq.value = parseInt(nowSeq.value) + 1;
+      });
+    } else {
+      nowSeq.value = parseInt(nowSeq.value) + 1;
+    }
+  }
 };
 
 const prevPage = () => {

@@ -25,7 +25,12 @@
           <q-btn color="primary" icon="search" @click="openTraining">
             <q-tooltip> Find & Edit saved question bank. </q-tooltip>
           </q-btn>
-          <q-btn color="orange" icon="visibility">
+          <q-btn
+            color="orange"
+            icon="visibility"
+            @click="openPreview"
+            :disable="!idRef"
+          >
             <q-tooltip> Test your question bank. </q-tooltip>
           </q-btn>
           <q-btn color="red" icon="settings" @click="onClickSetupTraining">
@@ -121,8 +126,27 @@
                   mode="live"
                   @custom-change="(val) => onChooseValue(val, idxCol)"
                   :key="idxCol + 'color'"
-                  :ans="valueSubmited[idxCol]"
+                  :ans="
+                    !Array.isArray(valueSubmited[idxCol])
+                      ? valueSubmited[idxCol]
+                      : ''
+                  "
+                  :ansArr="
+                    Array.isArray(valueSubmited[idxCol])
+                      ? valueSubmited[idxCol]
+                      : []
+                  "
                 />
+
+                <div class="row" v-if="valueSubmited[idxCol]">
+                  <div class="col">
+                    <span class="text-bold">Explanation (Optional)</span>
+                    <q-editor
+                      min-height="5rem"
+                      v-model="explainSubmit[idxCol]"
+                    />
+                  </div>
+                </div>
               </div></div
           ></template>
           <div class="row q-pt-md" v-else>
@@ -142,6 +166,7 @@ import apiRequest from "src/components/apiRequest";
 
 import setupTraining from "./setupTraining.vue";
 import openTrainingVue from "./openTraining.vue";
+import previewComponentVue from "../Forms/previewComponent.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -164,6 +189,7 @@ const setupTrainingSetup = ref({
 });
 
 const valueSubmited = ref([]);
+const explainSubmit = ref([]);
 
 const initChoice = ref({
   content: {
@@ -182,6 +208,7 @@ const initChoice = ref({
 const onChooseValue = (val, idx) => {
   console.log([val, idx]);
   valueSubmited.value[idx] = val;
+  explainSubmit.value[idx] = "";
   // forms.value[idx].value = val;
 };
 
@@ -245,7 +272,7 @@ const onSaveQuestion = () => {
         idRef: idRef.value,
         forms: forms.value,
         ans: valueSubmited.value,
-        uname: "",
+        exp: explainSubmit.value,
         title: title.value,
         isQuiz: true,
         setupTraining: setupTrainingSetup.value,
@@ -281,11 +308,27 @@ const openTraining = () => {
       type: "quiz",
     },
   }).onOk(async (val) => {
+    console.log(val);
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;
     valueSubmited.value = val.ans;
+    explainSubmit.value = val.exp;
     setupTrainingSetup.value = val.setupTraining;
+  });
+};
+
+const openPreview = () => {
+  $q.dialog({
+    component: previewComponentVue,
+    componentProps: {
+      data: forms.value,
+      setup: setupTrainingSetup.value,
+      id: idRef.value,
+      mode: "quiz",
+    },
+  }).onOk(async (val) => {
+    console.log(val);
   });
 };
 
