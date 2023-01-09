@@ -106,8 +106,6 @@
                 :disable="props.mode == 'live-read'"
               />
             </div>
-
-            {{ modelDataArr }}
           </template>
 
           <template v-else-if="props.comp === 'q-radio'">

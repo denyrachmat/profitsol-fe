@@ -11,7 +11,7 @@
         <div class="text-h6">Show Result</div>
       </q-card-section>
 
-      <q-card-section class="q-pa-md">
+      <q-card-section class="q-pa-md" style="overflow: auto; height: 40em">
         <div class="row" v-for="(quiz, idx) in props.dataQuiz" :key="idx">
           <div class="col">
             <componentViewVue
@@ -20,10 +20,43 @@
               :comp="quiz.content.component.value.comp"
               :label="quiz.content.label"
               :detail="quiz.content.detail_data"
-              :ans="!Array.isArray(answers[idx]) ? answers[idx] : ''"
-              :ansArr="Array.isArray(answers[idx]) ? answers[idx] : []"
+              :ans="
+                answers[idx] &&
+                answers[idx].users &&
+                !Array.isArray(answers[idx].users)
+                  ? answers[idx].users
+                  : ''
+              "
+              :ansArr="
+                answers[idx] &&
+                answers[idx].users &&
+                Array.isArray(answers[idx].users)
+                  ? answers[idx].users
+                  : []
+              "
               mode="live-read"
             />
+
+            <div class="row" v-if="answers[idx] && answers[idx].users">
+              <div
+                :class="`col ${
+                  !answers[idx].status ? 'bg-red' : 'bg-green'
+                } text-white q-pa-md`"
+              >
+                {{
+                  !answers[idx].status
+                    ? "Your answers is wrong !"
+                    : "Your answers is right."
+                }}
+
+                <span v-if="!answers[idx].status">
+                  Right answer is : <span class="text-bold">{{}}</span>
+                </span>
+              </div>
+              <div class="col q-pa-md" v-if="answers[idx].exp">
+                {{ answers[idx].exp }}
+              </div>
+            </div>
           </div>
         </div>
       </q-card-section>
@@ -52,6 +85,10 @@ const props = defineProps({
   dataQuiz: Array,
   idQuiz: Number,
 });
+
+const getAnswers = (detail, ans) => {
+  const data = detail.filter((fil) => {});
+};
 
 const answers = ref([]);
 
