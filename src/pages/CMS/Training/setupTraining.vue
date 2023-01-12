@@ -26,6 +26,7 @@
               label="Number of choice"
               v-model="defaultNumberOfChoice"
               type="number"
+              outlined
             />
           </div>
         </div>
@@ -94,16 +95,154 @@
 
           <div class="row q-pt-md">
             <div class="col">
-              <q-input label="Hours" type="number" v-model="hourTimer" dense />
+              <q-input
+                label="Hours"
+                type="number"
+                v-model="hourTimer"
+                dense
+                outlined
+              />
             </div>
             <div class="col q-pl-md">
-              <q-input label="Minutes" type="number" v-model="minTimer" dense />
+              <q-input
+                label="Minutes"
+                type="number"
+                v-model="minTimer"
+                dense
+                outlined
+              />
             </div>
             <div class="col q-pl-md">
-              <q-input label="Seconds" type="number" v-model="secTimer" dense />
+              <q-input
+                label="Seconds"
+                type="number"
+                v-model="secTimer"
+                dense
+                outlined
+              />
             </div>
           </div>
         </template>
+
+        <div class="row q-py-md">
+          <div class="col">
+            <div class="text-bold">Grade Setup</div>
+            <q-input
+              label="Min grade to pass"
+              v-model="minPass"
+              type="number"
+              :max="100"
+              :min="0"
+              outlined
+              dense
+            />
+          </div>
+        </div>
+
+        <q-separator />
+
+        <div class="text-bold">Quiz Active Setup</div>
+        <div class="row q-pt-md">
+          <div class="col q-pr-md">
+            <q-input
+              v-model="startQuiz"
+              outlined
+              dense
+              label="Start Date & Time"
+            >
+              <template v-slot:prepend>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy
+                    cover
+                    transition-show="scale"
+                    transition-hide="scale"
+                  >
+                    <q-date v-model="startQuiz" mask="YYYY-MM-DD HH:mm">
+                      <div class="row items-center justify-end">
+                        <q-btn
+                          v-close-popup
+                          label="Close"
+                          color="primary"
+                          flat
+                        />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+
+              <template v-slot:append>
+                <q-icon name="access_time" class="cursor-pointer">
+                  <q-popup-proxy
+                    cover
+                    transition-show="scale"
+                    transition-hide="scale"
+                  >
+                    <q-time
+                      v-model="startQuiz"
+                      mask="YYYY-MM-DD HH:mm"
+                      format24h
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn
+                          v-close-popup
+                          label="Close"
+                          color="primary"
+                          flat
+                        />
+                      </div>
+                    </q-time>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          <div class="col">
+            <q-input v-model="endQuiz" outlined dense label="End Date & Time">
+              <template v-slot:prepend>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy
+                    cover
+                    transition-show="scale"
+                    transition-hide="scale"
+                  >
+                    <q-date v-model="endQuiz" mask="YYYY-MM-DD HH:mm">
+                      <div class="row items-center justify-end">
+                        <q-btn
+                          v-close-popup
+                          label="Close"
+                          color="primary"
+                          flat
+                        />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+
+              <template v-slot:append>
+                <q-icon name="access_time" class="cursor-pointer">
+                  <q-popup-proxy
+                    cover
+                    transition-show="scale"
+                    transition-hide="scale"
+                  >
+                    <q-time v-model="endQuiz" mask="YYYY-MM-DD HH:mm" format24h>
+                      <div class="row items-center justify-end">
+                        <q-btn
+                          v-close-popup
+                          label="Close"
+                          color="primary"
+                          flat
+                        />
+                      </div>
+                    </q-time>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -133,6 +272,9 @@ const timerEveryQuestion = ref(false);
 const hourTimer = ref(0);
 const minTimer = ref(0);
 const secTimer = ref(0);
+const minPass = ref(100);
+const startQuiz = ref("");
+const endQuiz = ref("");
 
 onMounted(() => {
   defaultTypeChoice.value = props.setupTrainingSetup.defaultTypeChoice;
@@ -147,6 +289,9 @@ onMounted(() => {
   hourTimer.value = props.setupTrainingSetup.hourTimer;
   minTimer.value = props.setupTrainingSetup.minTimer;
   secTimer.value = props.setupTrainingSetup.secTimer;
+  minPass.value = props.setupTrainingSetup.minPass;
+  startQuiz.value = props.setupTrainingSetup.startQuiz;
+  endQuiz.value = props.setupTrainingSetup.endQuiz;
 });
 
 const defaultTypeChoiceOpt = ref([
@@ -184,6 +329,9 @@ function onOKClick() {
     hourTimer: hourTimer.value,
     minTimer: minTimer.value,
     secTimer: secTimer.value,
+    minPass: minPass.value,
+    startQuiz: startQuiz.value,
+    endQuiz: endQuiz.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

@@ -36,6 +36,9 @@
           <q-btn color="red" icon="settings" @click="onClickSetupTraining">
             <q-tooltip> Setting this question bank </q-tooltip>
           </q-btn>
+          <q-btn color="cyan" icon="share" @click="onClickShare">
+            <q-tooltip> Share this form </q-tooltip>
+          </q-btn>
         </q-btn-group>
       </div>
     </div>
@@ -167,6 +170,7 @@ import apiRequest from "src/components/apiRequest";
 import setupTraining from "./setupTraining.vue";
 import openTrainingVue from "./openTraining.vue";
 import previewComponentVue from "../Forms/previewComponent.vue";
+import shareFormsVue from "../Forms/shareForms.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -186,10 +190,15 @@ const setupTrainingSetup = ref({
   hourTimer: 0,
   minTimer: 0,
   secTimer: 0,
+  minPass: 100,
+  startQuiz: "",
+  endQuiz: "",
 });
+const share = ref([]);
 
 const valueSubmited = ref([]);
 const explainSubmit = ref([]);
+const idDetForm = ref([]);
 
 const initChoice = ref({
   content: {
@@ -208,7 +217,7 @@ const initChoice = ref({
 const onChooseValue = (val, idx) => {
   console.log([val, idx]);
   valueSubmited.value[idx] = val;
-  explainSubmit.value[idx] = "";
+  // explainSubmit.value[idx] = "";
   // forms.value[idx].value = val;
 };
 
@@ -248,6 +257,18 @@ const onClickSetupTraining = () => {
   });
 };
 
+const onClickShare = () => {
+  $q.dialog({
+    component: shareFormsVue,
+    componentProps: {
+      id: idRef.value,
+      shared: share.value,
+    },
+  }).onOk(async (val) => {
+    share.value = val;
+  });
+};
+
 const duplicateQuestion = (data) => {
   console.log(forms.value);
   console.log(data);
@@ -276,6 +297,7 @@ const onSaveQuestion = () => {
         title: title.value,
         isQuiz: true,
         setupTraining: setupTrainingSetup.value,
+        shareForms: share.value,
       },
       `cms/forms`,
       false,
@@ -315,6 +337,8 @@ const openTraining = () => {
     valueSubmited.value = val.ans;
     explainSubmit.value = val.exp;
     setupTrainingSetup.value = val.setupTraining;
+    idDetForm.value = val.ans_id;
+    share.value = val.share;
   });
 };
 
@@ -326,6 +350,7 @@ const openPreview = () => {
       setup: setupTrainingSetup.value,
       id: idRef.value,
       mode: "quiz",
+      idDet: idDetForm.value,
     },
   }).onOk(async (val) => {
     console.log(val);

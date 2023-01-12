@@ -11,50 +11,80 @@
         <div class="text-h6">Show Result</div>
       </q-card-section>
 
-      <q-card-section class="q-pa-md" style="overflow: auto; height: 40em">
-        <div class="row" v-for="(quiz, idx) in props.dataQuiz" :key="idx">
-          <div class="col">
-            <componentViewVue
-              :type="quiz.content.component.category"
-              :type-input="quiz.content.component.value.type"
-              :comp="quiz.content.component.value.comp"
-              :label="quiz.content.label"
-              :detail="quiz.content.detail_data"
-              :ans="
-                answers[idx] &&
-                answers[idx].users &&
-                !Array.isArray(answers[idx].users)
-                  ? answers[idx].users
-                  : ''
-              "
-              :ansArr="
-                answers[idx] &&
-                answers[idx].users &&
-                Array.isArray(answers[idx].users)
-                  ? answers[idx].users
-                  : []
-              "
-              mode="live-read"
-            />
+      <q-card-section class="q-pa-md">
+        <div class="row">
+          <div
+            :class="`col text-h6 text-bold text-center ${
+              isPass ? 'text-green' : 'text-red'
+            }`"
+          >
+            Grade : {{ grade }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col text-bold text-center">
+            {{
+              isPass
+                ? `You are pass this exam.`
+                : `Sorry you doesn't pass this exam.`
+            }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col" style="overflow: auto; height: 30em">
+            <div class="row" v-for="(quiz, idx) in props.dataQuiz" :key="idx">
+              <div class="col">
+                <componentViewVue
+                  :type="quiz.content.component.category"
+                  :type-input="quiz.content.component.value.type"
+                  :comp="quiz.content.component.value.comp"
+                  :label="quiz.content.label"
+                  :detail="quiz.content.detail_data"
+                  :ans="
+                    answers[idx] &&
+                    answers[idx].users &&
+                    !Array.isArray(answers[idx].users)
+                      ? answers[idx].users
+                      : ''
+                  "
+                  :ansArr="
+                    answers[idx] &&
+                    answers[idx].users &&
+                    Array.isArray(answers[idx].users)
+                      ? answers[idx].users
+                      : []
+                  "
+                  mode="live-read"
+                />
 
-            <div class="row" v-if="answers[idx] && answers[idx].users">
-              <div
-                :class="`col ${
-                  !answers[idx].status ? 'bg-red' : 'bg-green'
-                } text-white q-pa-md`"
-              >
-                {{
-                  !answers[idx].status
-                    ? "Your answers is wrong !"
-                    : "Your answers is right."
-                }}
+                <div class="row" v-if="answers[idx]">
+                  <div
+                    :class="`col ${
+                      !answers[idx].status ? 'bg-red' : 'bg-green'
+                    } text-white q-pa-md`"
+                  >
+                    {{
+                      !answers[idx].status
+                        ? "Your answers is wrong !"
+                        : "Your answers is right."
+                    }}
 
-                <span v-if="!answers[idx].status">
-                  Right answer is : <span class="text-bold">{{}}</span>
-                </span>
-              </div>
-              <div class="col q-pa-md" v-if="answers[idx].exp">
-                {{ answers[idx].exp }}
+                    <span
+                      v-if="!answers[idx].status && props.answerShow === true"
+                    >
+                      Right answer is :
+                      <span class="text-bold">{{
+                        answers[idx].ans_value &&
+                        answers[idx].ans_value.length > 1
+                          ? answers[idx].ans_value.join(", ")
+                          : answers[idx].ans_value[0]
+                      }}</span>
+                    </span>
+                  </div>
+                  <div class="col q-pa-md" v-if="answers[idx].exp">
+                    <div v-html="answers[idx].exp"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -91,6 +121,8 @@ const getAnswers = (detail, ans) => {
 };
 
 const answers = ref([]);
+const grade = ref(0);
+const isPass = ref(false);
 
 onMounted(() => {
   console.log(props);
@@ -109,6 +141,8 @@ const getAnswersUsers = async () => {
 
   if (data) {
     answers.value = data.data;
+    grade.value = data.grade;
+    isPass.value = data.is_pass;
   }
 };
 

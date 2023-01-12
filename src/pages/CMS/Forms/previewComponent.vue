@@ -17,6 +17,7 @@
           :id="props.id"
           :data="props.data"
           :setup="props.setup"
+          :idDet="props.idDet"
           v-else
         />
       </q-card-section>
@@ -42,6 +43,7 @@ const { postData } = apiRequest();
 
 const props = defineProps({
   id: String,
+  idDet: Array,
   data: Array,
   setup: Object,
   mode: String,
@@ -51,7 +53,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 function onOKClick() {
-  store.restoreDefault();
+  // store.restoreDefault();
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
   onDialogOK();

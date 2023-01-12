@@ -47,14 +47,7 @@
                 }}
               </div>
               <div
-                class="
-                  col-auto
-                  text-grey text-caption
-                  q-pt-md
-                  row
-                  no-wrap
-                  items-center
-                "
+                class="col-auto text-grey text-caption q-pt-md row no-wrap items-center"
               >
                 <q-icon name="place" />
                 250 ft
@@ -102,6 +95,11 @@
               <div class="col-12 col-md-6 q-pl-sm">
                 <div class="text-center">
                   <strong class="text-h5 text-bold">Information</strong>
+                </div>
+                <div style="overflow: scroll; max-height: 50em">
+                  <informationList
+                    @info-view="(val) => onViewInformation(val)"
+                  />
                 </div>
               </div>
             </div>
@@ -152,6 +150,7 @@ import { defineComponent, ref, onMounted } from "vue";
 import { useAuthStore } from "stores/authStore";
 import apiRequest from "src/components/apiRequest";
 import eventList from "./eventList.vue";
+import informationList from "./informationList.vue";
 // import {
 //   Providers,
 //   MgtPerson,
@@ -197,6 +196,10 @@ const getMSUserDetail = async () => {
   if (data) {
     mainEvent.value = data.value;
   }
+};
+
+const onViewInformation = (val) => {
+  console.log(val);
 };
 
 // Providers.globalProvider = new Msal2Provider({

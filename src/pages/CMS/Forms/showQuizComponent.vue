@@ -43,9 +43,12 @@
             !Array.isArray(getUserAnswers[nowSeq]) ? getUserAnswers[nowSeq] : ''
           "
           :ansArr="
-            Array.isArray(getUserAnswers[nowSeq]) ? getUserAnswers[nowSeq] : []
+            Array.isArray(getUserAnswers[nowSeq]) &&
+            getUserAnswers[nowSeq].length > 0
+              ? getUserAnswers[nowSeq]
+              : []
           "
-          @customChange="getAnswers"
+          @customChange="(val) => getAnswers(val)"
           mode="live"
         />
       </div>
@@ -63,7 +66,9 @@
             color="green"
             :label="nowSeq === props.data.length - 1 ? 'Submit' : 'Next'"
             @click="
-              nowSeq === props.data.length - 1 ? onClickSubmit() : onClickNext()
+              nowSeq === props.data.length - 1
+                ? onClickSubmit(props.idDet)
+                : onClickNext()
             "
           />
         </q-btn-group>
@@ -91,6 +96,21 @@ const props = defineProps({
   id: String,
   data: Array,
   setup: Object,
+  idDet: Array,
+});
+
+onMounted(() => {
+  store.timeData.hours =
+    parseInt(props.setup.hourTimer) > 0 ? parseInt(props.setup.hourTimer) : 0;
+  store.timeData.minutes =
+    parseInt(props.setup.minTimer) > 0 ? parseInt(props.setup.minTimer) : 0;
+  store.timeData.seconds =
+    parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
+
+  console.log(props.data);
+  if (!store.startTime) {
+    store.startCountDown();
+  }
 });
 
 const getNowQuestion = computed(() => {
@@ -105,15 +125,24 @@ const getUserAnswers = computed(() => {
   return store.getUsersAnswer;
 });
 
-const onClickNext = () => {
-  nowSeq.value = nowSeq.value + 1;
+const onClickNext = async () => {
+  if (props.setup.showRightKeysAnswerLocation === "end") {
+    nowSeq.value = nowSeq.value + 1;
+  } else {
+    console.log(props.idDet[nowSeq.value]);
+    const submiter = await onClickSubmit([props.idDet[nowSeq.value]]);
+    if (submiter) {
+      console.log(submiter);
+    }
+    // nowSeq.value = nowSeq.value + 1;
+  }
 };
 
 const onClickPrev = () => {
   nowSeq.value = nowSeq.value - 1;
 };
 
-const onClickSubmit = () => {
+const onClickSubmit = async (questId = []) => {
   $q.dialog({
     title: "Confirm",
     message: "Are you sure want to submit this quiz ?",
@@ -125,6 +154,7 @@ const onClickSubmit = () => {
       {
         id: props.id,
         ans: getUserAnswers.value,
+        questId: questId,
       },
       `cms/quiz`,
       false,
@@ -142,13 +172,17 @@ const onClickSubmit = () => {
         $q.dialog({
           component: showQuizResultVue,
           componentProps: {
-            resShow: parseInt(props.setup.showResult),
-            answerShow: parseInt(props.setup.showRightKeysAnswer),
+            resShow: props.setup.showResult,
+            answerShow: props.setup.showRightKeysAnswer,
             dataQuiz: props.data,
             idQuiz: props.id,
           },
           persistent: true,
         });
+      }
+
+      if (props.setup.showRightKeysAnswerLocation === "question") {
+        return data;
       }
     }
   });
@@ -157,18 +191,4 @@ const onClickSubmit = () => {
 const getAnswers = (val) => {
   store.addAnswers(nowSeq.value, val);
 };
-
-onMounted(() => {
-  store.timeData.hours =
-    parseInt(props.setup.hourTimer) > 0 ? parseInt(props.setup.hourTimer) : 0;
-  store.timeData.minutes =
-    parseInt(props.setup.minTimer) > 0 ? parseInt(props.setup.minTimer) : 0;
-  store.timeData.seconds =
-    parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
-
-  console.log(props.setup);
-  if (!store.startTime) {
-    store.startCountDown();
-  }
-});
 </script>

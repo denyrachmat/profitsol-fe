@@ -32,16 +32,13 @@ export const useFormStore = defineStore("form", {
 
   actions: {
     startCountDown() {
-      console.log("masuk timer 1");
+      // console.log("masuk timer 1");
       this.startTime = true;
 
       let initSecond =
         parseInt(this.timeData.hours) * 3600 +
         parseInt(this.timeData.minutes) * 60 +
         parseInt(this.timeData.seconds);
-
-      console.log(initSecond);
-
       // clearInterval(intTimer);
 
       const timerFunction = () => {
@@ -51,12 +48,12 @@ export const useFormStore = defineStore("form", {
         let minutes = secondsInMinutes % 60; // Minutes that cannot be written in hours
         let hours = (secondsInMinutes - minutes) / 60;
 
-        (this.timeRunning = {
+        this.timeRunning = {
           hours: hours,
           minutes: minutes,
           seconds: seconds,
-        }),
-          console.log([this.timeRunning]);
+        };
+        // console.log([this.timeRunning]);
 
         if (initSecond <= 0) {
           clearInterval(intTimer);

@@ -64,6 +64,9 @@ const getData = async () => {
   );
 
   if (data) {
+    setTimeout(() => {
+      console.log(data);
+    }, 1000);
     loading.value = false;
     listData.value = data.data;
   }

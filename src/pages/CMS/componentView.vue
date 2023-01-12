@@ -150,7 +150,7 @@ const onDeleteData = (idx) => {
 };
 
 onMounted(() => {
-  console.log("masuk sini");
+  console.log("masuk awalan");
   detailData.value = props.detail;
 
   if (props.ans) {
@@ -195,8 +195,11 @@ watch(
 watch(
   () => JSON.stringify(props.ansArr),
   (val) => {
-    console.log("masuk cek jawaban 2");
-    modelDataArr.value = JSON.parse(val);
+    if (JSON.parse(val).length > 0) {
+      console.log("masuk cek jawaban Array");
+      console.log(JSON.parse(val));
+      modelDataArr.value = JSON.parse(val);
+    }
   }
 );
 
@@ -205,6 +208,8 @@ watch(
   () => JSON.stringify(modelDataArr.value),
   (val) => {
     if (modelDataArr.value) {
+      console.log("lempar jawaban Array");
+      console.log(JSON.parse(val));
       emit("customChange", JSON.parse(val));
     }
   }
@@ -213,8 +218,10 @@ watch(
 watch(
   () => modelData.value,
   (val) => {
-    console.log("masuk ke 2");
-    emit("customChange", val);
+    if (modelData.value) {
+      console.log("masuk ke 2");
+      emit("customChange", val);
+    }
   }
 );
 </script>
