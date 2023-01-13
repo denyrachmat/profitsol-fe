@@ -27,7 +27,13 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, onMounted, defineAsyncComponent, computed } from "vue";
+import {
+  ref,
+  onMounted,
+  defineAsyncComponent,
+  computed,
+  defineComponent,
+} from "vue";
 import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 

@@ -148,9 +148,14 @@
 /* eslint-disable */
 import { defineComponent, ref, onMounted } from "vue";
 import { useAuthStore } from "stores/authStore";
+import { useFormStore } from "stores/formStore";
 import apiRequest from "src/components/apiRequest";
 import eventList from "./eventList.vue";
 import informationList from "./informationList.vue";
+import viewApps from "./viewApps.vue";
+import { date, useQuasar } from "quasar";
+
+import appListVue from "./appList.vue";
 // import {
 //   Providers,
 //   MgtPerson,
@@ -160,8 +165,9 @@ import informationList from "./informationList.vue";
 //   IDynamicPerson,
 // } from "@microsoft/mgt";
 
-import appListVue from "./appList.vue";
+const $q = useQuasar();
 const store = useAuthStore();
+const formStore = useFormStore();
 const viewMode = ref("apps");
 const mainEvent = ref([]);
 
@@ -200,6 +206,18 @@ const getMSUserDetail = async () => {
 
 const onViewInformation = (val) => {
   console.log(val);
+  formStore.hashFormsUpdate(val.pnm_hash_id_location);
+
+  $q.dialog({
+    component: viewApps,
+
+    // props forwarded to your custom component
+    componentProps: {
+      dataProps: val.pnm_action_url,
+      title: val.pnm_title,
+      // ...more..props...
+    },
+  }).onOk(async (val) => {});
 };
 
 // Providers.globalProvider = new Msal2Provider({

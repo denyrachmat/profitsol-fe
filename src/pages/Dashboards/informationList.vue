@@ -29,7 +29,7 @@
                 round
                 dense
                 color="green"
-                @click="clickView(row.pnm_action_url)"
+                @click="clickView(row)"
               />
             </q-item-section>
           </q-item>

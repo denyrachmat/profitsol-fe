@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 
 export const useFormStore = defineStore("form", {
   state: () => ({
+    hashForms: "",
     userAnswers: [],
     userAnswersForm: [],
     timers: 0,
@@ -27,6 +28,9 @@ export const useFormStore = defineStore("form", {
     },
     getUsersAnswerForm(state) {
       return state.userAnswersForm;
+    },
+    getHashForm(state) {
+      return state.hashForms;
     },
   },
 
@@ -87,6 +91,9 @@ export const useFormStore = defineStore("form", {
         minutes: 0,
         seconds: 0,
       };
+    },
+    hashFormsUpdate(val) {
+      this.hashForms = val;
     },
   },
 });
