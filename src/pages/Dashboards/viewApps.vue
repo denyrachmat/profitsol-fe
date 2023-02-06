@@ -27,20 +27,16 @@
   </q-dialog>
 </template>
 <script setup>
-import {
-  ref,
-  onMounted,
-  defineAsyncComponent,
-  computed,
-  defineComponent,
-} from "vue";
+import { ref, onMounted, defineAsyncComponent, computed, watch } from "vue";
 import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
+import { useFormStore } from "stores/formStore";
 
 import DMSUploadDocument from "../DMS/uploadDocument.vue";
 
 const $q = useQuasar();
 const router = useRouter();
+const formStore = useFormStore();
 const props = defineProps({
   dataProps: String,
   title: String,
@@ -81,6 +77,26 @@ const closeProgram = () => {
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
+
+watch(formStore, (val) => {
+  const datanya = formStore;
+
+  console.log("masuk sini loooh");
+  console.log(datanya);
+  console.log(date.getDateDiff(datanya.getEndDateForm, new Date(), "days"));
+
+  if (
+    datanya.getHashForm !== "" &&
+    datanya.getStartTimeState &&
+    datanya.getFinishQuizState
+  ) {
+    onDialogCancel();
+  }
+  // else {
+  //   formStore.setStartTimeState(false);
+  //   formStore.setFinishQuizState(false);
+  // }
+});
 // dialogRef      - Vue ref to be applied to QDialog
 // onDialogHide   - Function to be used as handler for @hide on QDialog
 // onDialogOK     - Function to call to settle dialog with "ok" outcome

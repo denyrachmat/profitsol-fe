@@ -8,140 +8,167 @@
   >
     <q-card class="q-dialog-plugin bg-white q-pa-md">
       <q-card-section>
-        <div class="text-h6">Setup Question Bank</div>
+        <div class="text-h6">
+          {{ props.isForm ? "Setup Forms" : "Setup Question Bank" }}
+        </div>
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <div class="row">
-          <div class="col">
-            <div class="text-bold">Default Type of Choice</div>
-            <q-option-group
-              v-model="defaultTypeChoice"
-              :options="defaultTypeChoiceOpt"
-              color="primary"
-            />
-          </div>
-          <div class="col">
-            <q-input
-              label="Number of choice"
-              v-model="defaultNumberOfChoice"
-              type="number"
-              outlined
-            />
-          </div>
-        </div>
-        <div class="row q-pt-md">
-          <div class="col">
-            <div class="text-bold">Show Result ?</div>
-            <div class="q-gutter-sm">
-              <q-radio v-model="showResult" :val="true" label="Yes" />
-              <q-radio v-model="showResult" :val="false" label="No" />
-            </div>
-          </div>
-          <div class="col">
-            <div class="text-bold">Randomize Question ?</div>
-            <div class="q-gutter-sm">
-              <q-radio v-model="randomizeQuestion" :val="true" label="Yes" />
-              <q-radio v-model="randomizeQuestion" :val="false" label="No" />
-            </div>
-          </div>
-        </div>
-        <div class="row q-pt-md">
-          <div class="col">
-            <div class="text-bold">Shows Right Answers ?</div>
-            <div class="q-gutter-sm">
-              <q-radio v-model="showRightKeysAnswer" :val="true" label="Yes" />
-              <q-radio v-model="showRightKeysAnswer" :val="false" label="No" />
-            </div>
-          </div>
-          <div class="col" v-if="showRightKeysAnswer">
-            <div class="text-bold">Right Answers Location</div>
-            <div class="q-gutter-sm">
-              <q-radio
-                v-model="showRightKeysAnswerLocation"
-                val="end"
-                label="On the end of question"
+        <template v-if="!isForm">
+          <!-- Choice Type -->
+          <div class="row">
+            <div class="col">
+              <div class="text-bold">Default Type of Choice</div>
+              <q-option-group
+                v-model="defaultTypeChoice"
+                :options="defaultTypeChoiceOpt"
+                color="primary"
               />
-              <q-radio
-                v-model="showRightKeysAnswerLocation"
-                val="question"
-                label="On every answers question"
+            </div>
+            <div class="col">
+              <q-input
+                label="Number of choice"
+                v-model="defaultNumberOfChoice"
+                type="number"
+                outlined
               />
             </div>
           </div>
-        </div>
 
-        <q-separator />
-
-        <div class="row q-pt-md">
-          <div class="col">
-            <div class="text-bold">Using Timer ?</div>
-            <div class="q-gutter-sm">
-              <q-radio v-model="setUpTimer" :val="true" label="Yes" />
-              <q-radio v-model="setUpTimer" :val="false" label="No" />
-            </div>
-          </div>
-        </div>
-        <template v-if="setUpTimer">
+          <!-- Result Setup -->
           <div class="row q-pt-md">
             <div class="col">
-              <div class="text-bold">Using timer on every question ?</div>
+              <div class="text-bold">Show Result ?</div>
               <div class="q-gutter-sm">
-                <q-radio v-model="timerEveryQuestion" :val="true" label="Yes" />
-                <q-radio v-model="timerEveryQuestion" :val="false" label="No" />
+                <q-radio v-model="showResult" :val="true" label="Yes" />
+                <q-radio v-model="showResult" :val="false" label="No" />
+              </div>
+            </div>
+            <div class="col">
+              <div class="text-bold">Randomize Question ?</div>
+              <div class="q-gutter-sm">
+                <q-radio v-model="randomizeQuestion" :val="true" label="Yes" />
+                <q-radio v-model="randomizeQuestion" :val="false" label="No" />
+              </div>
+            </div>
+          </div>
+          <div class="row q-pt-md">
+            <div class="col">
+              <div class="text-bold">Shows Right Answers ?</div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="showRightKeysAnswer"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="showRightKeysAnswer"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+            <div class="col" v-if="showRightKeysAnswer">
+              <div class="text-bold">Right Answers Location</div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="showRightKeysAnswerLocation"
+                  val="end"
+                  label="On the end of question"
+                />
+                <q-radio
+                  v-model="showRightKeysAnswerLocation"
+                  val="question"
+                  label="On every answers question"
+                />
               </div>
             </div>
           </div>
 
+          <q-separator />
+
+          <!-- Timer Setup -->
           <div class="row q-pt-md">
             <div class="col">
-              <q-input
-                label="Hours"
-                type="number"
-                v-model="hourTimer"
-                dense
-                outlined
-              />
+              <div class="text-bold">Using Timer ?</div>
+              <div class="q-gutter-sm">
+                <q-radio v-model="setUpTimer" :val="true" label="Yes" />
+                <q-radio v-model="setUpTimer" :val="false" label="No" />
+              </div>
             </div>
-            <div class="col q-pl-md">
-              <q-input
-                label="Minutes"
-                type="number"
-                v-model="minTimer"
-                dense
-                outlined
-              />
+          </div>
+          <template v-if="setUpTimer">
+            <div class="row q-pt-md">
+              <div class="col">
+                <div class="text-bold">Using timer on every question ?</div>
+                <div class="q-gutter-sm">
+                  <q-radio
+                    v-model="timerEveryQuestion"
+                    :val="true"
+                    label="Yes"
+                  />
+                  <q-radio
+                    v-model="timerEveryQuestion"
+                    :val="false"
+                    label="No"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="col q-pl-md">
+
+            <div class="row q-pt-md">
+              <div class="col">
+                <q-input
+                  label="Hours"
+                  type="number"
+                  v-model="hourTimer"
+                  dense
+                  outlined
+                />
+              </div>
+              <div class="col q-pl-md">
+                <q-input
+                  label="Minutes"
+                  type="number"
+                  v-model="minTimer"
+                  dense
+                  outlined
+                />
+              </div>
+              <div class="col q-pl-md">
+                <q-input
+                  label="Seconds"
+                  type="number"
+                  v-model="secTimer"
+                  dense
+                  outlined
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- Grade Setup -->
+          <div class="row q-py-md">
+            <div class="col">
+              <div class="text-bold">Grade Setup</div>
               <q-input
-                label="Seconds"
+                label="Min grade to pass"
+                v-model="minPass"
                 type="number"
-                v-model="secTimer"
-                dense
+                :max="100"
+                :min="0"
                 outlined
+                dense
               />
             </div>
           </div>
+
+          <q-separator />
         </template>
 
-        <div class="row q-py-md">
-          <div class="col">
-            <div class="text-bold">Grade Setup</div>
-            <q-input
-              label="Min grade to pass"
-              v-model="minPass"
-              type="number"
-              :max="100"
-              :min="0"
-              outlined
-              dense
-            />
-          </div>
+        <div class="text-bold">
+          {{ props.isForm ? "Form Active Setup" : "Quiz Active Setup" }}
         </div>
-
-        <q-separator />
-
-        <div class="text-bold">Quiz Active Setup</div>
         <div class="row q-pt-md">
           <div class="col q-pr-md">
             <q-input
@@ -257,6 +284,7 @@ import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 
 const props = defineProps({
+  isForm: Boolean,
   setupTrainingSetup: Object,
 });
 

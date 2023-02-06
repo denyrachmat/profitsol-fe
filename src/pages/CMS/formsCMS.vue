@@ -4,7 +4,7 @@
       <div class="col q-pr-md">
         <q-input label="Form Title" dense outlined v-model="title" />
       </div>
-      <div class="col-2 text-right">
+      <div class="col-3 text-right">
         <q-btn-group>
           <q-btn
             color="green"
@@ -27,6 +27,17 @@
             @click="openPreview"
           >
             <q-tooltip>Preview Forms</q-tooltip>
+          </q-btn>
+          <q-btn color="red" icon="settings" @click="onClickSetupTraining">
+            <q-tooltip> Setting Form </q-tooltip>
+          </q-btn>
+          <q-btn
+            color="cyan"
+            icon="share"
+            @click="onClickShare"
+            :disable="!idRef"
+          >
+            <q-tooltip> Share this form </q-tooltip>
           </q-btn>
         </q-btn-group>
       </div>
@@ -166,6 +177,8 @@ import componentViewVue from "./componentView.vue";
 import apiRequest from "src/components/apiRequest";
 import openTrainingVue from "./Training/openTraining.vue";
 import PreviewComponent from "./Forms/previewComponent.vue";
+import shareFormsVue from "./Forms/shareForms.vue";
+import setupTraining from "./Training/setupTraining.vue";
 
 const { postData } = apiRequest();
 
@@ -178,12 +191,33 @@ const formsInit = {
   seq_name: "",
   content: [],
 };
+const share = ref([]);
+const setupTrainingSetup = ref({
+  defaultTypeChoice: "multiple-radio",
+  defaultNumberOfChoice: "1",
+  showResult: true,
+  randomizeQuestion: true,
+  showRightKeysAnswer: true,
+  showRightKeysAnswerLocation: "end",
+  setUpTimer: false,
+  timerEveryQuestion: false,
+  hourTimer: 0,
+  minTimer: 0,
+  secTimer: 0,
+  minPass: 100,
+  startQuiz: "",
+  endQuiz: "",
+});
 
 const onAddRows = () => {
   // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
   forms.value.push({
     type: "row",
-    seq_name: `${parseInt(forms.value[forms.value.length - 1].seq_name) + 1}`,
+    seq_name: `${
+      forms.value.length === 0
+        ? 1
+        : parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+    }`,
     content: [
       {
         type: "",
@@ -291,6 +325,7 @@ const onClickSave = () => {
         ans: [],
         title: title.value,
         isQuiz: false,
+        shareForms: share.value,
       },
       `cms/forms`,
       false,
@@ -324,6 +359,7 @@ const openTraining = () => {
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;
+    share.value = val.share;
     // forms.value[idxForm].content = val;
   });
 };
@@ -351,6 +387,31 @@ const onClickChooseQuiz = (idxForm, idxCol) => {
       type: "quiz",
       content: val,
     };
+  });
+};
+
+const onClickShare = () => {
+  $q.dialog({
+    component: shareFormsVue,
+    componentProps: {
+      id: idRef.value,
+      shared: share.value,
+    },
+  }).onOk(async (val) => {
+    share.value = val;
+  });
+};
+
+const onClickSetupTraining = () => {
+  $q.dialog({
+    component: setupTraining,
+    componentProps: {
+      isForm: true,
+      setupTrainingSetup: setupTrainingSetup.value,
+    },
+  }).onOk(async (val) => {
+    setupTrainingSetup.value = val;
+    // forms.value[idxForm].content = val;
   });
 };
 </script>

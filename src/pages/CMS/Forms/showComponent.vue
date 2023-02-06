@@ -53,6 +53,7 @@
             color="green"
             icon="save"
             :disable="getNextData && getNextData.length !== 0"
+            v-if="isFormsExists.length > 0"
           />
           <q-btn
             color="accent"
@@ -96,6 +97,14 @@ const getNextData = computed(() =>
 
 const getRequired = computed(() =>
   getNowData.value.filter((x) => x.content.filter((y) => y.required).length > 0)
+);
+
+const isFormsExists = computed(() =>
+  props.data.filter((x) =>
+    x.content.length > 0
+      ? x.content.filter((y) => y.type === "form").length > 0
+      : []
+  )
 );
 
 const getUserAnswers = computed(() => {

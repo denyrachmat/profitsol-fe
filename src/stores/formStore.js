@@ -5,8 +5,10 @@ export const useFormStore = defineStore("form", {
     hashForms: "",
     userAnswers: [],
     userAnswersForm: [],
+    intervalSetup: null,
     timers: 0,
     startTime: false,
+    finishQuiz: false,
     timeData: {
       hours: 0,
       minutes: 0,
@@ -17,6 +19,8 @@ export const useFormStore = defineStore("form", {
       minutes: 0,
       seconds: 0,
     },
+    startFormDate: "",
+    endFormDate: "",
   }),
 
   getters: {
@@ -31,6 +35,18 @@ export const useFormStore = defineStore("form", {
     },
     getHashForm(state) {
       return state.hashForms;
+    },
+    getStartTimeState(state) {
+      return state.startTime;
+    },
+    getFinishQuizState(state) {
+      return state.finishQuiz;
+    },
+    getStartDateForm(state) {
+      return state.startFormDate;
+    },
+    getEndDateForm(state) {
+      return state.endFormDate;
     },
   },
 
@@ -60,12 +76,13 @@ export const useFormStore = defineStore("form", {
         // console.log([this.timeRunning]);
 
         if (initSecond <= 0) {
-          clearInterval(intTimer);
-          this.startTime = false;
+          clearInterval(this.intervalSetup);
+          this.finishQuiz = true;
+          // this.startTime = false;
         }
       };
 
-      const intTimer = setInterval(timerFunction, 1000);
+      this.intervalSetup = setInterval(timerFunction, 1000);
     },
     addAnswers(idx, val) {
       this.userAnswers[idx] = val;
@@ -94,6 +111,26 @@ export const useFormStore = defineStore("form", {
     },
     hashFormsUpdate(val) {
       this.hashForms = val;
+    },
+    finishQuizImmediatelly() {
+      this.restoreDefault();
+      clearInterval(this.intervalSetup);
+      this.finishQuiz = true;
+    },
+    setStartDateForm(date) {
+      this.startFormDate = date;
+    },
+    setEndDateForm(date) {
+      this.endFormDate = date;
+    },
+    setStartTimeState(flag) {
+      this.startTime = flag;
+    },
+    setFinishQuizState(flag) {
+      this.finishQuiz = flag;
+    },
+    setHashForms(hashed) {
+      this.hashForms = hashed;
     },
   },
 });

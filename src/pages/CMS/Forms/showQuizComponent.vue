@@ -4,14 +4,14 @@
       <div class="col q-pa-md bg-white" style="border-radius: 10px">
         <div class="row">
           <div class="col-2 text-bold self-center">
-            Question {{ nowSeq + 1 }} of {{ props.data.length }}
+            Question {{ nowSeq + 1 }} of {{ datanya.length }}
           </div>
           <div class="col">
             <div class="row">
               <div
                 :class="`col-1 q-px-md`"
                 style="height: 20px; width: 20px"
-                v-for="idx in props.data.length"
+                v-for="idx in datanya.length"
                 :key="idx"
               >
                 <div
@@ -31,7 +31,7 @@
         >
       </div>
     </div>
-    <div class="row q-pt-md">
+    <div class="row q-pt-md" v-if="getNowQuestion">
       <div class="col bg-white" style="border-radius: 10px">
         <componentViewVue
           :type="getNowQuestion.content.component.category"
@@ -64,9 +64,9 @@
           />
           <q-btn
             color="green"
-            :label="nowSeq === props.data.length - 1 ? 'Submit' : 'Next'"
+            :label="nowSeq === datanya.length - 1 ? 'Submit' : 'Next'"
             @click="
-              nowSeq === props.data.length - 1
+              nowSeq === datanya.length - 1
                 ? onClickSubmit(props.idDet)
                 : onClickNext()
             "
@@ -77,7 +77,7 @@
   </div>
 </template>
 <script setup>
-import { ref, defineProps, onMounted, computed } from "vue";
+import { ref, defineProps, onMounted, computed, watch } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
@@ -92,6 +92,9 @@ const { postData } = apiRequest();
 
 const nowSeq = ref(0);
 const runningTimes = ref({});
+const datanya = ref([]);
+const dataOri = ref([]);
+const listQuestShuff = ref([]);
 const props = defineProps({
   id: String,
   data: Array,
@@ -111,18 +114,62 @@ onMounted(() => {
   if (!store.startTime) {
     store.startCountDown();
   }
+
+  if (props.data.length > 0) {
+    dataOri.value = props.data;
+
+    const dataShuf = shuffle(props.data, true);
+    datanya.value = dataShuf[0];
+    listQuestShuff.value = dataShuf[1];
+  }
 });
 
+const shuffle = (array, idxOnly = false) => {
+  let currentIndex = array.length,
+    randomIndex;
+
+  let shufIdx = [];
+  let realData = [];
+  // While there remain elements to shuffle.
+  while (currentIndex != 0) {
+    realData.push(array[currentIndex]);
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+
+    shufIdx.push(currentIndex);
+  }
+
+  if (idxOnly) {
+    return [array, shufIdx];
+  }
+  return array;
+};
+
 const getNowQuestion = computed(() => {
-  return props.data[nowSeq.value];
+  return datanya.value[nowSeq.value];
 });
 
 const getNowTimer = computed(() => {
   return store.getRunningTimers;
 });
 
+const getStartTimeState = computed(() => {
+  return store.getStartTimeState;
+});
+
 const getUserAnswers = computed(() => {
   return store.getUsersAnswer;
+});
+
+const getFinishQuizState = computed(() => {
+  return store.getFinishQuizState;
 });
 
 const onClickNext = async () => {
@@ -142,19 +189,23 @@ const onClickPrev = () => {
   nowSeq.value = nowSeq.value - 1;
 };
 
-const onClickSubmit = async (questId = []) => {
-  $q.dialog({
-    title: "Confirm",
-    message: "Are you sure want to submit this quiz ?",
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
+const onClickSubmit = async (questId = [], passConfirm = false) => {
+  let idList = [];
+  if (questId.length === listQuestShuff.value.length) {
+    console.log(listQuestShuff.value);
+    listQuestShuff.value.map((val) => {
+      idList.push(questId[val]);
+    });
+  } else {
+    idList = questId;
+  }
+  if (passConfirm) {
     const data = await postData(
       "post",
       {
         id: props.id,
         ans: getUserAnswers.value,
-        questId: questId,
+        questId: idList,
       },
       `cms/quiz`,
       false,
@@ -174,7 +225,7 @@ const onClickSubmit = async (questId = []) => {
           componentProps: {
             resShow: props.setup.showResult,
             answerShow: props.setup.showRightKeysAnswer,
-            dataQuiz: props.data,
+            dataQuiz: dataOri.value,
             idQuiz: props.id,
           },
           persistent: true,
@@ -185,10 +236,83 @@ const onClickSubmit = async (questId = []) => {
         return data;
       }
     }
-  });
+  } else {
+    console.log(idList);
+    $q.dialog({
+      title: "Confirm",
+      message: "Are you sure want to submit this quiz ?",
+      cancel: true,
+      persistent: true,
+    }).onOk(async () => {
+      console.log(dataOri.value);
+      const data = await postData(
+        "post",
+        {
+          id: props.id,
+          ans: getUserAnswers.value,
+          questId: idList,
+        },
+        `cms/quiz`,
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        if (data.status) {
+          store.finishQuizImmediatelly();
+          $q.notify({
+            message: data.message,
+            color: "green",
+          });
+
+          $q.dialog({
+            component: showQuizResultVue,
+            componentProps: {
+              resShow: props.setup.showResult,
+              answerShow: props.setup.showRightKeysAnswer,
+              dataQuiz: dataOri.value,
+              idQuiz: props.id,
+            },
+            persistent: true,
+          });
+        }
+
+        if (props.setup.showRightKeysAnswerLocation === "question") {
+          return data;
+        }
+      }
+    });
+  }
 };
 
 const getAnswers = (val) => {
   store.addAnswers(nowSeq.value, val);
 };
+
+watch(getNowTimer, (time) => {
+  if (time.hours === 0 && time.minutes === 1 && time.seconds === 0) {
+    $q.notify({
+      message: "Your time to finish is 1 minute remaining !",
+      color: "orange",
+    });
+  }
+
+  if (time.hours === 0 && time.minutes === 0 && time.seconds === 30) {
+    $q.notify({
+      message: "Your time to finish is 30 seconds remaining, hurry up !!",
+      color: "orange",
+    });
+  }
+
+  if (
+    !getFinishQuizState.value &&
+    time.hours === 0 &&
+    time.minutes === 0 &&
+    time.seconds === 0
+  ) {
+    onClickSubmit(props.idDet, true);
+  }
+  console.log(time);
+});
 </script>

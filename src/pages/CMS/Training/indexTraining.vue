@@ -4,7 +4,7 @@
       <div class="col q-pr-md">
         <q-input outlined label="Question Bank Title" v-model="title" dense />
       </div>
-      <div class="col-3 text-right">
+      <div class="col-4 text-right">
         <q-btn-group>
           <q-btn
             color="green"
@@ -36,7 +36,12 @@
           <q-btn color="red" icon="settings" @click="onClickSetupTraining">
             <q-tooltip> Setting this question bank </q-tooltip>
           </q-btn>
-          <q-btn color="cyan" icon="share" @click="onClickShare">
+          <q-btn
+            color="cyan"
+            icon="share"
+            @click="onClickShare"
+            :disable="!idRef"
+          >
             <q-tooltip> Share this form </q-tooltip>
           </q-btn>
         </q-btn-group>

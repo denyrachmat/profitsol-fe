@@ -1,11 +1,13 @@
 <template>
   <div class="q-pa-md">
     <div v-if="hasil">
+      <showComponentVue :data="hasil.forms" v-if="hasil.isQuiz == 0" />
       <showQuizComponentVue
         :id="hasil.id"
         :data="hasil.forms"
         :setup="hasil.setupTraining"
         :id-det="hasil.ans_id"
+        v-else
       />
     </div>
   </div>

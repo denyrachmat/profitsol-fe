@@ -74,9 +74,25 @@
             <div class="full-height row">
               <div class="col-12 col-md-6">
                 <div class="text-center">
-                  <strong class="text-h5 text-bold">Meeting Schedule</strong>
+                  <div class="row q-px-md">
+                    <div class="col">
+                      <strong class="text-h5 text-bold"
+                        >Meeting Schedule</strong
+                      >
+                    </div>
+                    <div class="col text-right">
+                      <q-btn
+                        icon="refresh"
+                        color="cyan"
+                        @click="getMSUserDetail()"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div style="overflow: scroll; max-height: 50em">
+                <div
+                  style="overflow: scroll; max-height: 50em"
+                  :key="keyMeeting"
+                >
                   <eventList
                     :events="mainEvent"
                     v-if="Object.values(store.msLoginDet).length > 0"
@@ -93,10 +109,19 @@
                 </div>
               </div>
               <div class="col-12 col-md-6 q-pl-sm">
-                <div class="text-center">
-                  <strong class="text-h5 text-bold">Information</strong>
+                <div class="row q-px-md">
+                  <div class="col">
+                    <strong class="text-h5 text-bold">Information</strong>
+                  </div>
+                  <div class="col text-right">
+                    <q-btn
+                      icon="refresh"
+                      color="cyan"
+                      @click="keyInfo = keyInfo + 1"
+                    />
+                  </div>
                 </div>
-                <div style="overflow: scroll; max-height: 50em">
+                <div style="overflow: scroll; max-height: 50em" :key="keyInfo">
                   <informationList
                     @info-view="(val) => onViewInformation(val)"
                   />
@@ -146,7 +171,7 @@
 </template>
 <script setup>
 /* eslint-disable */
-import { defineComponent, ref, onMounted } from "vue";
+import { defineComponent, ref, onMounted, watch } from "vue";
 import { useAuthStore } from "stores/authStore";
 import { useFormStore } from "stores/formStore";
 import apiRequest from "src/components/apiRequest";
@@ -170,6 +195,8 @@ const store = useAuthStore();
 const formStore = useFormStore();
 const viewMode = ref("apps");
 const mainEvent = ref([]);
+const keyInfo = ref(0);
+const keyMeeting = ref(0);
 
 const { postData } = apiRequest();
 
@@ -205,19 +232,56 @@ const getMSUserDetail = async () => {
 };
 
 const onViewInformation = (val) => {
-  console.log(val);
-  formStore.hashFormsUpdate(val.pnm_hash_id_location);
+  if (val.shared && val.shared.forms.cfmt_quiz_flag == 1) {
+    $q.dialog({
+      title: "Start Quiz",
+      message: "Are you sure want to start this quiz?",
+      cancel: true,
+      persistent: true,
+    }).onOk(() => {
+      formStore.hashFormsUpdate(val.pnm_hash_id_location);
+      formStore.setStartDateForm(val.pnm_start_date);
+      formStore.setEndDateForm(val.pnm_end_date);
+      if (
+        date.getDateDiff(new Date(val.pnm_end_date), new Date(), "days") >= 0
+      ) {
+        formStore.setStartTimeState(false);
+        formStore.setFinishQuizState(false);
+        $q.dialog({
+          component: viewApps,
 
-  $q.dialog({
-    component: viewApps,
+          // props forwarded to your custom component
+          componentProps: {
+            dataProps: val.pnm_action_url,
+            title: val.pnm_title,
+            // ...more..props...
+          },
+        }).onOk(async (val) => {});
+      } else {
+        $q.notify({
+          message: `Sorry this quiz already expired or already answered !!`,
+          caption: `Expired on ${date.formatDate(
+            val.pnm_end_date,
+            "DD MMM YYYY HH:mm:ss"
+          )}`,
+          color: "red",
+        });
+      }
+    });
+  } else {
+    formStore.hashFormsUpdate(val.pnm_hash_id_location);
 
-    // props forwarded to your custom component
-    componentProps: {
-      dataProps: val.pnm_action_url,
-      title: val.pnm_title,
-      // ...more..props...
-    },
-  }).onOk(async (val) => {});
+    $q.dialog({
+      component: viewApps,
+
+      // props forwarded to your custom component
+      componentProps: {
+        dataProps: val.pnm_action_url,
+        title: val.pnm_title,
+        // ...more..props...
+      },
+    }).onOk(async (val) => {});
+  }
 };
 
 // Providers.globalProvider = new Msal2Provider({

@@ -32,7 +32,7 @@
         </div>
         <div class="row">
           <div class="col" style="overflow: auto; height: 30em">
-            <div class="row" v-for="(quiz, idx) in props.dataQuiz" :key="idx">
+            <div class="row" v-for="(quiz, idx) in questions" :key="idx">
               <div class="col">
                 <componentViewVue
                   :type="quiz.content.component.category"
@@ -123,6 +123,7 @@ const getAnswers = (detail, ans) => {
 const answers = ref([]);
 const grade = ref(0);
 const isPass = ref(false);
+const questions = ref([]);
 
 onMounted(() => {
   console.log(props);
@@ -143,6 +144,7 @@ const getAnswersUsers = async () => {
     answers.value = data.data;
     grade.value = data.grade;
     isPass.value = data.is_pass;
+    questions.value = data.data_ori;
   }
 };
 
