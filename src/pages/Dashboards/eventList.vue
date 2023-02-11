@@ -1,61 +1,69 @@
 <template>
   <div class="q-pa-md">
     <q-list class="bg-white">
-      <template v-for="(event, idx) in viewList" :key="idx">
-        <q-item>
-          <q-item-section>
-            <q-item-label
-              ><strong>{{ event.subject }}</strong></q-item-label
-            >
-            <q-item-label caption lines="1">
-              <div class="q-pa-md q-gutter-sm" style="height: 80px">
-                <q-avatar
-                  v-for="(att, n) in event.attendees.slice(0, 5)"
-                  :key="n"
-                  size="38px"
-                  class="overlapping"
-                  color="primary"
-                  text-color="white"
-                  :style="`left: ${n * 25}px`"
-                >
-                  {{ att.emailAddress.name[0] }}
-                  <q-tooltip
-                    anchor="top middle"
-                    self="bottom middle"
-                    :offset="[10, 10]"
+      <template v-if="viewList.length > 0">
+        <template v-for="(event, idx) in viewList" :key="idx">
+          <q-item>
+            <q-item-section>
+              <q-item-label
+                ><strong>{{ event.subject }}</strong></q-item-label
+              >
+              <q-item-label caption lines="1">
+                <div class="q-pa-md q-gutter-sm" style="height: 80px">
+                  <q-avatar
+                    v-for="(att, n) in event.attendees.slice(0, 5)"
+                    :key="n"
+                    size="38px"
+                    class="overlapping"
+                    color="primary"
+                    text-color="white"
+                    :style="`left: ${n * 25}px`"
                   >
-                    {{ att.emailAddress.name }}
-                  </q-tooltip>
-                </q-avatar>
-                <span
-                  v-if="event.attendees.length > 5"
-                  class="overlapping text-h6"
-                  :style="`left: ${5 * 28}px`"
-                  >And +{{ event.attendees.length - 5 }} Others</span
-                >
-              </div>
-            </q-item-label>
-          </q-item-section>
+                    {{ att.emailAddress.name[0] }}
+                    <q-tooltip
+                      anchor="top middle"
+                      self="bottom middle"
+                      :offset="[10, 10]"
+                    >
+                      {{ att.emailAddress.name }}
+                    </q-tooltip>
+                  </q-avatar>
+                  <span
+                    v-if="event.attendees.length > 5"
+                    class="overlapping text-h6"
+                    :style="`left: ${5 * 28}px`"
+                    >And +{{ event.attendees.length - 5 }} Others</span
+                  >
+                </div>
+              </q-item-label>
+            </q-item-section>
 
-          <q-item-section side top class="relative-position">
-            <q-item-label caption>{{
-              convertDate(event.start.dateTime)
-            }}</q-item-label>
-          </q-item-section>
-          <q-item-section side class="relative-position">
-            <q-btn
-              icon="visibility"
-              outline
-              round
-              dense
-              color="green"
-              @click="clickView(event)"
-            />
-          </q-item-section>
-        </q-item>
+            <q-item-section side top class="relative-position">
+              <q-item-label caption>{{
+                convertDate(event.start.dateTime)
+              }}</q-item-label>
+            </q-item-section>
+            <q-item-section side class="relative-position">
+              <q-btn
+                icon="visibility"
+                outline
+                round
+                dense
+                color="green"
+                @click="clickView(event)"
+              />
+            </q-item-section>
+          </q-item>
 
-        <q-separator spaced inset />
+          <q-separator spaced inset />
+        </template>
       </template>
+
+      <q-item v-else>
+        <q-item-label class="text-center">
+          <strong>No new Meeting</strong>
+        </q-item-label>
+      </q-item>
     </q-list>
 
     <q-dialog v-model="viewDetail">

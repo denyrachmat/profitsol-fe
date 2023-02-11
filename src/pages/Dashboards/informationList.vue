@@ -8,8 +8,12 @@
               <div
                 :class="`row full-width ${
                   row.shared.forms.cfmt_quiz_flag == 0
-                    ? 'bg-orange'
-                    : 'bg-green'
+                    ? 'bg-cyan'
+                    : row.answers.length === 0
+                    ? 'bg-red'
+                    : row.listHasil.status === 'PASSED'
+                    ? 'bg-green'
+                    : 'bg-orange'
                 }`"
                 style="height: 10px"
               ></div>
@@ -44,14 +48,18 @@
                         }}
                       </div>
                       <div class="q-pt-sm text-bold" style="font-size: 15px">
-                        {{
-                          row.answers.length > 0
-                            ? `Already Answered on : ${date.formatDate(
-                                row.answers[0].created_at,
-                                "DD MMM YYYY HH:mm:ss"
-                              )}`
-                            : "Not Answered yet"
-                        }}
+                        <div class="row">
+                          <div class="col">
+                            {{
+                              row.answers.length > 0
+                                ? `Already Answered on : ${date.formatDate(
+                                    row.answers[0].created_at,
+                                    "DD MMM YYYY HH:mm:ss"
+                                  )}`
+                                : "Not Answered yet"
+                            }}
+                          </div>
+                        </div>
                       </div>
                     </template>
                   </q-item-label>
@@ -65,6 +73,21 @@
                     dense
                     color="green"
                     @click="clickView(row)"
+                    flat
+                    :disable="
+                      row.shared.forms.cfmt_quiz_flag == 1 &&
+                      row.listHasil.status === 'PASSED'
+                    "
+                  />
+                  <q-btn
+                    icon="delete"
+                    outline
+                    round
+                    dense
+                    color="red"
+                    @click="deleteNotif(row)"
+                    flat
+                    v-if="row.shared.forms.cfmt_quiz_flag == 0"
                   />
                 </q-item-section>
               </q-item>
@@ -84,9 +107,10 @@
 </template>
 <script setup>
 import { ref, defineProps, computed, onMounted } from "vue";
-import { date } from "quasar";
+import { date, useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
+const $q = useQuasar();
 const { postData } = apiRequest();
 const emit = defineEmits(["infoView"]);
 
@@ -112,5 +136,28 @@ const getData = async () => {
 
 const clickView = (link) => {
   emit("infoView", link);
+};
+
+const deleteNotif = (row) => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Are you sure want to remove this notification ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "delete",
+      null,
+      `portal/notif/${row.id}`,
+      false,
+      false,
+      true
+    );
+    // console.log('>>>> OK')
+
+    if (data) {
+      getData();
+    }
+  });
 };
 </script>

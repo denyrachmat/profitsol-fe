@@ -119,6 +119,7 @@ onMounted(() => {
     dataOri.value = props.data;
 
     const dataShuf = shuffle(props.data, true);
+    console.log(dataShuf);
     datanya.value = dataShuf[0];
     listQuestShuff.value = dataShuf[1];
   }
@@ -193,12 +194,18 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
   let idList = [];
   if (questId.length === listQuestShuff.value.length) {
     console.log(listQuestShuff.value);
-    listQuestShuff.value.map((val) => {
-      idList.push(questId[val]);
+    datanya.value.map((val) => {
+      idList.push(val.id);
     });
   } else {
     idList = questId;
   }
+
+  console.log({
+    id: props.id,
+    ans: getUserAnswers.value,
+    questId: idList,
+  });
   if (passConfirm) {
     const data = await postData(
       "post",

@@ -33,7 +33,12 @@
           >
             <q-tooltip> Test your question bank. </q-tooltip>
           </q-btn>
-          <q-btn color="red" icon="settings" @click="onClickSetupTraining">
+          <q-btn
+            color="red"
+            icon="settings"
+            @click="onClickSetupTraining"
+            :disable="!idRef"
+          >
             <q-tooltip> Setting this question bank </q-tooltip>
           </q-btn>
           <q-btn

@@ -78,6 +78,7 @@ export const HelpersComponent = {
               headers: {
                 authorization: `Bearer ${this.store.authDet.token}`,
                 username: this.store.authDet.username,
+                Accept: "application/json",
               },
             });
           } else {

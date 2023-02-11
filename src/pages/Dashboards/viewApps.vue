@@ -81,10 +81,6 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 watch(formStore, (val) => {
   const datanya = formStore;
 
-  console.log("masuk sini loooh");
-  console.log(datanya);
-  console.log(date.getDateDiff(datanya.getEndDateForm, new Date(), "days"));
-
   if (
     datanya.getHashForm !== "" &&
     datanya.getStartTimeState &&

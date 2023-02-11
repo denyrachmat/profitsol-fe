@@ -75,7 +75,7 @@
               <div class="col-12 col-md-6">
                 <div class="text-center">
                   <div class="row q-px-md">
-                    <div class="col">
+                    <div class="col text-left">
                       <strong class="text-h5 text-bold"
                         >Meeting Schedule</strong
                       >
