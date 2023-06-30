@@ -4,7 +4,7 @@
       <div class="col q-pr-md">
         <q-input label="Form Title" dense outlined v-model="title" />
       </div>
-      <div class="col-3 text-right">
+      <div class="col-4 text-right">
         <q-btn-group>
           <q-btn
             color="green"
