@@ -100,6 +100,7 @@ export default defineComponent({
 
     return {
       remember: ref(false),
+      isMSLogin: ref(false),
       username: ref(""),
       password: ref(""),
       store,
@@ -168,6 +169,11 @@ export default defineComponent({
         this.store.logMessage(hasil.message);
         this.store.storeChoosedRole(grup.rolesGroup.roles[0]);
 
+        if (!this.isMSLogin) {
+          this.store.storeMSTokenDet("");
+          this.store.storeMSLoginDet("");
+        }
+
         this.$router.push("/");
       }
       this.onReset();
@@ -199,11 +205,12 @@ export default defineComponent({
 
           if (dataToken) {
             this.store.storeMSTokenDet(dataToken);
-
             this.store.storeMSLoginDet(logs);
 
             this.username = logs.username;
             this.password = logs.idTokenClaims.rh;
+
+            this.isMSLogin = true;
 
             this.onSubmit();
           }
