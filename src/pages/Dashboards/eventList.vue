@@ -8,7 +8,7 @@
               <q-item-label
                 ><strong>{{ event.subject }}</strong></q-item-label
               >
-              <q-item-label caption lines="1">
+              <q-item-label caption lines="2">
                 <div class="q-pa-md q-gutter-sm" style="height: 80px">
                   <q-avatar
                     v-for="(att, n) in event.attendees.slice(0, 5)"
@@ -34,6 +34,12 @@
                     :style="`left: ${5 * 28}px`"
                     >And +{{ event.attendees.length - 5 }} Others</span
                   >
+                </div>
+                <div class="q-pa-md q-gutter-sm" style="height: 40px">
+                  Organize By : {{ event.organizer.emailAddress.name }}
+                </div>
+                <div class="q-pa-md q-gutter-sm" style="height: 40px">
+                  @{{ event.location.displayName }}
                 </div>
               </q-item-label>
             </q-item-section>
@@ -72,7 +78,10 @@
           <div class="text-h6">{{ choosedData.subject }}</div>
         </q-card-section>
 
-        <q-card-section class="q-pt-none">
+        <q-card-section
+          class="q-pt-none"
+          style="max-height: 70vh; overflow: auto"
+        >
           <div v-html="choosedData.body.content"></div>
           <q-list>
             <q-item-label header>Participant</q-item-label>

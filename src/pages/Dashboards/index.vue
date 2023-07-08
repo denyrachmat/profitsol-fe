@@ -270,7 +270,7 @@ const onViewInformation = (val) => {
     });
   } else {
     formStore.hashFormsUpdate(val.pnm_hash_id_location);
-
+    console.log(val);
     $q.dialog({
       component: viewApps,
 

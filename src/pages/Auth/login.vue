@@ -151,6 +151,7 @@ export default defineComponent({
         var data = {
           username: this.username,
           password: this.password,
+          isMSLogin: this.isMSLogin,
         };
       }
 
