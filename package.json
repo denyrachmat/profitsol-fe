@@ -33,8 +33,11 @@
     "vue": "^3.0.0",
     "vue-mapbox": "^0.4.1",
     "vue-pdf-embed": "^1.1.4",
+    "vue-prism-component": "^2.0.0",
+    "vue-prism-editor": "^2.0.0-alpha.2",
     "vue-router": "^4.0.0",
     "vue3-google-signin": "^1.0.2",
+    "vue3-prism": "^0.1.4",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {

@@ -1,18 +1,169 @@
 <template>
   <div class="q-pa-md">
-    <div class="row">
+    <div class="row q-pb-md">
       <div class="col text-right">
-        <q-btn-dropdown color="teal" rounded label="Settings">
-          <q-list>
-            <q-item clickable v-close-popup>
-              <q-item-section>
-                <q-item-label>Add Connection</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-btn-dropdown>
+        <q-btn-group push>
+          <q-btn
+            label="Create New"
+            color="primary"
+            @click="addNewReport"
+          ></q-btn>
+          <q-btn-dropdown color="teal" label="Settings">
+            <q-list>
+              <q-item clickable v-close-popup>
+                <q-item-section @click="addConnButtonAction">
+                  <q-item-label>Add Connection</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup>
+                <q-item-section @click="listConnButtonAction">
+                  <q-item-label>List Connection</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+        </q-btn-group>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <q-table
+          title="List Report"
+          :rows="rows"
+          :columns="columns"
+          row-key="mrm_name"
+        >
+          <template v-slot:body="props">
+            <q-tr :props="props">
+              <q-td key="mrm_name" :props="props">
+                {{ props.row.mrm_name }}
+              </q-td>
+              <q-td key="mdm_host" :props="props">
+                {{ props.row.mdm_host }}
+              </q-td>
+              <q-td key="mrm_db" :props="props">
+                {{ props.row.mrm_db }}
+              </q-td>
+              <q-td key="created_at" :props="props">
+                {{ props.row.created_at }}
+              </q-td>
+              <q-td key="action" :props="props">
+                <q-btn-group outline>
+                  <q-btn icon="edit" color="orange" outline>
+                    <q-tooltip> Edit your report </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="visibility"
+                    color="cyan"
+                    outline
+                    @click="viewReportAction(props.row.id)"
+                  >
+                    <q-tooltip> View Report </q-tooltip>
+                  </q-btn>
+                  <q-btn icon="share" color="indigo" outline>
+                    <q-tooltip> Share Report </q-tooltip>
+                  </q-btn>
+                  <q-btn icon="delete" color="red" outline>
+                    <q-tooltip> Delete Report </q-tooltip>
+                  </q-btn>
+                </q-btn-group>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
       </div>
     </div>
   </div>
 </template>
-<script setup></script>
+<script setup>
+import { ref, watch, computed, onMounted } from "vue";
+import { useQuasar } from "quasar";
+import apiRequest from "src/components/apiRequest";
+
+import addConnectionAction from "./addConnection.vue";
+import addReportAction from "./addReport.vue";
+import viewReport from "./ActionReport/viewReport.vue";
+
+const $q = useQuasar();
+const { postData } = apiRequest();
+
+const rows = ref([]);
+const columns = ref([
+  {
+    name: "mrm_name",
+    align: "center",
+    label: "Report Name",
+    field: "mrm_name",
+    sortable: true,
+  },
+  {
+    name: "mdm_host",
+    align: "center",
+    label: "Report Host",
+    field: "mdm_host",
+    sortable: true,
+  },
+  {
+    name: "mrm_db",
+    align: "center",
+    label: "Report DB",
+    field: "mrm_db",
+    sortable: true,
+  },
+  {
+    name: "created_at",
+    align: "center",
+    label: "Created At",
+    field: "created_at",
+    sortable: true,
+  },
+  {
+    name: "action",
+    align: "center",
+    label: "Action",
+    sortable: true,
+  },
+]);
+
+onMounted(() => {
+  getDatanya();
+});
+
+const addConnButtonAction = () => {
+  $q.dialog({
+    component: addConnectionAction,
+  }).onOk(async (val) => {
+    console.log(val);
+  });
+};
+
+const addNewReport = () => {
+  $q.dialog({
+    component: addReportAction,
+  }).onOk(async (val) => {
+    console.log(val);
+  });
+};
+
+const getDatanya = async () => {
+  const data = await postData("get", null, `mrs/report`, false, false, true);
+
+  if (data.status) {
+    rows.value = data.data;
+    console.log(data);
+  }
+};
+
+const viewReportAction = (id) => {
+  console.log(id);
+  $q.dialog({
+    component: viewReport,
+    componentProps: {
+      idReport: id,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+  });
+};
+</script>
