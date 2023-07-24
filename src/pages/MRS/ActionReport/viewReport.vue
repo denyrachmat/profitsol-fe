@@ -6,7 +6,7 @@
     transition-hide="slide-down"
     full-width
   >
-    <TableReport :idReport="props.idReport" />
+    <TableReport :idReport="props.idReport" :TableTitle="props.TableTitle" />
   </q-dialog>
 </template>
 <script setup>
@@ -19,6 +19,7 @@ import TableReport from "../Tables/indexTableReport.vue";
 
 const props = defineProps({
   idReport: String,
+  TableTitle: String,
 });
 
 const $q = useQuasar();

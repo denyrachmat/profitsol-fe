@@ -25,7 +25,7 @@ const props = defineProps({
   modelValue: String,
 });
 
-const code = ref("");
+const code = ref(props.modelValue);
 const highlighter = () => highlight(code.value, languages.sql);
 
 const emit = defineEmits(["update:modelValue"]);

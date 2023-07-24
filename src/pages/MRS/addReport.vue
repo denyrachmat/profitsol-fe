@@ -20,6 +20,8 @@
           label="Choose Connection"
           @update:model-value="onChooseConn"
           :loading="loading"
+          emit-value
+          map-options
         />
       </q-step>
 
@@ -172,9 +174,30 @@
                 </q-item-section>
 
                 <q-item-section class="col-2 gt-sm">
+                  <q-item-label lines="1">
+                    <q-toggle
+                      v-model="element.filterable"
+                      label="Filterable ?"
+                      :disable="!element.active"
+                    />
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section class="col-2 gt-sm">
+                  <q-item-label lines="1">
+                    <q-toggle
+                      v-model="element.exported"
+                      label="Exportable ?"
+                      :disable="!element.active"
+                    />
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section class="col-2 gt-sm">
                   <q-item-label lines="1">{{ element.name }}</q-item-label>
                   <q-item-label caption>Field Name</q-item-label>
                 </q-item-section>
+
                 <q-item-section>
                   <q-item-label lines="1"
                     ><q-input
@@ -184,6 +207,24 @@
                       :disable="!element.active"
                     ></q-input
                   ></q-item-label>
+                </q-item-section>
+
+                <q-item-section class="col-1">
+                  <q-item-label lines="1" class="text-right">
+                    <q-btn
+                      flat
+                      icon="manage_search"
+                      :color="
+                        !element.active || !element.filterable
+                          ? 'grey'
+                          : 'orange'
+                      "
+                      :disable="!element.active || !element.filterable"
+                      @click="onManageField(element)"
+                    >
+                      <q-tooltip> Manage field column </q-tooltip>
+                    </q-btn>
+                  </q-item-label>
                 </q-item-section>
               </q-item>
             </template>
@@ -208,6 +249,7 @@
             @click="$refs.stepper.previous()"
             label="Back"
             class="q-ml-sm"
+            :disable="props.dataEdit"
           />
         </q-stepper-navigation>
       </template>
@@ -223,12 +265,33 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 import draggable from "vuedraggable";
 import { useAuthStore } from "src/stores/authStore";
 
+import manageField from "./Tables/colsManager.vue";
+
 const store = useAuthStore();
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 const $q = useQuasar();
 const { postData } = apiRequest();
+
+const props = defineProps({
+  dataEdit: Object,
+});
+
+onMounted(() => {
+  if (props.dataEdit) {
+    choosedConnection.value = props.dataEdit.mdm_id;
+    mdm_id.value = props.dataEdit.mdm_id;
+    choosedDB.value = props.dataEdit.mrm_db;
+    choosedTable.value = props.dataEdit.mrm_table;
+    validQuery.value = true;
+    reportTitle.value = props.dataEdit.mrm_name;
+    code.value = props.dataEdit.mrm_query;
+    listCols.value = props.dataEdit.cols;
+    step.value = 4;
+  }
+});
+
 const methodsReport = ref("query");
 const options = ref([
   {
@@ -333,7 +396,7 @@ const getListTables = async (id, type = "db", db = "master") => {
 };
 
 const onChooseConn = async (val) => {
-  choosedConnection.value = val.value;
+  choosedConnection.value = val;
   const getDatas = await getListTables(val.value);
   loading.value = true;
 
@@ -430,8 +493,9 @@ const onFinishTable = () => {
       "post",
       {
         header: {
+          id: props.dataEdit ? props.dataEdit.id : "",
           p_u_username: store.authDet.username,
-          mdm_id: mdm_id.value.value,
+          mdm_id: mdm_id.value,
           mrm_name: reportTitle.value,
           mrm_db: choosedDB.value,
           mrm_table: choosedTable.value,
@@ -449,6 +513,15 @@ const onFinishTable = () => {
       onDialogOK();
     }
   });
+};
+
+const onManageField = (data) => {
+  $q.dialog({
+    component: manageField,
+    componentProps: {
+      data: data,
+    },
+  }).onOk(async () => {});
 };
 </script>
 <style lang="sass">

@@ -1,6 +1,6 @@
 <template>
   <q-table
-    :title="TableTitle"
+    :title="props.TableTitle"
     :rows="rows"
     :columns="columns"
     row-key="mrm_name"
@@ -9,21 +9,44 @@
     :loading="loading"
     ref="tableRef"
   >
+    <template v-slot:top-left>
+      {{ props.TableTitle }}
+    </template>
+    <template v-slot:top-right>
+      <q-btn-group push>
+        <q-btn
+          color="green"
+          icon-right="archive"
+          label="Export to excel"
+          no-caps
+          @click="exportTable"
+        />
+        <q-btn
+          color="primary"
+          icon-right="search"
+          label="Filter"
+          no-caps
+          @click="filterDatas"
+        />
+      </q-btn-group>
+    </template>
   </q-table>
 </template>
 <script setup>
 import { ref, watch, computed, onMounted } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
+import filterData from "./filterIndex.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
 
 const props = defineProps({
   idReport: String,
+  TableTitle: String,
 });
 
-const TableTitle = ref("");
+const TableTitle = ref(props.TableTitle);
 const pagination = ref({
   sortBy: "desc",
   descending: false,
@@ -35,10 +58,12 @@ const loading = ref(false);
 const columns = ref([]);
 const rows = ref([]);
 const tableRef = ref(null);
+const filter = ref([]);
 
 onMounted(async () => {
   const colsnya = await getCols(props.idReport);
 
+  console.log(props);
   if (colsnya) {
     tableRef.value.requestServerInteraction();
   }
@@ -89,5 +114,22 @@ const onRequest = async (propsTab) => {
     pagination.value.rowsNumber = checkDatanya.data.rowsNumber;
     pagination.value.sortBy = checkDatanya.data.sortBy;
   }
+};
+
+const exportTable = () => {};
+
+const filterDatas = () => {
+  $q.dialog({
+    component: filterData,
+    componentProps: {
+      colsData: columns.value,
+      filtered: filter.value,
+    },
+  }).onOk(async (val) => {
+    filter.value = val;
+
+    console.log(val);
+    // onRequest({ pagination: pagination.value, filter: filter.value });
+  });
 };
 </script>

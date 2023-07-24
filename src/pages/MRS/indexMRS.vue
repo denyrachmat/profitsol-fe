@@ -50,14 +50,19 @@
               </q-td>
               <q-td key="action" :props="props">
                 <q-btn-group outline>
-                  <q-btn icon="edit" color="orange" outline>
+                  <q-btn
+                    icon="edit"
+                    color="orange"
+                    outline
+                    @click="onEditreport(props.row)"
+                  >
                     <q-tooltip> Edit your report </q-tooltip>
                   </q-btn>
                   <q-btn
                     icon="visibility"
                     color="cyan"
                     outline
-                    @click="viewReportAction(props.row.id)"
+                    @click="viewReportAction(props.row.id, props.row.mrm_name)"
                   >
                     <q-tooltip> View Report </q-tooltip>
                   </q-btn>
@@ -155,12 +160,24 @@ const getDatanya = async () => {
   }
 };
 
-const viewReportAction = (id) => {
-  console.log(id);
+const viewReportAction = (id, title) => {
+  console.log([id, title]);
   $q.dialog({
     component: viewReport,
     componentProps: {
       idReport: id,
+      TableTitle: title,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+  });
+};
+
+const onEditreport = (valData) => {
+  $q.dialog({
+    component: addReportAction,
+    componentProps: {
+      dataEdit: valData,
     },
   }).onOk(async (val) => {
     console.log(val);
