@@ -9,6 +9,7 @@ export const useFormStore = defineStore("form", {
     timers: 0,
     startTime: false,
     finishQuiz: false,
+    setUpTimer: false,
     timeData: {
       hours: 0,
       minutes: 0,
@@ -48,6 +49,9 @@ export const useFormStore = defineStore("form", {
     getEndDateForm(state) {
       return state.endFormDate;
     },
+    getSetUpTimer(state) {
+      return state.setUpTimer
+    }
   },
 
   actions: {
@@ -88,7 +92,6 @@ export const useFormStore = defineStore("form", {
       this.userAnswers[idx] = val;
     },
     addAnswersForm(rowIdx, colIdx, val) {
-      console.log([rowIdx, colIdx, val]);
       this.userAnswersForm[rowIdx] = {
         ...this.userAnswersForm[rowIdx],
         [colIdx]: val,
@@ -132,5 +135,8 @@ export const useFormStore = defineStore("form", {
     setHashForms(hashed) {
       this.hashForms = hashed;
     },
+    setSetUpTimer(stateVal) {
+      this.setUpTimer = stateVal
+    }
   },
 });

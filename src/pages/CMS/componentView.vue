@@ -1,12 +1,39 @@
 <template>
   <div class="q-pa-md">
     <template v-if="props.type === 'normal'">
-      <q-input
-        :type="props.typeInput"
-        v-model="modelData"
-        :label="props.label"
-        dense
-      />
+      <q-input v-model="modelData" :label="props.label" dense>
+        <template
+          v-slot:prepend
+          v-if="props.typeInput === 'date' || props.typeInput === 'time'"
+        >
+          <q-icon
+            :name="props.typeInput === 'date' ? 'event' : 'access_time'"
+            class="cursor-pointer"
+          >
+            <q-popup-proxy
+              cover
+              transition-show="scale"
+              transition-hide="scale"
+            >
+              <q-date
+                v-model="modelData"
+                mask="YYYY-MM-DD"
+                v-if="props.typeInput === 'date'"
+              >
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="Close" color="primary" flat />
+                </div>
+              </q-date>
+
+              <q-time v-model="modelData" mask="HH:mm" format24h v-else>
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="Close" color="primary" flat />
+                </div>
+              </q-time>
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
     </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">
@@ -109,7 +136,7 @@
           </template>
 
           <template v-else-if="props.comp === 'q-radio'">
-            <span v-html="props.label" />
+            <span v-html="props.label"></span>
             <div class="q-gutter-sm">
               <q-option-group
                 :options="props.detail"
@@ -140,6 +167,7 @@ const props = defineProps({
   mode: String,
   ans: String,
   ansArr: Array,
+  isRequired: Boolean,
 });
 
 const detailData = ref([]);
@@ -220,6 +248,7 @@ watch(
   (val) => {
     if (modelData.value) {
       console.log("masuk ke 2");
+      console.log(val);
       emit("customChange", val);
     }
   }

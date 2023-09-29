@@ -39,9 +39,9 @@
           v-for="(menu, idx) in listMenu"
           :key="idx"
         >
-          <q-card style="min-height: 25em" class="relative-position">
+          <q-card style="min-height: 20em" class="relative-position text-wrap">
             <q-card-section class="bg-primary text-white">
-              <div class="text-h6">{{ menu.apps.am_app_name }}</div>
+              <div class="text-bold">{{ menu.apps.am_app_name }}</div>
             </q-card-section>
 
             <q-separator />
@@ -58,9 +58,11 @@
             >
               <q-btn
                 color="cyan"
-                icon-right="exit_to_app"
+                :icon-right="
+                  menu.apps.am_is_files == 1 ? 'download' : 'exit_to_app'
+                "
                 @click="chooseApp(menu)"
-                >GO
+                >{{ menu.apps.am_is_files == 1 ? "Download" : "GO" }}
               </q-btn>
             </q-card-actions>
           </q-card>
@@ -76,6 +78,7 @@
 import { ref, defineProps, computed } from "vue";
 import { useAuthStore } from "stores/authStore";
 import { useQuasar, date } from "quasar";
+import apiRequest from "src/components/apiRequest";
 
 import viewApps from "./viewApps.vue";
 import appListRows from "./appListRows.vue";
@@ -83,6 +86,7 @@ import appListRows from "./appListRows.vue";
 import uploadDocument from "../DMS/uploadDocument.vue";
 
 const $q = useQuasar();
+const { postData } = apiRequest();
 
 const props = defineProps({
   mode: String,
@@ -128,16 +132,55 @@ const findChoosedApps = (arr, id) => {
 const chooseApp = (val) => {
   // console.log(val);
   if (val && val.child_roles.length === 0) {
-    $q.dialog({
-      component: viewApps,
+    if (val.apps.am_is_files == 1) {
+      if (val.apps.am_app_code[0] == "M") {
+        // JIKA YG DI KLIK ADALAH APLIKASI MACRO EXCEL
+        $q.dialog({
+          title: "Download Macro",
+          message: "Are you sure want to download this macro ?",
+          cancel: true,
+          persistent: true,
+        }).onOk(async () => {
+          const datas = await postData(
+            "get",
+            null,
+            `macro/download/${btoa(val.apps.am_app_url)}`,
+            true,
+            false,
+            true
+          );
 
-      // props forwarded to your custom component
-      componentProps: {
-        dataProps: val.apps.am_app_url,
-        title: val.apps.am_app_name,
-        // ...more..props...
-      },
-    }).onOk(async (val) => {});
+          if (datas) {
+            // console.log(datas);
+            const link = document.createElement("a");
+            link.download = name;
+            // const data = await fetch(datas).then((res) => res.blob());
+            link.href = window.URL.createObjectURL(
+              new Blob([datas.data], {
+                type: "application/vnd.ms-excel",
+              })
+            );
+            link.setAttribute("download", val.apps.am_app_name);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(link.href);
+            // console.log(datas);
+          }
+        });
+      }
+    } else {
+      $q.dialog({
+        component: viewApps,
+
+        // props forwarded to your custom component
+        componentProps: {
+          dataProps: val.apps.am_app_url,
+          title: val.apps.am_app_name,
+          isRouter: val.apps.am_local_form == 1,
+          // ...more..props...
+        },
+      }).onOk(async (val) => {});
+    }
   } else {
     clickedApp.value = [...clickedApp.value, val.apps.am_app_code];
   }

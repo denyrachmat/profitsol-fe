@@ -73,6 +73,8 @@ watch(isVerified, (val) => {
       Date.now(),
       "YYYY-MM-DD HH:mm:ss"
     );
+  } else {
+    dataHasil.value.email_verified_at = null;
   }
 });
 

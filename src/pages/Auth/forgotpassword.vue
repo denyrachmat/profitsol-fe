@@ -1,7 +1,16 @@
 <template>
   <q-card class="my-card center">
     <q-card-section class="bg-purple q-pa-md text-white">
-      <div class="text-h6"><q-btn flat color="white" icon="chevron_left" round @click="$emit('getrouted','login')"/> Input your username / registered email</div>
+      <div class="text-h6">
+        <q-btn
+          flat
+          color="white"
+          icon="chevron_left"
+          round
+          @click="$emit('getrouted', 'login')"
+        />
+        Input your username / registered email
+      </div>
     </q-card-section>
 
     <q-separator dark />
@@ -13,7 +22,7 @@
           v-model="username"
           label="Username / Email"
           lazy-rules
-          :rules="[val => (val && val.length > 0) || 'Please type something']"
+          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
         />
         <div>
           <q-btn label="Submit" type="submit" color="primary" />
@@ -36,14 +45,37 @@ import { HelpersComponent } from "../../components/HelpersComponent";
 
 export default {
   name: "forgotPassword",
+  mixins: [HelpersComponent],
   data() {
     return {
-      username: '',
+      username: "",
     };
   },
   methods: {
-    onSubmit() {},
-    onReset() {}
-  }
+    async onSubmit() {
+      let opt = {
+        methods: "post",
+        url: "forgot-password",
+      };
+
+      let hasil = await this.postData(
+        opt,
+        {
+          email: this.username,
+        },
+        false,
+        true,
+        false
+      );
+      if (hasil && hasil.status) {
+        console.log(hasil);
+        this.$q.notify({
+          color: "success",
+          message: `Reset link has sent to your email !!`,
+        });
+      }
+    },
+    onReset() {},
+  },
 };
 </script>

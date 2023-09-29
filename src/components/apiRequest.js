@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ref } from "vue";
 import { useAuthStore } from "../stores/authStore";
-import { useQuasar } from "quasar";
+import { useQuasar, QSpinnerFacebook } from "quasar";
 import { useRouter } from "vue-router";
 
 const apiRequest = () => {
@@ -35,31 +35,47 @@ const apiRequest = () => {
     // Setup Root API
     const apiURL = !isApi ? process.env.API + url : isApi;
 
-    let header = {
-      responseType: blob ? "arraybuffer" : "json",
-      headers: {
-        authorization: `Bearer ${
-          isMSToken ? store.msTokenDet.accessToken : store.authDet.token
-        }`,
-        username: store.authDet.username,
-        ...(blob
-          ? {
+    let header
+    if (auth) {
+      header = {
+        responseType: blob ? "arraybuffer" : "json",
+        headers: {
+          authorization: `Bearer ${isMSToken ? store.msTokenDet.accessToken : store.authDet.token
+            }`,
+          username: store.authDet.username,
+          ...(blob
+            ? {
               "Content-Type":
                 "multipart/form-data; charset=utf-8; boundary=" +
                 Math.random().toString().substr(2),
             }
-          : null),
-      },
-    };
+            : null),
+        },
+      };
+    } else {
+      header = {
+        responseType: blob ? "arraybuffer" : "json",
+        headers: {
+          username: store.authDet.username,
+          ...(blob
+            ? {
+              "Content-Type":
+                "multipart/form-data; charset=utf-8; boundary=" +
+                Math.random().toString().substr(2),
+            }
+            : null),
+        },
+      };
+    }
 
     let setupAx = null;
-    if (methods === "get") {
+    if (methods === "get" || methods === "delete") {
       setupAx = axios[methods](apiURL, header);
     } else {
       setupAx = axios[methods](apiURL, request, header);
     }
 
-    // console.log(header);
+    // console.log(setupAx);
 
     let req = setupAx
       .then((res) => {
@@ -75,11 +91,12 @@ const apiRequest = () => {
         }
 
         if (e.response) {
-          console.log(e.response.status);
+          console.log(e.response);
           if (e.response.status == 422) {
-            // console.log(e.response.data);
+            console.log(e.response.data);
             let errors = e.response.data.errors;
             if (errors) {
+              console.log(errors)
               Object.keys(errors).map((val) => {
                 errors[val].map((val_det) => {
                   $q.notify({
@@ -100,10 +117,17 @@ const apiRequest = () => {
                   message: decodedString,
                 });
               } else {
-                $q.notify({
-                  color: "negative",
-                  message: "Undefined error!!",
-                });
+                if (e.response.data.message) {
+                  $q.notify({
+                    color: "negative",
+                    message: e.response.data.message,
+                  });
+                } else {
+                  $q.notify({
+                    color: "negative",
+                    message: "Undefined error!!",
+                  });
+                }
               }
             }
           }

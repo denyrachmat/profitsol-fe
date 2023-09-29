@@ -208,6 +208,11 @@ const setupTrainingSetup = ref({
   startQuiz: "",
   endQuiz: "",
 });
+const shareMainMenu = ref(0);
+const shareIsroles = ref(0);
+const selectedSharedMenu = ref("");
+const shareFormsMenuIcon = ref("");
+const selectedTableRoles = ref("");
 
 const onAddRows = () => {
   // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
@@ -326,6 +331,10 @@ const onClickSave = () => {
         title: title.value,
         isQuiz: false,
         shareForms: share.value,
+        shareFormsIsMainMenu: shareMainMenu.value,
+        shareFormsIsRoles: shareIsroles.value,
+        selectedSharedMenu: selectedSharedMenu.value,
+        shareFormsMenuIcon: shareFormsMenuIcon.value,
       },
       `cms/forms`,
       false,
@@ -356,10 +365,16 @@ const openTraining = () => {
       type: "form",
     },
   }).onOk(async (val) => {
+    // console.log(val);
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;
     share.value = val.share;
+    shareMainMenu.value = val.shareFormsIsMainMenu;
+    shareIsroles.value = val.shareIsroles;
+    selectedSharedMenu.value = val.selectedSharedMenu;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedTableRoles.value = val.shareFormsRoleID;
     // forms.value[idxForm].content = val;
   });
 };
@@ -391,14 +406,24 @@ const onClickChooseQuiz = (idxForm, idxCol) => {
 };
 
 const onClickShare = () => {
+  console.log(shareMainMenu.value);
   $q.dialog({
     component: shareFormsVue,
     componentProps: {
       id: idRef.value,
       shared: share.value,
+      shareMainMenu: shareMainMenu.value,
+      shareIsroles: shareIsroles.value,
+      selectedSharedMenu: selectedSharedMenu.value,
+      shareFormsMenuIcon: shareFormsMenuIcon.value,
+      selectedTableRoles: selectedTableRoles.value,
     },
   }).onOk(async (val) => {
-    share.value = val;
+    share.value = val.emails;
+    shareMainMenu.value = val.isMainMenu;
+    shareIsroles.value = val.isRoles;
+    selectedSharedMenu.value = val.selectedSharedMenu;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
   });
 };
 
@@ -414,4 +439,35 @@ const onClickSetupTraining = () => {
     // forms.value[idxForm].content = val;
   });
 };
+
+// watch(
+//   () => JSON.stringify(setupTrainingSetup.value),
+//   (val) => {
+//     const valParse = JSON.parse(val);
+//     console.log(valParse);
+
+//     if (valParse) {
+//       initChoice.value.content.component.value.comp =
+//         valParse.defaultTypeChoice === "multiple-radio"
+//           ? "q-radio"
+//           : "q-checkbox";
+//       initChoice.value.content.component.value.type =
+//         valParse.defaultTypeChoice;
+
+//       const hasilDetail = [];
+//       for (let index = 0; index < valParse.defaultNumberOfChoice; index++) {
+//         hasilDetail.push({
+//           col_det_id: "opt-" + (index + 1),
+//           col_det_label: "",
+//           label: "",
+//           value: index + 1,
+//         });
+//       }
+
+//       initChoice.value.content.detail_data = hasilDetail;
+//     }
+//     // refreshDetail.value = refreshDetail.value + 1;
+//     // emit("onDeleted", JSON.parse(val));
+//   }
+// );
 </script>

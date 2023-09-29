@@ -39,6 +39,9 @@
               <q-td key="mrm_name" :props="props">
                 {{ props.row.mrm_name }}
               </q-td>
+              <q-td key="mrm_url_gen" :props="props">
+                {{ props.row.mrm_url_gen }}
+              </q-td>
               <q-td key="mdm_host" :props="props">
                 {{ props.row.mdm_host }}
               </q-td>
@@ -46,7 +49,9 @@
                 {{ props.row.mrm_db }}
               </q-td>
               <q-td key="created_at" :props="props">
-                {{ props.row.created_at }}
+                {{
+                  date.formatDate(props.row.created_at, "YYYY-MM-DD HH:mm:ss")
+                }}
               </q-td>
               <q-td key="action" :props="props">
                 <q-btn-group outline>
@@ -66,10 +71,20 @@
                   >
                     <q-tooltip> View Report </q-tooltip>
                   </q-btn>
-                  <q-btn icon="share" color="indigo" outline>
-                    <q-tooltip> Share Report </q-tooltip>
+                  <q-btn
+                    icon="tab"
+                    color="indigo"
+                    outline
+                    @click="onOpenNewTab(props.row.id)"
+                  >
+                    <q-tooltip> Open in new tab </q-tooltip>
                   </q-btn>
-                  <q-btn icon="delete" color="red" outline>
+                  <q-btn
+                    icon="delete"
+                    color="red"
+                    outline
+                    @click="onDelete(props.row.id)"
+                  >
                     <q-tooltip> Delete Report </q-tooltip>
                   </q-btn>
                 </q-btn-group>
@@ -85,6 +100,7 @@
 import { ref, watch, computed, onMounted } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
+import { date } from "quasar";
 
 import addConnectionAction from "./addConnection.vue";
 import addReportAction from "./addReport.vue";
@@ -100,6 +116,13 @@ const columns = ref([
     align: "center",
     label: "Report Name",
     field: "mrm_name",
+    sortable: true,
+  },
+  {
+    name: "mrm_url_gen",
+    align: "center",
+    label: "Report Origin",
+    field: "mrm_url_gen",
     sortable: true,
   },
   {
@@ -181,6 +204,39 @@ const onEditreport = (valData) => {
     },
   }).onOk(async (val) => {
     console.log(val);
+  });
+};
+
+const onOpenNewTab = (id) => {
+  $q.dialog({
+    title: "Open separated tab",
+    message: "Are you sure want to open this report in new tab ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    window.open(window.location.origin + "#/mrsReport/" + id, "_blank").focus();
+  });
+};
+
+const onDelete = (id) => {
+  $q.dialog({
+    title: "Delete report",
+    message: "Are you sure want to remove this report ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "delete",
+      null,
+      `mrs/report/${id}`,
+      false,
+      false,
+      true
+    );
+
+    if (data.status) {
+      getDatanya();
+    }
   });
 };
 </script>

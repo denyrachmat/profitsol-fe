@@ -33,6 +33,8 @@
           </q-menu>
         </q-btn>
 
+        <q-btn flat dense round icon="mail" aria-label="Notification"> </q-btn>
+
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
             <q-list style="min-width: 100px">

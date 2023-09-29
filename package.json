@@ -26,6 +26,7 @@
     "firebase": "^9.9.2",
     "mapbox-gl": "^2.9.1",
     "pinia": "^2.0.11",
+    "pinia-plugin-persist": "^1.0.0",
     "pinia-plugin-persistedstate": "^1.6.1",
     "quasar": "^2.6.0",
     "stylus-loader": "^7.0.0",

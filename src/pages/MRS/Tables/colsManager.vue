@@ -32,6 +32,11 @@
           </div>
         </div>
       </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn label="Search" color="primary" @click="onOKClick" />
+        <q-btn flat label="Cancel" color="red" @click="onDialogCancel" />
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
@@ -40,7 +45,9 @@ import { ref, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 
 const props = defineProps({
-  data: Object,
+  fieldName: String,
+  typeField: String,
+  filterMethod: String,
 });
 
 const groupType = ref("text");
@@ -88,4 +95,8 @@ onMounted(() => {
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
+
+const onOKClick = () => {
+  onDialogOK(filterList.value);
+};
 </script>

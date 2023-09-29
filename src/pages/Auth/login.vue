@@ -155,7 +155,7 @@ export default defineComponent({
         };
       }
 
-      let hasil = await this.postData(opt, data, false, true);
+      let hasil = await this.postData(opt, data, false, true, true);
       let date = new Date();
 
       var time =

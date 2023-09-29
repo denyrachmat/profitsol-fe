@@ -115,10 +115,7 @@
                   </template>
                 </q-btn>
               </q-btn-group>
-              <editorCode
-                v-if="methodsReport == 'query' || methodsReport == 'view'"
-                v-model="code"
-              />
+              <editorCode v-model="code" />
             </div>
           </div>
           <hr />
@@ -160,41 +157,37 @@
           <div class="q-pb-md">
             <q-input label="Report Title" filled dense v-model="reportTitle" />
           </div>
-          <draggable
-            tag="div"
-            v-model="listCols"
-            class="q-list q-list--bordered q-list--dense q-list--separator"
-          >
-            <template #item="{ element }">
-              <q-item clickable v-ripple :active="element.active">
+          <q-list bordered class="rounded-borders">
+            <q-expansion-item
+              expand-separator
+              icon="tune"
+              label="Parameter settings (For Stored Procedure)"
+            >
+              <q-item
+                clickable
+                v-ripple
+                :active="methodsReport == 'sp'"
+                v-for="(params, idx) in listParamsConverted"
+                :key="idx"
+              >
                 <q-item-section class="col-2 gt-sm">
                   <q-item-label lines="1">
-                    <q-toggle v-model="element.active" label="Using Field ?" />
+                    <q-toggle v-model="params.active" label="Using Field ?" />
                   </q-item-label>
                 </q-item-section>
 
                 <q-item-section class="col-2 gt-sm">
                   <q-item-label lines="1">
                     <q-toggle
-                      v-model="element.filterable"
+                      v-model="params.filterable"
                       label="Filterable ?"
-                      :disable="!element.active"
+                      :disable="!params.active"
                     />
                   </q-item-label>
                 </q-item-section>
 
                 <q-item-section class="col-2 gt-sm">
-                  <q-item-label lines="1">
-                    <q-toggle
-                      v-model="element.exported"
-                      label="Exportable ?"
-                      :disable="!element.active"
-                    />
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section class="col-2 gt-sm">
-                  <q-item-label lines="1">{{ element.name }}</q-item-label>
+                  <q-item-label lines="1">{{ params.name }}</q-item-label>
                   <q-item-label caption>Field Name</q-item-label>
                 </q-item-section>
 
@@ -203,32 +196,109 @@
                     ><q-input
                       dense
                       label="Field Label"
-                      v-model="element.label"
-                      :disable="!element.active"
+                      v-model="params.label"
+                      :disable="!params.active"
+                      filled
                     ></q-input
                   ></q-item-label>
                 </q-item-section>
 
-                <q-item-section class="col-1">
-                  <q-item-label lines="1" class="text-right">
-                    <q-btn
-                      flat
-                      icon="manage_search"
-                      :color="
-                        !element.active || !element.filterable
-                          ? 'grey'
-                          : 'orange'
-                      "
-                      :disable="!element.active || !element.filterable"
-                      @click="onManageField(element)"
-                    >
-                      <q-tooltip> Manage field column </q-tooltip>
-                    </q-btn>
+                <q-item-section>
+                  <q-item-label lines="1">
+                    <q-select
+                      v-model="params.type"
+                      :options="optType"
+                      emit-value
+                      map-options
+                      dense
+                      filled
+                      :disable="!params.active"
+                    />
                   </q-item-label>
                 </q-item-section>
               </q-item>
-            </template>
-          </draggable>
+            </q-expansion-item>
+            <q-expansion-item
+              expand-separator
+              icon="table_view"
+              label="Columns settings"
+              caption="Columns & Filter Setup"
+            >
+              <draggable
+                tag="div"
+                v-model="listCols"
+                class="q-list q-list--bordered q-list--dense q-list--separator"
+              >
+                <template #item="{ element }">
+                  <q-item
+                    clickable
+                    v-ripple
+                    :active="element.active || methodsReport != 'sp'"
+                  >
+                    <q-item-section class="col-2 gt-sm">
+                      <q-item-label lines="1">
+                        <q-toggle
+                          v-model="element.active"
+                          label="Using Field ?"
+                        />
+                      </q-item-label>
+                    </q-item-section>
+
+                    <q-item-section class="col-2 gt-sm">
+                      <q-item-label lines="1">
+                        <q-toggle
+                          v-model="element.filterable"
+                          label="Filterable ?"
+                          :disable="!element.active || methodsReport == 'sp'"
+                        />
+                      </q-item-label>
+                    </q-item-section>
+
+                    <q-item-section class="col-2 gt-sm">
+                      <q-item-label lines="1">
+                        <q-toggle
+                          v-model="element.exported"
+                          label="Exportable ?"
+                          :disable="!element.active || methodsReport == 'sp'"
+                        />
+                      </q-item-label>
+                    </q-item-section>
+
+                    <q-item-section class="col-2 gt-sm">
+                      <q-item-label lines="1">{{ element.name }}</q-item-label>
+                      <q-item-label caption>Field Name</q-item-label>
+                    </q-item-section>
+
+                    <q-item-section>
+                      <q-item-label lines="1"
+                        ><q-input
+                          dense
+                          label="Field Label"
+                          v-model="element.label"
+                          :disable="!element.active"
+                          filled
+                        ></q-input
+                      ></q-item-label>
+                    </q-item-section>
+
+                    <q-item-section>
+                      <q-item-label lines="1">
+                        <q-select
+                          v-model="element.type"
+                          :options="optType"
+                          emit-value
+                          map-options
+                          dense
+                          filled
+                          :disable="!element.active || methodsReport == 'sp'"
+                        />
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </draggable>
+            </q-expansion-item>
+          </q-list>
         </template>
       </q-step>
 
@@ -288,6 +358,7 @@ onMounted(() => {
     reportTitle.value = props.dataEdit.mrm_name;
     code.value = props.dataEdit.mrm_query;
     listCols.value = props.dataEdit.cols;
+    listParamsConverted.value = props.dataEdit.colsParam;
     step.value = 4;
   }
 });
@@ -317,11 +388,62 @@ const choosedDB = ref("");
 const choosedTable = ref("");
 const code = ref("");
 const listCols = ref([]);
+const listParams = ref([]);
+const listParamsConverted = ref([]);
 const reportTitle = ref("");
 
 const loading = ref(false);
 const validQuery = ref(false);
+const optType = ref([
+  {
+    label: "Text",
+    value: "text",
+  },
+  {
+    label: "Integer",
+    value: "int",
+  },
+  {
+    label: "Float",
+    value: "float",
+  },
+  {
+    label: "Date",
+    value: "date",
+  },
+  {
+    label: "Datetime",
+    value: "datetime",
+  },
+]);
 
+watch(step, (val) => {
+  if (val === 4) {
+    listCols.value.map((valMap) => {
+      if (valMap.name.toLowerCase().includes("qty")) {
+        valMap.type = "int";
+      } else if (valMap.name.toLowerCase().includes("date")) {
+        valMap.type = "date";
+      } else {
+        valMap.type = "text";
+      }
+    });
+
+    if (listParamsConverted.value) {
+      listParamsConverted.value.map((valMap) => {
+        if (valMap.name.toLowerCase().includes("qty")) {
+          valMap.type = "int";
+        } else if (valMap.name.toLowerCase().includes("date")) {
+          valMap.type = "date";
+        } else {
+          valMap.type = "text";
+        }
+      });
+    }
+  }
+});
+
+// =============== Start Function==============
 const listColsForDraggable = computed(() => {
   return listCols.value.map((vm, idx) => {
     vm.id = idx;
@@ -334,17 +456,18 @@ onMounted(() => {
 });
 
 watch(methodsReport, async (val) => {
-  console.log(val);
-  const getDatas = await getListTables(
-    choosedConnection.value,
-    val === "view" ? "view" : "tables",
-    choosedDB.value
-  );
-  loading.value = true;
+  if (choosedConnection.value) {
+    const getDatas = await getListTables(
+      choosedConnection.value,
+      val,
+      choosedDB.value
+    );
+    loading.value = true;
 
-  if (getDatas) {
-    loading.value = false;
-    listTables.value = getDatas;
+    if (getDatas) {
+      loading.value = false;
+      listTables.value = getDatas;
+    }
   }
 });
 
@@ -374,11 +497,11 @@ const getListConnection = async () => {
   if (data) {
     loading.value = false;
     listConnection.value = data.data;
-    console.log(data);
   }
 };
 
 const getListTables = async (id, type = "db", db = "master") => {
+  console.log(id);
   loading.value = true;
   const data = await postData(
     "get",
@@ -396,8 +519,9 @@ const getListTables = async (id, type = "db", db = "master") => {
 };
 
 const onChooseConn = async (val) => {
+  console.log(val);
   choosedConnection.value = val;
-  const getDatas = await getListTables(val.value);
+  const getDatas = await getListTables(val);
   loading.value = true;
 
   if (getDatas) {
@@ -407,6 +531,7 @@ const onChooseConn = async (val) => {
 };
 
 const onChooseDB = async (val) => {
+  console.log(choosedConnection.value);
   choosedDB.value = val;
   const getDatas = await getListTables(choosedConnection.value, "tables", val);
   loading.value = true;
@@ -421,23 +546,35 @@ const onChooseTableView = async (val) => {
   listCols.value = [];
   validQuery.value = false;
 
-  code.value = `SELECT * FROM ${val}`;
+  if (methodsReport.value == "sp") {
+    const getParam = await getSPParameter(val);
+    code.value = `EXEC ${val}`;
+
+    if (getParam) {
+      listParams.value = getParam;
+      getParam.map((valMap, idx) => {
+        code.value = `${code.value} ${idx === 0 ? "" : ","} ${valMap}=''`;
+      });
+    }
+  } else {
+    code.value = `SELECT * FROM ${val}`;
+  }
   choosedTable.value = val;
 };
 
-const checkQuery = async () => {
-  return await postData(
-    "post",
-    {
-      id: mdm_id.value,
-      dbname: choosedDB.value,
-      code: code.value,
-    },
-    `mrs/simRunning`,
+const getSPParameter = async (table) => {
+  const data = await postData(
+    "get",
+    null,
+    `mrs/getParameterSP/${choosedConnection.value}/${choosedDB.value}/${table}`,
     false,
     false,
     true
   );
+
+  if (data.status) {
+    return data.data;
+  }
 };
 
 const onClickRunning = () => {
@@ -455,6 +592,9 @@ const onClickRunning = () => {
         id: mdm_id.value,
         dbname: choosedDB.value,
         code: code.value,
+        type: methodsReport.value,
+        table: choosedTable.value,
+        param: listParams.value,
       },
       `mrs/simRunning`,
       false,
@@ -462,11 +602,12 @@ const onClickRunning = () => {
       true
     );
 
-    if (data) {
+    if (data.status) {
       loading.value = false;
       if (data.cols) {
         validQuery.value = true;
         listCols.value = data.cols;
+        listParamsConverted.value = data.params;
         $q.dialog({
           component: simulationTablesReport,
           componentProps: {
@@ -478,6 +619,12 @@ const onClickRunning = () => {
       } else {
         validQuery.value = false;
       }
+    } else {
+      loading.value = false;
+      $q.notify({
+        color: "negative",
+        message: data.message,
+      });
     }
   });
 };
@@ -500,8 +647,10 @@ const onFinishTable = () => {
           mrm_db: choosedDB.value,
           mrm_table: choosedTable.value,
           mrm_query: code.value,
+          mrm_url_gen: methodsReport.value,
         },
         det: listCols.value,
+        detParams: listParamsConverted.value,
       },
       `mrs/report`,
       false,
@@ -509,7 +658,7 @@ const onFinishTable = () => {
       true
     );
 
-    if (data.status) {
+    if (data.status === true) {
       onDialogOK();
     }
   });

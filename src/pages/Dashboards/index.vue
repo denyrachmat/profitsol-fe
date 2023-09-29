@@ -9,7 +9,9 @@
               <q-avatar
                 size="150px"
                 style="margin: 0 auto; top: 20%"
-                v-if="store.getDetail.user_det.pud_photo"
+                v-if="
+                  store.getDetail.user_det && store.getDetail.user_det.pud_photo
+                "
               >
                 <img
                   :src="store.getDetail.user_det.pud_photo"
@@ -40,10 +42,14 @@
             <div class="row no-wrap items-center">
               <div class="col text-h6 ellipsis">
                 {{
-                  store.authDet ? store.getDetail.user_det.pud_first_name : ""
+                  store.authDet && store.getDetail.user_det
+                    ? store.getDetail.user_det.pud_first_name
+                    : ""
                 }}
                 {{
-                  store.authDet ? store.getDetail.user_det.pud_last_name : ""
+                  store.authDet && store.getDetail.user_det
+                    ? store.getDetail.user_det.pud_last_name
+                    : ""
                 }}
               </div>
               <div
@@ -56,8 +62,10 @@
           </q-card-section>
 
           <q-card-section class="q-pt-none">
-            <div class="text-subtitle1">IT Departement</div>
-            <div class="text-caption text-grey">MIS Staff</div>
+            <div class="text-subtitle1">
+              {{ store.getChoosedRole.role.rm_role_desc }}
+            </div>
+            <!-- <div class="text-caption text-grey">MIS Staff</div> -->
           </q-card-section>
 
           <q-separator />
@@ -85,12 +93,13 @@
                         icon="refresh"
                         color="cyan"
                         @click="getMSUserDetail()"
+                        flat
                       />
                     </div>
                   </div>
                 </div>
                 <div
-                  style="overflow: scroll; max-height: 50em"
+                  style="overflow: scroll; max-height: 55vh"
                   :key="keyMeeting"
                 >
                   <eventList
@@ -110,18 +119,50 @@
               </div>
               <div class="col-12 col-md-6 q-pl-sm">
                 <div class="row q-px-md">
-                  <div class="col">
+                  <div class="col-4">
                     <strong class="text-h5 text-bold">Information</strong>
                   </div>
                   <div class="col text-right">
+                    <q-btn-toggle
+                      v-model="toggleAutoRefreshInfo"
+                      toggle-color="primary"
+                      class="q-ml-md"
+                      :options="[
+                        { value: 1, slot: 'one' },
+                        { value: 0, slot: 'two' },
+                      ]"
+                      flat
+                      dense
+                    >
+                      <template v-slot:one>
+                        <div class="row items-center no-wrap">
+                          <q-icon right name="replay_10">
+                            <q-tooltip>
+                              Auto refreshed for 10 seconds
+                            </q-tooltip>
+                          </q-icon>
+                        </div>
+                      </template>
+                      <template v-slot:two>
+                        <div class="row items-center no-wrap">
+                          <q-icon right name="sync_disabled">
+                            <q-tooltip>
+                              Disable auto refresh / Manual refresh mode
+                            </q-tooltip>
+                          </q-icon>
+                        </div>
+                      </template>
+                    </q-btn-toggle>
                     <q-btn
                       icon="refresh"
                       color="cyan"
                       @click="keyInfo = keyInfo + 1"
+                      flat
+                      :disable="toggleAutoRefreshInfo === 1"
                     />
                   </div>
                 </div>
-                <div style="overflow: scroll; max-height: 50em" :key="keyInfo">
+                <div style="overflow: scroll; max-height: 55vh" :key="keyInfo">
                   <informationList
                     @info-view="(val) => onViewInformation(val)"
                   />
@@ -197,6 +238,8 @@ const viewMode = ref("apps");
 const mainEvent = ref([]);
 const keyInfo = ref(0);
 const keyMeeting = ref(0);
+const toggleAutoRefreshInfo = ref(1);
+const timeoutRefresh = ref(null);
 
 const { postData } = apiRequest();
 
@@ -210,7 +253,29 @@ onMounted(() => {
     console.log("masuk sini");
     this.$router.push("login");
   }
+
+  if (toggleAutoRefreshInfo.value === 1) {
+    timeoutRefresh.value = setInterval(() => {
+      keyInfo.value = keyInfo.value + 1;
+    }, 10000);
+  } else {
+    clearInterval(timeoutRefresh.value);
+  }
 });
+
+watch(
+  () => toggleAutoRefreshInfo.value,
+  (val) => {
+    console.log(val);
+    if (val === 1) {
+      timeoutRefresh.value = setInterval(() => {
+        keyInfo.value = keyInfo.value + 1;
+      }, 10000);
+    } else {
+      clearInterval(timeoutRefresh.value);
+    }
+  }
+);
 
 const getMSUserDetail = async () => {
   const data = await postData(
@@ -219,7 +284,7 @@ const getMSUserDetail = async () => {
     null,
     false,
     false,
-    false,
+    true,
     process.env.GRAPH_API + "me/calendar/events",
     true
   );
@@ -233,6 +298,7 @@ const getMSUserDetail = async () => {
 
 const onViewInformation = (val) => {
   if (val.shared && val.shared.forms.cfmt_quiz_flag == 1) {
+    console.log(val);
     $q.dialog({
       title: "Start Quiz",
       message: "Are you sure want to start this quiz?",
@@ -245,8 +311,11 @@ const onViewInformation = (val) => {
       if (
         date.getDateDiff(new Date(val.pnm_end_date), new Date(), "days") >= 0
       ) {
+        // if (val.lihatHasil.cfsd_timer == 1) {
+        // }
         formStore.setStartTimeState(false);
         formStore.setFinishQuizState(false);
+
         $q.dialog({
           component: viewApps,
 
