@@ -285,11 +285,11 @@ const showHistory = async (email, id) => {
 watch(
   () => choosedData.value,
   (val) => {
-    if (val.id) {
+    if (val.id && rows.value.length > 0) {
       clearInterval(intervalTable.value);
       intervalTable.value = setInterval(() => {
         onChooseData(val);
-      }, 20000);
+      }, 30000);
     } else {
       clearInterval(intervalTable.value);
     }

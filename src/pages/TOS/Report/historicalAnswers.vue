@@ -24,24 +24,22 @@
             v-for="(data, idx) in props.datas"
             :key="idx"
           >
-            <q-expansion-item
-              :header-inset-level="1"
-              expand-separator
-              icon="receipt"
-              :label="childData"
-              default-opened
-              :key="idx + idx2 + 'child'"
-              v-for="(childData, idx2) in getFailedData(data.data)"
-            >
-            </q-expansion-item>
-            <q-card>
-              <q-card-section>
-                Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                Quidem, eius reprehenderit eos corrupti commodi magni quaerat ex
-                numquam, dolorum officiis modi facere maiores architecto
-                suscipit iste eveniet doloribus ullam aliquid.
-              </q-card-section>
-            </q-card>
+            <q-list bordered class="rounded-borders">
+              <q-item
+                :header-inset-level="1"
+                :key="idx + idx2 + 'child'"
+                v-for="(childData, idx2) in getFailedData(
+                  data.data,
+                  data.data_ori
+                )"
+              >
+                <q-item-section top>
+                  <q-item-label lines="10">
+                    <span v-html="childData.quest.content.label"></span>
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
           </q-expansion-item>
         </q-list>
       </q-card-section>
@@ -61,8 +59,19 @@ const props = defineProps({
   datas: Array,
 });
 
-const getFailedData = (dataChild) => {
-  return dataChild.filter((fil, keys) => !fil.status);
+const getFailedData = (dataChild, dataQuestion) => {
+  let hasil = [];
+  dataQuestion.map((val, idx) => {
+    if (!dataChild[idx].status) {
+      hasil.push({
+        quest: val,
+        answer: dataChild[idx],
+      });
+    }
+  });
+
+  console.log(hasil);
+  return hasil;
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
