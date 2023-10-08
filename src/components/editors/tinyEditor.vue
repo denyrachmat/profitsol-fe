@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div eager>
     <editor
       api-key="gw0rtlzda4wpi7l6uncts5jnjh5ftvfw8ncz54ex7maanor4"
       class="full-height"
@@ -14,6 +14,10 @@ import Editor from "@tinymce/tinymce-vue";
 
 const initEditor = ref({
   selector: "textarea#open-source-plugins",
+  codesample_languages: [
+    { text: "SQL", value: "sql" },
+    { text: "HTML/XML", value: "markup" },
+  ],
   plugins:
     "print preview paste importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons",
   imagetools_cors_hosts: ["picsum.photos"],
@@ -26,6 +30,7 @@ const initEditor = ref({
   autosave_prefix: "{path}{query}-{id}-",
   autosave_restore_when_empty: false,
   autosave_retention: "2m",
+  codesample_content_css: "http://ourcodeworld.com/material/css/prism.css",
   image_advtab: true,
   link_list: [
     { title: "My page 1", value: "https://www.tiny.cloud" },
@@ -104,3 +109,9 @@ watch(
   }
 );
 </script>
+
+<style>
+.tox-dialog {
+  z-index: 15000000000 !important;
+}
+</style>

@@ -20,6 +20,18 @@ const routes = [
     ],
   },
   {
+    path: "/mrsReport/:idReport",
+    children: [
+      { path: "", component: () => import("pages/MRS/Tables/indexTableReport.vue") },
+    ],
+  },
+  {
+    path: "/forms/:linkID",
+    children: [
+      { path: "", component: () => import("pages/CMS/formsAsApps.vue") },
+    ],
+  },
+  {
     path: "/settings/",
     component: () => import("layouts/MainLayout.vue"),
     children: [

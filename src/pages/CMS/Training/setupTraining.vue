@@ -305,21 +305,24 @@ const startQuiz = ref("");
 const endQuiz = ref("");
 
 onMounted(() => {
-  defaultTypeChoice.value = props.setupTrainingSetup.defaultTypeChoice;
-  defaultNumberOfChoice.value = props.setupTrainingSetup.defaultNumberOfChoice;
-  showResult.value = props.setupTrainingSetup.showResult;
-  randomizeQuestion.value = props.setupTrainingSetup.randomizeQuestion;
-  showRightKeysAnswer.value = props.setupTrainingSetup.showRightKeysAnswer;
-  showRightKeysAnswerLocation.value =
-    props.setupTrainingSetup.showRightKeysAnswerLocation;
-  setUpTimer.value = props.setupTrainingSetup.setUpTimer;
-  timerEveryQuestion.value = props.setupTrainingSetup.timerEveryQuestion;
-  hourTimer.value = props.setupTrainingSetup.hourTimer;
-  minTimer.value = props.setupTrainingSetup.minTimer;
-  secTimer.value = props.setupTrainingSetup.secTimer;
-  minPass.value = props.setupTrainingSetup.minPass;
-  startQuiz.value = props.setupTrainingSetup.startQuiz;
-  endQuiz.value = props.setupTrainingSetup.endQuiz;
+  if (props.setupTrainingSetup) {
+    defaultTypeChoice.value = props.setupTrainingSetup.defaultTypeChoice;
+    defaultNumberOfChoice.value =
+      props.setupTrainingSetup.defaultNumberOfChoice;
+    showResult.value = props.setupTrainingSetup.showResult;
+    randomizeQuestion.value = props.setupTrainingSetup.randomizeQuestion;
+    showRightKeysAnswer.value = props.setupTrainingSetup.showRightKeysAnswer;
+    showRightKeysAnswerLocation.value =
+      props.setupTrainingSetup.showRightKeysAnswerLocation;
+    setUpTimer.value = props.setupTrainingSetup.setUpTimer;
+    timerEveryQuestion.value = props.setupTrainingSetup.timerEveryQuestion;
+    hourTimer.value = props.setupTrainingSetup.hourTimer;
+    minTimer.value = props.setupTrainingSetup.minTimer;
+    secTimer.value = props.setupTrainingSetup.secTimer;
+    minPass.value = props.setupTrainingSetup.minPass;
+    startQuiz.value = props.setupTrainingSetup.startQuiz;
+    endQuiz.value = props.setupTrainingSetup.endQuiz;
+  }
 });
 
 const defaultTypeChoiceOpt = ref([

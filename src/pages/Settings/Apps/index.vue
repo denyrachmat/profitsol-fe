@@ -65,7 +65,26 @@
                 <q-icon :name="props.row.am_app_icon" size="30px" />
               </q-td>
               <q-td key="am_is_drawer" :props="props">
-                {{ props.row.am_is_drawer }}
+                <q-icon
+                  :name="
+                    props.row.am_is_drawer == 1 ? 'check_circle' : 'cancel'
+                  "
+                  :color="props.row.am_is_drawer == 1 ? 'green' : 'red'"
+                />
+              </q-td>
+              <q-td key="am_is_files" :props="props">
+                <q-icon
+                  :name="props.row.am_is_files == 1 ? 'check_circle' : 'cancel'"
+                  :color="props.row.am_is_files == 1 ? 'green' : 'red'"
+                />
+              </q-td>
+              <q-td key="am_is_shared" :props="props">
+                <q-icon
+                  :name="
+                    props.row.am_is_shared == 1 ? 'check_circle' : 'cancel'
+                  "
+                  :color="props.row.am_is_shared == 1 ? 'green' : 'red'"
+                />
               </q-td>
               <q-td key="action" :props="props">
                 <q-btn-group spread rounded>
@@ -155,6 +174,20 @@ const columns = ref([
     sortable: true,
   },
   {
+    name: "am_is_files",
+    align: "center",
+    label: "Is Download Files ?",
+    field: "am_is_files",
+    sortable: true,
+  },
+  {
+    name: "am_is_shared",
+    align: "center",
+    label: "Is Shared Apps ?",
+    field: "am_is_shared",
+    sortable: true,
+  },
+  {
     name: "action",
     align: "center",
     label: "Actions",
@@ -176,6 +209,8 @@ const onUpdatedApps = (
     am_app_url: "",
     am_app_icon: "",
     am_is_drawer: false,
+    am_is_files: false,
+    am_is_shared: false,
   }
 ) => {
   $q.dialog({
@@ -183,6 +218,7 @@ const onUpdatedApps = (
 
     // props forwarded to your custom component
     componentProps: {
+      isUpdate: !isNew,
       dataProps: data,
       list_parent: rows.value,
       // ...more..props...

@@ -80,9 +80,8 @@
                           : answers[idx].ans_value[0]
                       }}</span>
                     </span>
-                  </div>
-                  <div class="col q-pa-md" v-if="answers[idx].exp">
-                    <div v-html="answers[idx].exp"></div>
+
+                    <div class="q-pt-sm" v-html="answers[idx].exp"></div>
                   </div>
                 </div>
               </div>

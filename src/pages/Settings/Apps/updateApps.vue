@@ -11,6 +11,7 @@
               outlined
               label="App Code"
               v-model="dataHasil.am_app_code"
+              :disable="isUpdate"
             />
           </div>
         </div>
@@ -34,7 +35,24 @@
               outlined
               label="App Icon Name"
               v-model="dataHasil.am_app_icon"
-            />
+            >
+              <template v-slot:before>
+                <q-icon
+                  :name="
+                    dataHasil.am_app_icon
+                      ? dataHasil.am_app_icon
+                      : 'add_reaction'
+                  "
+                >
+                  <q-tooltip>Icon Preview will be here</q-tooltip>
+                </q-icon>
+              </template>
+              <template v-slot:after>
+                <q-btn icon="open_in_new" flat @click="openLinkIcon">
+                  <q-tooltip>Click to find all available icons</q-tooltip>
+                </q-btn>
+              </template>
+            </q-input>
           </div>
         </div>
         <div class="row q-pb-sm">
@@ -77,6 +95,22 @@
               :color="isVerified ? 'green' : 'red'"
               keep-color
             />
+            <q-checkbox
+              v-model="isFiles"
+              label="Is Downloaded Files ?"
+              checked-icon="task_alt"
+              unchecked-icon="highlight_off"
+              :color="isFiles ? 'green' : 'red'"
+              keep-color
+            />
+            <q-checkbox
+              v-model="isShared"
+              label="Is Shared Trough Apps ?"
+              checked-icon="task_alt"
+              unchecked-icon="highlight_off"
+              :color="isShared ? 'green' : 'red'"
+              keep-color
+            />
           </div>
         </div>
       </q-card-section>
@@ -95,6 +129,7 @@ import { ref, onMounted, watch } from "vue";
 import { useDialogPluginComponent, date } from "quasar";
 
 const props = defineProps({
+  isUpdate: Boolean,
   dataProps: Object || null,
   list_parent: Array,
   // ...your custom props
@@ -103,6 +138,8 @@ const props = defineProps({
 const dataHasil = ref(null);
 const listParent = ref(props.list_parent);
 const isVerified = ref(false);
+const isFiles = ref(false);
+const isShared = ref(false);
 
 watch(isVerified, (val) => {
   if (val) {
@@ -110,8 +147,24 @@ watch(isVerified, (val) => {
   }
 });
 
+watch(isFiles, (val) => {
+  if (val) {
+    dataHasil.value.am_is_files = val;
+  }
+});
+
+watch(isShared, (val) => {
+  if (val) {
+    dataHasil.value.am_is_shared = val;
+  }
+});
+
 onMounted(() => {
   dataHasil.value = props.dataProps;
+  isVerified.value = props.dataProps.am_is_drawer == 1;
+  isFiles.value = props.dataProps.am_is_files == 1;
+  isShared.value = props.dataProps.am_is_shared == 1;
+  // console.log(props.dataProps);
   // listParent.value = props.list_parent;
 });
 
@@ -120,6 +173,10 @@ defineEmits([
   // component will emit through useDialogPluginComponent()
   ...useDialogPluginComponent.emits,
 ]);
+
+const openLinkIcon = () => {
+  window.open("https://fonts.google.com/icons?icon.platform=android", "_blank");
+};
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();

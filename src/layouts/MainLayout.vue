@@ -33,6 +33,8 @@
           </q-menu>
         </q-btn>
 
+        <q-btn flat dense round icon="mail" aria-label="Notification"> </q-btn>
+
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
             <q-list style="min-width: 100px">
@@ -139,10 +141,11 @@ export default defineComponent({
       this.$router.push("/login");
     }
 
+    console.log(Providers);
     if (Providers.globalProvider) {
       console.log(Providers.globalProvider.state);
 
-      console.log(ProviderState.SignedIn);
+      console.log({ stat: "cek ms signin", data: ProviderState.SignedIn });
     }
 
     this.$msalInstance = new PublicClientApplication({

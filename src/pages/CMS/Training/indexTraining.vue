@@ -205,6 +205,9 @@ const setupTrainingSetup = ref({
   endQuiz: "",
 });
 const share = ref([]);
+const shareMainMenu = ref(0);
+const shareIsroles = ref(0);
+const shareFormsMenuIcon = ref("");
 
 const valueSubmited = ref([]);
 const explainSubmit = ref([]);
@@ -275,7 +278,10 @@ const onClickShare = () => {
       shared: share.value,
     },
   }).onOk(async (val) => {
-    share.value = val;
+    share.value = val.emails;
+    shareMainMenu.value = val.isMainMenu;
+    shareIsroles.value = val.isRoles;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
   });
 };
 
@@ -308,6 +314,8 @@ const onSaveQuestion = () => {
         isQuiz: true,
         setupTraining: setupTrainingSetup.value,
         shareForms: share.value,
+        shareFormsIsMainMenu: shareMainMenu.value,
+        shareFormsIsRoles: shareIsroles.value,
       },
       `cms/forms`,
       false,
@@ -340,6 +348,7 @@ const openTraining = () => {
       type: "quiz",
     },
   }).onOk(async (val) => {
+    setupTrainingSetup.value = null;
     console.log(val);
     idRef.value = val.id;
     title.value = val.title;
@@ -370,25 +379,29 @@ const openPreview = () => {
 watch(
   () => JSON.stringify(setupTrainingSetup.value),
   (val) => {
-    console.log(val);
     const valParse = JSON.parse(val);
-    initChoice.value.content.component.value.comp =
-      valParse.defaultTypeChoice === "multiple-radio"
-        ? "q-radio"
-        : "q-checkbox";
-    initChoice.value.content.component.value.type = valParse.defaultTypeChoice;
+    console.log(valParse);
 
-    const hasilDetail = [];
-    for (let index = 0; index < valParse.defaultNumberOfChoice; index++) {
-      hasilDetail.push({
-        col_det_id: "opt-" + (index + 1),
-        col_det_label: "",
-        label: "",
-        value: index + 1,
-      });
+    if (valParse) {
+      initChoice.value.content.component.value.comp =
+        valParse.defaultTypeChoice === "multiple-radio"
+          ? "q-radio"
+          : "q-checkbox";
+      initChoice.value.content.component.value.type =
+        valParse.defaultTypeChoice;
+
+      const hasilDetail = [];
+      for (let index = 0; index < valParse.defaultNumberOfChoice; index++) {
+        hasilDetail.push({
+          col_det_id: "opt-" + (index + 1),
+          col_det_label: "",
+          label: "",
+          value: index + 1,
+        });
+      }
+
+      initChoice.value.content.detail_data = hasilDetail;
     }
-
-    initChoice.value.content.detail_data = hasilDetail;
     // refreshDetail.value = refreshDetail.value + 1;
     // emit("onDeleted", JSON.parse(val));
   }

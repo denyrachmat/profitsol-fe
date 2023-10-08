@@ -9,8 +9,9 @@
             :comp="col.content.component.value.comp"
             :label="col.content.label"
             :detail="col.content.detail_data"
+            :is-required="col.required"
             mode="live"
-            @customChange="(val) => getAnswers(idx, idx2, val)"
+            @customChange="(val) => getAnswers(idx, idx2, val, col.id)"
             :ans="
               getUserAnswers[idx] &&
               !Array.isArray(getUserAnswers[idx] && getUserAnswers[idx][idx2])
@@ -41,7 +42,7 @@
       </div>
     </template>
     <div class="row q-pt-md">
-      <div class="col">
+      <div class="col absolute-bottom">
         <q-btn-group spread>
           <q-btn
             color="accent"
@@ -54,6 +55,7 @@
             icon="save"
             :disable="getNextData && getNextData.length !== 0"
             v-if="isFormsExists.length > 0"
+            @click="onSubmitData"
           />
           <q-btn
             color="accent"
@@ -80,6 +82,7 @@ const { postData } = apiRequest();
 
 const nowSeq = ref(null);
 const props = defineProps({
+  id: String,
   data: Array,
 });
 
@@ -159,8 +162,8 @@ const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
   return hasil;
 };
 
-const getAnswers = (row, col, val) => {
-  store.addAnswersForm(row, col, val);
+const getAnswers = (row, col, val, idDiv) => {
+  store.addAnswersForm(row, idDiv, val);
 };
 
 onMounted(() => {
@@ -195,6 +198,34 @@ const nextPage = () => {
       nowSeq.value = parseInt(nowSeq.value) + 1;
     }
   }
+};
+
+const onSubmitData = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Would you like to submit this form ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        id: props.id,
+        ans: getUserAnswers.value,
+      },
+      `cms/storeAnswers`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      console.log(props.id);
+      console.log(getUserAnswers.value);
+      console.log(data);
+      store.restoreDefault();
+    }
+  });
 };
 
 const prevPage = () => {

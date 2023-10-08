@@ -5,7 +5,8 @@
     maximized
     transition-show="slide-up"
     transition-hide="slide-down"
-    no-esc-dismiss
+    @escape-key="closeProgram()"
+    persistent
   >
     <q-card class="q-dialog-plugin">
       <q-bar>
@@ -21,16 +22,27 @@
           :src="dataProps"
           class="full-width window-height"
         ></iframe>
-        <component :is="dyne" v-else />
+        <template v-else>
+          <router-view v-if="isRouter"></router-view>
+          <component :is="content" v-else />
+        </template>
       </div>
     </q-card>
   </q-dialog>
 </template>
 <script setup>
-import { ref, onMounted, defineAsyncComponent, computed, watch } from "vue";
+import {
+  ref,
+  onMounted,
+  defineAsyncComponent,
+  computed,
+  watch,
+  onUnmounted,
+} from "vue";
 import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 import { useFormStore } from "stores/formStore";
+import error404 from "./error404.vue";
 
 import DMSUploadDocument from "../DMS/uploadDocument.vue";
 
@@ -40,19 +52,30 @@ const formStore = useFormStore();
 const props = defineProps({
   dataProps: String,
   title: String,
+  isRouter: Boolean,
   // ...your custom props
 });
 
 const url = ref("");
+const content = ref(null);
 
 onMounted(async () => {
-  url.value = props.dataProps;
+  if (props.isRouter) {
+    url.value = props.dataProps;
+    router.push(url.value);
+  } else {
+    url.value = props.dataProps;
+    content.value = defineAsyncComponent({
+      loader: () => import("../" + url.value + ".vue"),
+      errorComponent: error404,
+    });
+  }
 });
 
-const dyne = computed(() => {
-  const urlCompile = "../" + url.value + ".vue";
-  return defineAsyncComponent(() => import("../" + url.value + ".vue"));
-});
+// const dyne = computed(() => {
+//   const urlCompile = "../" + url.value + ".vue";
+//   content.value = defineAsyncComponent(() => import("../" + url.value + ".vue"));
+// });
 
 const handleLoginSuccess = () => {
   const { credential } = response;
@@ -70,6 +93,8 @@ const closeProgram = () => {
     cancel: true,
     persistent: true,
   }).onOk(() => {
+    router.push("/");
+    // router.back();
     onDialogCancel();
     // console.log('>>>> OK')
   });
@@ -81,7 +106,9 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 watch(formStore, (val) => {
   const datanya = formStore;
 
+  console.log("wathc di viewapp", datanya);
   if (
+    datanya.getSetUpTimer &&
     datanya.getHashForm !== "" &&
     datanya.getStartTimeState &&
     datanya.getFinishQuizState
