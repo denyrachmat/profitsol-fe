@@ -55,7 +55,12 @@
                   {{ col.value }}
                 </q-chip>
                 <template v-else-if="col.name === 'action'">
-                  <q-btn flat icon="visibility" color="cyan">
+                  <q-btn
+                    flat
+                    icon="visibility"
+                    color="cyan"
+                    @click="showHistory(props.row.email, choosedData.id)"
+                  >
                     <q-tooltip>Show Historical Answers</q-tooltip>
                   </q-btn>
                 </template>
@@ -98,6 +103,7 @@
 import { ref, defineProps, onMounted, computed, watch, onUnmounted } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
+import historicalAnswers from "./Report/historicalAnswers.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -253,6 +259,29 @@ const exportToExcel = (id) => {
   });
 };
 
+const showHistory = async (email, id) => {
+  loading.value = true;
+  const data = await postData(
+    "get",
+    null,
+    `tos/showHistoryPerUser/${email}/${id}`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    loading.value = false;
+    $q.dialog({
+      component: historicalAnswers,
+      componentProps: {
+        datas: data.data,
+      },
+      persistent: true,
+    });
+  }
+};
+
 watch(
   () => choosedData.value,
   (val) => {
@@ -260,7 +289,7 @@ watch(
       clearInterval(intervalTable.value);
       intervalTable.value = setInterval(() => {
         onChooseData(val);
-      }, 10000);
+      }, 20000);
     } else {
       clearInterval(intervalTable.value);
     }

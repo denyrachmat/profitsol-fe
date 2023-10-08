@@ -212,7 +212,6 @@
             </div>
           </div>
         </div>
-        {{ selectedTableRoles }}
       </q-card-section>
 
       <q-card-actions align="right">
