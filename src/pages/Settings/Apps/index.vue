@@ -13,6 +13,7 @@
           title="Apps List"
           :filter="filterData"
           dense
+          class="my-sticky-header-column-table"
         >
           <template v-slot:top-right>
             <div class="row">
@@ -56,7 +57,9 @@
                 {{ props.row.am_app_name }}
               </q-td>
               <q-td key="am_app_desc" :props="props">
-                {{ props.row.am_app_desc }}
+                <span style="text-overflow: ellipsis; max-width: 20px">
+                  {{ props.row.am_app_desc }}
+                </span>
               </q-td>
               <q-td key="am_app_url" :props="props">
                 {{ props.row.am_app_url }}
@@ -90,7 +93,6 @@
                 <q-btn-group spread rounded>
                   <q-btn
                     color="green"
-                    label="Update"
                     icon="edit"
                     dense
                     @click="onUpdatedApps(false, props.row)"
@@ -98,7 +100,6 @@
                   />
                   <q-btn
                     color="red"
-                    label="Delete"
                     icon="delete"
                     dense
                     @click="deleteUser(props.row.username)"
@@ -151,6 +152,7 @@ const columns = ref([
     label: "App Desc",
     field: "am_app_desc",
     sortable: true,
+    style: "width: 50px",
   },
   {
     name: "am_app_url",
@@ -295,3 +297,49 @@ const getApps = async () => {
   }
 };
 </script>
+
+<style lang="sass">
+.my-sticky-header-column-table
+  /* height or max-height is important */
+  height: 60vh
+
+  /* specifying max-width so the example can
+    highlight the sticky column on any browser window */
+  max-width: 100%
+
+  td:first-child
+    /* bg color is important for td; just specify one */
+    background-color: #fff
+
+  tr th
+    position: sticky
+    /* higher than z-index for td below */
+    z-index: 2
+    /* bg color is important; just specify one */
+    background: #fff
+
+  /* this will be the loading indicator */
+  thead tr:last-child th
+    /* height of all previous header rows */
+    top: 48px
+    /* highest z-index */
+    z-index: 3
+  thead tr:first-child th
+    top: 0
+    z-index: 1
+  tr:first-child th:first-child
+    /* highest z-index */
+    z-index: 3
+
+  td:first-child
+    z-index: 1
+
+  td:first-child, th:first-child
+    position: sticky
+    left: 0
+
+  /* prevent scrolling behind sticky top row on focus */
+  tbody
+    /* height of all previous header rows */
+    scroll-margin-top: 48px
+</style>

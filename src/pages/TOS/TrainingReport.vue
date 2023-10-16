@@ -285,6 +285,7 @@ const exportToExcel = (id) => {
 };
 
 const exportToExcelAnalytyic = (id) => {
+  console.log(id);
   $q.dialog({
     title: "Confirmation",
     message: `Do you want to export this data ?`,

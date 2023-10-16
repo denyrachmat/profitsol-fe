@@ -56,11 +56,15 @@
         <template v-for="(form, idxForm) in forms" :key="idxForm">
           <div class="row q-pt-md">
             <q-input
-              borderless
-              class="q-ml-md"
+              outlined
               v-model="form.seq_name"
               input-class="text-h6"
-            ></q-input>
+              dense
+            >
+              <template v-slot:prepend>
+                <span class="text-h6">Page :</span>
+              </template>
+            </q-input>
             <!-- <div class="col text-h4 text-bold">Rows 1</div> -->
             <div class="col text-right">
               <q-btn-group outline>
@@ -95,12 +99,14 @@
               <div class="text-center">
                 <q-btn-group flat>
                   <q-btn
-                    color="green"
+                    :color="!col.type ? 'green' : 'orange'"
                     icon="list_alt"
                     flat
                     @click="onClickChooseComponent(col.type, idxForm, idxCol)"
                   >
-                    <q-tooltip>Add forms component here</q-tooltip>
+                    <q-tooltip>{{
+                      !col.type ? "Add forms component here" : "Edit this form"
+                    }}</q-tooltip>
                   </q-btn>
                   <q-btn
                     color="indigo"
@@ -112,11 +118,20 @@
                   </q-btn>
                   <q-btn
                     color="cyan"
-                    icon="psychology"
+                    icon="quiz"
                     flat
                     @click="onClickChooseQuiz(idxForm, idxCol)"
                   >
                     <q-tooltip>Add Quiz content here</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    color="blue"
+                    icon="psychology"
+                    flat
+                    :disable="col.type != 'form'"
+                    @click="onClickLogicField(form.seq_name, idxCol)"
+                  >
+                    <q-tooltip>Add logic this field</q-tooltip>
                   </q-btn>
                   <q-btn
                     color="red"
@@ -179,6 +194,7 @@ import openTrainingVue from "./Training/openTraining.vue";
 import PreviewComponent from "./Forms/previewComponent.vue";
 import shareFormsVue from "./Forms/shareForms.vue";
 import setupTraining from "./Training/setupTraining.vue";
+import showLogicField from "./Forms/showLogicField.vue";
 
 const { postData } = apiRequest();
 
@@ -207,6 +223,7 @@ const setupTrainingSetup = ref({
   minPass: 100,
   startQuiz: "",
   endQuiz: "",
+  rowsPageMethods: "multi-page",
 });
 const shareMainMenu = ref(0);
 const shareIsroles = ref(0);
@@ -221,7 +238,9 @@ const onAddRows = () => {
     seq_name: `${
       forms.value.length === 0
         ? 1
-        : parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+        : setupTrainingSetup.value.rowsPageMethods === "multi-page"
+        ? parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+        : parseInt(forms.value[forms.value.length - 1].seq_name)
     }`,
     content: [
       {
@@ -433,6 +452,20 @@ const onClickSetupTraining = () => {
     componentProps: {
       isForm: true,
       setupTrainingSetup: setupTrainingSetup.value,
+    },
+  }).onOk(async (val) => {
+    setupTrainingSetup.value = val;
+    // forms.value[idxForm].content = val;
+  });
+};
+
+const onClickLogicField = (pageSel, colSel) => {
+  $q.dialog({
+    component: showLogicField,
+    componentProps: {
+      forms: forms.value,
+      page: pageSel,
+      colsIdx: colSel,
     },
   }).onOk(async (val) => {
     setupTrainingSetup.value = val;

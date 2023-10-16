@@ -270,6 +270,16 @@
             </q-input>
           </div>
         </div>
+
+        <div class="row q-pt-md" v-if="props.isForm">
+          <div class="col">
+            <q-option-group
+              v-model="rowsPageMethods"
+              :options="rowsPageMethodsOpt"
+              color="primary"
+            />
+          </div>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -303,6 +313,17 @@ const secTimer = ref(0);
 const minPass = ref(100);
 const startQuiz = ref("");
 const endQuiz = ref("");
+const rowsPageMethods = ref("multi-page");
+const rowsPageMethodsOpt = ref([
+  {
+    label: "Multi page when add rows",
+    value: "multi-page",
+  },
+  {
+    label: "Same page when add rows",
+    value: "one-page",
+  },
+]);
 
 onMounted(() => {
   if (props.setupTrainingSetup) {
@@ -363,6 +384,7 @@ function onOKClick() {
     minPass: minPass.value,
     startQuiz: startQuiz.value,
     endQuiz: endQuiz.value,
+    rowsPageMethods: rowsPageMethods.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically
