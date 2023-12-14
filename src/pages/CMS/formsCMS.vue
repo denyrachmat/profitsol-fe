@@ -17,6 +17,14 @@
           <q-btn color="purple" icon="add" @click="onAddRows" :disable="!title">
             <q-tooltip>Add rows </q-tooltip>
           </q-btn>
+          <q-btn
+            color="blue"
+            icon="psychology"
+            @click="onClickLogicForms"
+            :disable="!title"
+          >
+            <q-tooltip>Add forms event</q-tooltip>
+          </q-btn>
           <q-btn color="cyan" icon="search" @click="openTraining">
             <q-tooltip>Open created forms</q-tooltip>
           </q-btn>
@@ -195,6 +203,7 @@ import PreviewComponent from "./Forms/previewComponent.vue";
 import shareFormsVue from "./Forms/shareForms.vue";
 import setupTraining from "./Training/setupTraining.vue";
 import showLogicField from "./Forms/showLogicField.vue";
+import showLogicForms from "./Forms/showLogicForms.vue";
 
 const { postData } = apiRequest();
 
@@ -473,6 +482,17 @@ const onClickLogicField = (pageSel, colSel) => {
   });
 };
 
+const onClickLogicForms = () => {
+  $q.dialog({
+    component: showLogicForms,
+    componentProps: {
+      forms: forms.value,
+    },
+  }).onOk(async (val) => {
+    setupTrainingSetup.value = val;
+    // forms.value[idxForm].content = val;
+  });
+};
 // watch(
 //   () => JSON.stringify(setupTrainingSetup.value),
 //   (val) => {

@@ -152,6 +152,7 @@ export default defineComponent({
           username: this.username,
           password: this.password,
           isMSLogin: this.isMSLogin,
+          remember: this.remember,
         };
       }
 

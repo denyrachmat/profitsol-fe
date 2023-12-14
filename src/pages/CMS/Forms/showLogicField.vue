@@ -15,6 +15,11 @@
       </q-card-section>
 
       <q-card-section class="q-pa-md">
+        <div class="row q-pt-md">
+          <div class="col">
+            <span class="text-bold">Rules Logic</span>
+          </div>
+        </div>
         <template v-for="(rule, idx) in rules" :key="idx">
           <div class="row q-pt-md" v-if="rule.type === 'logics'">
             <div class="col q-pl-md">
@@ -67,14 +72,94 @@
               >
               </q-select>
             </div>
+
+            <!-- IF Choose Notif show type notif-->
+            <div class="col q-pl-md" v-if="rule.result.value === 'notif'">
+              <q-select
+                v-model="rule.resultAction.notifType"
+                :options="notifOpt"
+                label="Notif Type Choose"
+                dense
+                outlined
+              >
+              </q-select>
+            </div>
+
+            <div
+              class="col q-pl-md"
+              v-if="
+                rule.result.value === 'show_rowcols' ||
+                rule.result.value === 'hide_rowcols'
+              "
+            >
+              <q-select
+                v-model="rule.resultAction.choosedPage"
+                :options="getPage()"
+                label="Choose Page"
+                dense
+                outlined
+                map-options
+                emit-value
+              >
+              </q-select>
+            </div>
+
+            <div
+              class="col q-pl-md"
+              v-if="
+                (rule.result.value === 'show_rowcols' ||
+                  rule.result.value === 'hide_rowcols') &&
+                rule.resultAction.choosedPage
+              "
+            >
+              <q-select
+                v-model="rule.resultAction.choosedCols"
+                :options="getPage(rule.resultAction.choosedPage)"
+                label="Choose Cols"
+                dense
+                outlined
+              >
+              </q-select>
+            </div>
+
             <div
               class="col q-pl-md"
               v-if="
                 rule.result.value === 'skip_page' ||
-                rule.result.value === 'jump_page'
+                rule.result.value === 'jump_page' ||
+                rule.result.value === 'notif'
               "
             >
-              <q-input dense outlined :label="`${rule.result.label} number`" />
+              <q-input
+                v-model="rule.resultAction.action"
+                dense
+                outlined
+                :label="
+                  rule.result.value === 'notif'
+                    ? 'Alert message'
+                    : `${rule.result.label} number`
+                "
+              />
+            </div>
+            <div class="col-1 q-pl-md text-right">
+              <q-btn
+                icon="add"
+                flat
+                color="green"
+                @click="addMoreResult()"
+                v-if="rules[idx - 1].type === 'logics'"
+              >
+                <q-tooltip>Add more result</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="delete"
+                flat
+                color="red"
+                @click="rules.splice(idx, 1)"
+                v-else
+              >
+                <q-tooltip>Remove Result</q-tooltip>
+              </q-btn>
             </div>
           </div>
         </template>
@@ -189,12 +274,12 @@ const resultOpt = ref([
     value: "jump_page",
   },
   {
-    label: "Show Column",
-    value: "show_cols",
+    label: "Show Rows / Column",
+    value: "show_rowcols",
   },
   {
-    label: "Hide Column",
-    value: "hide_cols",
+    label: "Hide Rows / Column",
+    value: "hide_rowcols",
   },
   {
     label: "Disable Field",
@@ -207,6 +292,10 @@ const resultOpt = ref([
   {
     label: "Show Notify",
     value: "notif",
+  },
+  {
+    label: "Show Alert",
+    value: "alert",
   },
 ]);
 const rules = ref([
@@ -227,6 +316,20 @@ const rules = ref([
     resultAction: {},
   },
 ]);
+const notifOpt = ref([
+  {
+    label: "Error (Red Notify)",
+    value: "error",
+  },
+  {
+    label: "Warning (Orange Notify)",
+    value: "warning",
+  },
+  {
+    label: "Success (Green Notify)",
+    value: "success",
+  },
+]);
 
 const getNowFields = computed(
   () =>
@@ -235,40 +338,101 @@ const getNowFields = computed(
     ]
 );
 
-const onChangeOperator = (val, idx) => {
-  if (idx === rules.value.length - 2) {
-    if (val.value !== "then") {
-      rules.value.splice(idx + 1, rules.value.length);
-      rules.value.push(
-        {
-          type: "logics",
-          opr: opr.value,
-          modelValue: modelValue.value,
-          oprCont: oprCont.value,
-          result: "",
-          resultAction: {},
+const getAllForms = computed(() =>
+  props.forms.reduce(
+    (acc, val, idx) =>
+      (acc = {
+        ...acc,
+        [idx]: {
+          idxRows: idx,
+          data: [...val.content.filter((valDet) => valDet.type == "form")],
         },
-        {
-          type: "results",
-          opr: opr.value,
-          modelValue: modelValue.value,
-          oprCont: oprCont.value,
-          result: "",
-          resultAction: {},
-        }
-      );
+      }),
+    []
+  )
+);
+
+const getPage = (page = "") => {
+  let getListCols;
+  if (page) {
+    getListCols = props.forms.filter((fil) => fil.seq_name === page);
+  } else {
+    getListCols = props.forms.filter((fil) => fil.seq_name !== props.page);
+  }
+
+  let hasil = [];
+  getListCols.map((valMap) => {
+    if (page) {
+      valMap.content.map((valCont, idx) => {
+        hasil.push({
+          value: valCont.id,
+          label: `Columns - ${idx + 1} (Type Form: ${valCont.type})`,
+        });
+      });
     } else {
-      rules.value.splice(idx + 1, rules.value.length);
-      rules.value.push({
+      hasil.push({
+        value: valMap.seq_name,
+        label: `Page - ${valMap.seq_name}`,
+      });
+    }
+  });
+
+  console.log(page);
+
+  return hasil;
+};
+
+onMounted(() => {
+  console.log(props.forms);
+  console.log(getAllForms.value);
+});
+
+const onChangeOperator = (val, idx) => {
+  // if (idx === rules.value.length - 2) {
+
+  // }
+  if (val.value !== "then") {
+    rules.value.splice(idx + 1, rules.value.length);
+    rules.value.push(
+      {
+        type: "logics",
+        opr: opr.value,
+        modelValue: modelValue.value,
+        oprCont: oprCont.value,
+        result: "",
+        resultAction: {},
+      },
+      {
         type: "results",
         opr: opr.value,
         modelValue: modelValue.value,
         oprCont: oprCont.value,
         result: "",
         resultAction: {},
-      });
-    }
+      }
+    );
+  } else {
+    rules.value.splice(idx + 1, rules.value.length);
+    rules.value.push({
+      type: "results",
+      opr: opr.value,
+      modelValue: modelValue.value,
+      oprCont: oprCont.value,
+      result: "",
+      resultAction: {},
+    });
   }
+};
+
+const addMoreResult = () => {
+  rules.value.push({
+    type: "results",
+    opr: opr.value,
+    modelValue: modelValue.value,
+    oprCont: oprCont.value,
+    result: "",
+    resultAction: {},
+  });
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -281,5 +445,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 // onDialogCancel - Function to call to settle dialog with "cancel" outcome
 
 // this is part of our example (so not required)
-function onOKClick() {}
+function onOKClick() {
+  console.log();
+}
 </script>
