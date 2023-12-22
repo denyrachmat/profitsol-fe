@@ -21,6 +21,16 @@
           </div>
         </div>
         <template v-for="(rule, idx) in rules" :key="idx">
+          <div
+            class="q-pt-md"
+            v-if="
+              rules[idx - 1] &&
+              rules[idx - 1].type === 'results' &&
+              rule.type === 'logics'
+            "
+          >
+            <q-separator />
+          </div>
           <div class="row q-pt-md" v-if="rule.type === 'logics'">
             <div class="col q-pl-md">
               <q-select
@@ -29,6 +39,8 @@
                 label="Operator"
                 dense
                 outlined
+                emit-value
+                map-options
               >
               </q-select>
             </div>
@@ -40,6 +52,8 @@
                 dense
                 v-if="getNowFields.content.component.category === 'multiple'"
                 outlined
+                emit-value
+                map-options
               />
               <q-input
                 label="Value"
@@ -57,8 +71,33 @@
                 dense
                 @update:model-value="(val) => onChangeOperator(val, idx)"
                 outlined
+                emit-value
+                map-options
               >
               </q-select>
+            </div>
+            <div class="col-1 q-pl-md text-right">
+              <q-btn
+                icon="add"
+                flat
+                color="orange"
+                @click="addMoreLogics()"
+                v-if="idx === 0"
+              >
+                <q-tooltip>Add more logics</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="delete"
+                flat
+                color="red"
+                @click="
+                  rules.splice(idx + 1, 1);
+                  rules.splice(idx, 1);
+                "
+                v-else
+              >
+                <q-tooltip>Remove Logics</q-tooltip>
+              </q-btn>
             </div>
           </div>
           <div class="row q-pt-md" v-if="rule.type === 'results'">
@@ -69,6 +108,8 @@
                 label="Results"
                 dense
                 outlined
+                emit-value
+                map-options
               >
               </q-select>
             </div>
@@ -81,6 +122,8 @@
                 label="Notif Type Choose"
                 dense
                 outlined
+                emit-value
+                map-options
               >
               </q-select>
             </div>
@@ -118,6 +161,8 @@
                 label="Choose Cols"
                 dense
                 outlined
+                emit-value
+                map-options
               >
               </q-select>
             </div>
@@ -142,12 +187,13 @@
               />
             </div>
             <div class="col-1 q-pl-md text-right">
+              <!-- addMoreLogics -->
               <q-btn
                 icon="add"
                 flat
                 color="green"
-                @click="addMoreResult()"
-                v-if="rules[idx - 1].type === 'logics'"
+                @click="addMoreResult(idx)"
+                v-if="rules[idx - 1] && rules[idx - 1].type === 'logics'"
               >
                 <q-tooltip>Add more result</q-tooltip>
               </q-btn>
@@ -156,7 +202,7 @@
                 flat
                 color="red"
                 @click="rules.splice(idx, 1)"
-                v-else
+                v-if="rules[idx - 1] && rules[idx - 1].type === 'results'"
               >
                 <q-tooltip>Remove Result</q-tooltip>
               </q-btn>
@@ -178,8 +224,9 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 
 const props = defineProps({
   forms: Array,
-  page: Number,
+  page: String,
   colsIdx: Number,
+  logics: Array,
 });
 
 const $q = useQuasar();
@@ -377,14 +424,14 @@ const getPage = (page = "") => {
     }
   });
 
-  console.log(page);
-
   return hasil;
 };
 
 onMounted(() => {
-  console.log(props.forms);
-  console.log(getAllForms.value);
+  if (props.logics && props.logics.length > 0) {
+    console.log(props.logics);
+    rules.value = props.logics;
+  }
 });
 
 const onChangeOperator = (val, idx) => {
@@ -424,7 +471,35 @@ const onChangeOperator = (val, idx) => {
   }
 };
 
-const addMoreResult = () => {
+const addMoreResult = (idx) => {
+  rules.value.splice(idx + 1, 0, {
+    type: "results",
+    opr: opr.value,
+    modelValue: modelValue.value,
+    oprCont: oprCont.value,
+    result: "",
+    resultAction: {},
+  });
+  // rules.value.push({
+  //   type: "results",
+  //   opr: opr.value,
+  //   modelValue: modelValue.value,
+  //   oprCont: oprCont.value,
+  //   result: "",
+  //   resultAction: {},
+  // });
+};
+
+const addMoreLogics = () => {
+  rules.value.push({
+    type: "logics",
+    opr: opr.value,
+    modelValue: modelValue.value,
+    oprCont: oprCont.value,
+    result: "",
+    resultAction: {},
+  });
+
   rules.value.push({
     type: "results",
     opr: opr.value,
@@ -446,6 +521,13 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 
 // this is part of our example (so not required)
 function onOKClick() {
-  console.log();
+  $q.dialog({
+    title: "Confirm",
+    message: "Are you sure want to add this logics to the field ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    onDialogOK(rules.value);
+  });
 }
 </script>
