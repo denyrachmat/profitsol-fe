@@ -1,5 +1,6 @@
 import { QSpinnerFacebook } from "quasar";
 import { useAuthStore } from "stores/authStore";
+import axios from 'axios'
 
 export const HelpersComponent = {
   setup() {
@@ -52,7 +53,7 @@ export const HelpersComponent = {
       if (request) {
         if (blob) {
           if (auth) {
-            var header = this.$axios[opt.methods](apiURL, request, {
+            var header = axios[opt.methods](apiURL, request, {
               responseType: "arraybuffer",
               headers: {
                 authorization: `Bearer ${this.store.authDet.token}`,
@@ -63,7 +64,7 @@ export const HelpersComponent = {
               },
             });
           } else {
-            var header = this.$axios[opt.methods](apiURL, request, {
+            var header = axios[opt.methods](apiURL, request, {
               responseType: "arraybuffer",
               headers: {
                 "Content-Type":
@@ -74,7 +75,7 @@ export const HelpersComponent = {
           }
         } else {
           if (auth) {
-            var header = this.$axios[opt.methods](apiURL, request, {
+            var header = axios[opt.methods](apiURL, request, {
               headers: {
                 authorization: `Bearer ${this.store.authDet.token}`,
                 username: this.store.authDet.username,
@@ -82,13 +83,17 @@ export const HelpersComponent = {
               },
             });
           } else {
-            var header = this.$axios[opt.methods](apiURL, request);
+            var header = axios[opt.methods](apiURL, request, {
+              headers: {
+                Accept: "application/json",
+              },
+            });
           }
         }
       } else {
         if (auth) {
           if (blob) {
-            var header = this.$axios[opt.methods](apiURL, {
+            var header = axios[opt.methods](apiURL, {
               responseType: "arraybuffer",
               headers: {
                 authorization: `Bearer ${this.store.authDet.token}`,
@@ -96,20 +101,23 @@ export const HelpersComponent = {
               },
             });
           } else {
-            var header = this.$axios[opt.methods](apiURL, {
+            var header = axios[opt.methods](apiURL, {
               headers: {
                 authorization: `Bearer ${this.store.authDet.token}`,
                 username: this.store.authDet.username,
+                Accept: "application/json",
               },
             });
           }
         } else {
           if (blob) {
-            var header = this.$axios[opt.methods](apiURL, {
+            var header = axios[opt.methods](apiURL, {
               responseType: "arraybuffer",
             });
           } else {
-            var header = this.$axios[opt.methods](apiURL);
+            var header = axios[opt.methods](apiURL, {
+              headers: { Accept: "application/json" }
+            });
           }
         }
       }
@@ -189,7 +197,7 @@ export const HelpersComponent = {
 
       return hasil < 0 ? hasil * -1 : hasil;
     },
-    resetForm() {},
+    resetForm() { },
     cekValiditasUserPage(url) {
       if (url == "/home" || url == "/login") {
         console.log("ini home");

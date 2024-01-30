@@ -17,6 +17,14 @@
           <q-btn color="purple" icon="add" @click="onAddRows" :disable="!title">
             <q-tooltip>Add rows </q-tooltip>
           </q-btn>
+          <q-btn
+            color="blue"
+            icon="psychology"
+            @click="onClickLogicForms"
+            :disable="!title"
+          >
+            <q-tooltip>Add forms event</q-tooltip>
+          </q-btn>
           <q-btn color="cyan" icon="search" @click="openTraining">
             <q-tooltip>Open created forms</q-tooltip>
           </q-btn>
@@ -52,15 +60,23 @@
       "
     >
       <legend>Create forms here</legend>
+
+      {{ logicsFields }}
+
+      {{ formEvents }}
       <template v-if="forms.length > 0">
         <template v-for="(form, idxForm) in forms" :key="idxForm">
           <div class="row q-pt-md">
             <q-input
-              borderless
-              class="q-ml-md"
+              outlined
               v-model="form.seq_name"
               input-class="text-h6"
-            ></q-input>
+              dense
+            >
+              <template v-slot:prepend>
+                <span class="text-h6">Page :</span>
+              </template>
+            </q-input>
             <!-- <div class="col text-h4 text-bold">Rows 1</div> -->
             <div class="col text-right">
               <q-btn-group outline>
@@ -95,12 +111,14 @@
               <div class="text-center">
                 <q-btn-group flat>
                   <q-btn
-                    color="green"
+                    :color="!col.type ? 'green' : 'orange'"
                     icon="list_alt"
                     flat
                     @click="onClickChooseComponent(col.type, idxForm, idxCol)"
                   >
-                    <q-tooltip>Add forms component here</q-tooltip>
+                    <q-tooltip>{{
+                      !col.type ? "Add forms component here" : "Edit this form"
+                    }}</q-tooltip>
                   </q-btn>
                   <q-btn
                     color="indigo"
@@ -112,11 +130,20 @@
                   </q-btn>
                   <q-btn
                     color="cyan"
-                    icon="psychology"
+                    icon="quiz"
                     flat
                     @click="onClickChooseQuiz(idxForm, idxCol)"
                   >
                     <q-tooltip>Add Quiz content here</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    color="blue"
+                    icon="psychology"
+                    flat
+                    :disable="col.type != 'form'"
+                    @click="onClickLogicField(form.seq_name, idxCol)"
+                  >
+                    <q-tooltip>Add logic this field</q-tooltip>
                   </q-btn>
                   <q-btn
                     color="red"
@@ -179,6 +206,8 @@ import openTrainingVue from "./Training/openTraining.vue";
 import PreviewComponent from "./Forms/previewComponent.vue";
 import shareFormsVue from "./Forms/shareForms.vue";
 import setupTraining from "./Training/setupTraining.vue";
+import showLogicField from "./Forms/showLogicField.vue";
+import showLogicForms from "./Forms/showLogicForms.vue";
 
 const { postData } = apiRequest();
 
@@ -207,12 +236,15 @@ const setupTrainingSetup = ref({
   minPass: 100,
   startQuiz: "",
   endQuiz: "",
+  rowsPageMethods: "multi-page",
 });
 const shareMainMenu = ref(0);
 const shareIsroles = ref(0);
 const selectedSharedMenu = ref("");
 const shareFormsMenuIcon = ref("");
 const selectedTableRoles = ref("");
+const logicsFields = ref([]);
+const formEvents = ref([]);
 
 const onAddRows = () => {
   // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
@@ -221,7 +253,9 @@ const onAddRows = () => {
     seq_name: `${
       forms.value.length === 0
         ? 1
-        : parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+        : setupTrainingSetup.value.rowsPageMethods === "multi-page"
+        ? parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+        : parseInt(forms.value[forms.value.length - 1].seq_name)
     }`,
     content: [
       {
@@ -335,6 +369,8 @@ const onClickSave = () => {
         shareFormsIsRoles: shareIsroles.value,
         selectedSharedMenu: selectedSharedMenu.value,
         shareFormsMenuIcon: shareFormsMenuIcon.value,
+        logicsFields: logicsFields.value,
+        formEvents: formEvents.value,
       },
       `cms/forms`,
       false,
@@ -375,6 +411,8 @@ const openTraining = () => {
     selectedSharedMenu.value = val.selectedSharedMenu;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
     selectedTableRoles.value = val.shareFormsRoleID;
+    logicsFields.value = val.logicsFields;
+    formEvents.value = val.formEvents;
     // forms.value[idxForm].content = val;
   });
 };
@@ -440,34 +478,30 @@ const onClickSetupTraining = () => {
   });
 };
 
-// watch(
-//   () => JSON.stringify(setupTrainingSetup.value),
-//   (val) => {
-//     const valParse = JSON.parse(val);
-//     console.log(valParse);
+const onClickLogicField = (pageSel, colSel) => {
+  $q.dialog({
+    component: showLogicField,
+    componentProps: {
+      forms: forms.value,
+      page: pageSel,
+      colsIdx: colSel,
+      logics: logicsFields.value,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+    logicsFields.value = val;
+  });
+};
 
-//     if (valParse) {
-//       initChoice.value.content.component.value.comp =
-//         valParse.defaultTypeChoice === "multiple-radio"
-//           ? "q-radio"
-//           : "q-checkbox";
-//       initChoice.value.content.component.value.type =
-//         valParse.defaultTypeChoice;
-
-//       const hasilDetail = [];
-//       for (let index = 0; index < valParse.defaultNumberOfChoice; index++) {
-//         hasilDetail.push({
-//           col_det_id: "opt-" + (index + 1),
-//           col_det_label: "",
-//           label: "",
-//           value: index + 1,
-//         });
-//       }
-
-//       initChoice.value.content.detail_data = hasilDetail;
-//     }
-//     // refreshDetail.value = refreshDetail.value + 1;
-//     // emit("onDeleted", JSON.parse(val));
-//   }
-// );
+const onClickLogicForms = () => {
+  $q.dialog({
+    component: showLogicForms,
+    componentProps: {
+      forms: forms.value,
+      events: formEvents.value,
+    },
+  }).onOk(async (val) => {
+    formEvents.value = val;
+  });
+};
 </script>

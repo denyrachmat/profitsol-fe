@@ -46,11 +46,9 @@ module.exports = configure(function (ctx) {
     build: {
       vueRouterMode: "hash", // available values: 'hash', 'history'
       env: {
-        API: ctx.dev
-          ? "http://localhost/stx-api/public/api/"
-          : // : "https://api.sumitronics-indonesia.com/api/",
-            // : "https://192.168.100.32/stx_api_v2/public/api/",
-            "http://192.168.100.32:8081/stx_api_v2/public/api/",
+        API: !ctx.dev
+          ? "http://localhost/STX/stx-api/public/api/"
+          : "http://192.168.100.32/public/api/",
         API_DOWNLOAD: ctx.dev
           ? "http://localhost/STX/stx-api/"
           : // : "http://api.sumitronics-indonesia.com/",

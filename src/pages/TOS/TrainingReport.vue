@@ -16,7 +16,32 @@
         />
       </div>
       <div class="col text-right">
-        <q-btn-group push>
+        <q-btn
+          color="primary"
+          label="Export to excel"
+          icon="download"
+          :disabled="!choosedData"
+        >
+          <q-menu>
+            <q-list style="min-width: 100px">
+              <q-item
+                clickable
+                v-close-popup
+                @click="exportToExcel(choosedData.id)"
+              >
+                <q-item-section>Export Users Answer Result</q-item-section>
+              </q-item>
+              <q-item
+                clickable
+                v-close-popup
+                @click="exportToExcelAnalytyic(choosedData.id)"
+              >
+                <q-item-section>Export Questioner Analytics</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+        <!-- <q-btn-group push>
           <q-btn
             push
             label="export to excel"
@@ -25,7 +50,7 @@
             @click="exportToExcel(choosedData.id)"
             :disabled="!choosedData"
           />
-        </q-btn-group>
+        </q-btn-group> -->
       </div>
     </div>
 
@@ -248,6 +273,30 @@ const exportToExcel = (id) => {
       "get",
       null,
       `tos/trainingListExport/${id}`,
+      false,
+      false,
+      true
+    );
+    if (data) {
+      loading.value = false;
+      window.open(process.env.API_DOWNLOAD + data, "_blank").focus();
+    }
+  });
+};
+
+const exportToExcelAnalytyic = (id) => {
+  console.log(id);
+  $q.dialog({
+    title: "Confirmation",
+    message: `Do you want to export this data ?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    const data = await postData(
+      "get",
+      null,
+      `tos/exportAnalyticsQuestion/${id}`,
       false,
       false,
       true

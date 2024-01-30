@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <div class="row">
+    <div class="row q-pb-md">
       <div class="col">
         <q-select
           outlined
@@ -15,7 +15,17 @@
           :readonly="loading"
         />
       </div>
-      <div class="col text-right"></div>
+      <div class="col q-pl-md">
+        <q-input outlined dense label="Approval Name" v-model="approvalName" />
+      </div>
+    </div>
+
+    <q-separator />
+
+    <div class="row q-pt-md">
+      <div class="col">
+        {{ choosedData }}
+      </div>
     </div>
   </div>
 </template>
@@ -29,6 +39,7 @@ const { postData } = apiRequest();
 
 const listData = ref([]);
 const choosedData = ref(null);
+const approvalName = ref("");
 const loading = ref(false);
 
 onMounted(() => {

@@ -4,7 +4,7 @@
       <div
         class="col-1 cursor-pointer q-pa-md"
         v-for="(folder, idx) in folders"
-        :key="idx"
+        :key="idx + '_folder'"
         @click="clickedFolder(folder)"
         @contextmenu="(e) => rightClick(e, folder)"
       >
@@ -68,8 +68,8 @@ import extList from "./extList.json";
 const selectedFolder = ref([]);
 const selectedFiles = ref([]);
 const folderList = ref([]);
-const folders = ref([]);
-const files = ref([]);
+const foldersS = ref([]);
+const filesS = ref([]);
 
 const props = defineProps({
   folders: Array,
@@ -87,8 +87,8 @@ const emit = defineEmits([
 
 onMounted(() => {
   emit("onMountedDone", true);
-  folders.value = props.folders;
-  files.value = props.files;
+  foldersS.value = props.folders;
+  filesS.value = props.files;
   folderList.value = props.data;
 });
 

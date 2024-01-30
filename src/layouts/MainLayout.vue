@@ -118,8 +118,8 @@ export default defineComponent({
 
   setup() {
     const leftDrawerOpen = ref(false);
-    const store = useAuthStore();
     const $q = useQuasar();
+    const store = useAuthStore();
 
     return {
       essentialLinks: linksList,

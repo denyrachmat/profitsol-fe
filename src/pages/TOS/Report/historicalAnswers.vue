@@ -16,26 +16,35 @@
           <q-expansion-item
             expand-separator
             :icon="data.is_pass ? 'done_all' : 'cancel'"
-            :header-class="
-              data.is_pass ? 'text-white bg-green' : 'text-white bg-red'
-            "
+            :header-class="data.is_pass ? 'text-green' : 'text-red'"
             :label="`Time Answers on : ${data.times}`"
-            :caption="`Batch ID : ${data.batch}`"
+            :caption="`Grade : ${data.grade}`"
             v-for="(data, idx) in props.datas"
             :key="idx"
           >
-            <q-list bordered class="rounded-borders">
-              <q-item
-                :header-inset-level="1"
-                :key="idx + idx2 + 'child'"
-                v-for="(childData, idx2) in getFailedData(
-                  data.data,
-                  data.data_ori
-                )"
-              >
+            <q-list
+              bordered
+              class="rounded-borders"
+              :header-inset-level="1"
+              :key="idx + idx2 + 'child'"
+              v-for="(childData, idx2) in getFailedData(
+                data.data,
+                data.data_ori
+              )"
+            >
+              <q-item>
                 <q-item-section top>
+                  <q-item-label lines="1">
+                    <span class="text-bold">Question :</span>
+                  </q-item-label>
                   <q-item-label lines="10">
                     <span v-html="childData.quest.content.label"></span>
+                  </q-item-label>
+                  <q-item-label lines="1">
+                    <span class="text-bold">Answers :</span>
+                  </q-item-label>
+                  <q-item-label lines="10">
+                    <span v-html="childData.answer.ans_value[0]"></span>
                   </q-item-label>
                 </q-item-section>
               </q-item>
