@@ -97,7 +97,7 @@
                         :columns="columnsRoles"
                         row-key="id"
                         :filter="filterDataRoles"
-                        v-model:selected="selectedTableRoles"
+                        v-model:selected="selectedTableRolesS"
                         selection="multiple"
                         dense
                         @update:selected="onSelectDataRoles"
@@ -164,13 +164,15 @@
                 <q-input
                   outlined
                   label="App Icon Name"
-                  v-model="shareFormsMenuIcon"
+                  v-model="shareFormsMenuIconS"
                   dense
                 >
                   <template v-slot:before>
                     <q-icon
                       :name="
-                        shareFormsMenuIcon ? shareFormsMenuIcon : 'add_reaction'
+                        shareFormsMenuIconS
+                          ? shareFormsMenuIconS
+                          : 'add_reaction'
                       "
                     >
                       <q-tooltip>Icon Preview will be here</q-tooltip>
@@ -195,7 +197,7 @@
                   >
                     <q-item-section avatar>
                       <q-radio
-                        v-model="selectedSharedMenu"
+                        v-model="selectedSharedMenuS"
                         :val="menus.am_app_code"
                         color="orange"
                       />
@@ -273,7 +275,7 @@ const cols = ref([
 ]);
 
 const filterDataRoles = ref("");
-const selectedTableRoles = ref([]);
+const selectedTableRolesS = ref([]);
 
 const rowsRoles = ref([]);
 const columnsRoles = ref([
@@ -303,8 +305,8 @@ const columnsRoles = ref([
 const selectedTable = ref([]);
 const shareToMainMenu = ref(false);
 const isUsingRoles = ref(false);
-const selectedSharedMenu = ref("");
-const shareFormsMenuIcon = ref("");
+const selectedSharedMenuS = ref("");
+const shareFormsMenuIconS = ref("");
 
 const sharedMenuList = ref([]);
 
@@ -339,9 +341,9 @@ onMounted(async () => {
 
   shareToMainMenu.value = props.shareMainMenu;
   isUsingRoles.value = props.shareIsroles;
-  selectedSharedMenu.value = props.selectedSharedMenu;
-  shareFormsMenuIcon.value = props.shareFormsMenuIcon;
-  selectedTableRoles.value = props.selectedTableRoles;
+  selectedSharedMenuS.value = props.selectedSharedMenu;
+  shareFormsMenuIconS.value = props.shareFormsMenuIcon;
+  selectedTableRolesS.value = props.selectedTableRoles;
 });
 
 const getRoles = async () => {
@@ -393,8 +395,8 @@ function onOKClick() {
     emails: selected.value,
     isMainMenu: shareToMainMenu.value,
     isRoles: isUsingRoles.value,
-    selectedSharedMenu: selectedSharedMenu.value,
-    shareFormsMenuIcon: shareFormsMenuIcon.value,
+    selectedSharedMenu: selectedSharedMenuS.value,
+    shareFormsMenuIcon: shareFormsMenuIconS.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

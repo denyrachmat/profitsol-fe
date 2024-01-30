@@ -115,7 +115,7 @@
             </div>
 
             <!-- IF Choose Notif show type notif-->
-            <div class="col q-pl-md" v-if="rule.result.value === 'notif'">
+            <div class="col q-pl-md" v-if="rule.result === 'notif'">
               <q-select
                 v-model="rule.resultAction.notifType"
                 :options="notifOpt"
@@ -131,8 +131,7 @@
             <div
               class="col q-pl-md"
               v-if="
-                rule.result.value === 'show_rowcols' ||
-                rule.result.value === 'hide_rowcols'
+                rule.result === 'show_rowcols' || rule.result === 'hide_rowcols'
               "
             >
               <q-select
@@ -150,8 +149,8 @@
             <div
               class="col q-pl-md"
               v-if="
-                (rule.result.value === 'show_rowcols' ||
-                  rule.result.value === 'hide_rowcols') &&
+                (rule.result === 'show_rowcols' ||
+                  rule.result === 'hide_rowcols') &&
                 rule.resultAction.choosedPage
               "
             >
@@ -170,9 +169,9 @@
             <div
               class="col q-pl-md"
               v-if="
-                rule.result.value === 'skip_page' ||
-                rule.result.value === 'jump_page' ||
-                rule.result.value === 'notif'
+                rule.result === 'skip_page' ||
+                rule.result === 'jump_page' ||
+                rule.result === 'notif'
               "
             >
               <q-input
@@ -180,7 +179,7 @@
                 dense
                 outlined
                 :label="
-                  rule.result.value === 'notif'
+                  rule.result === 'notif'
                     ? 'Alert message'
                     : `${rule.result.label} number`
                 "
