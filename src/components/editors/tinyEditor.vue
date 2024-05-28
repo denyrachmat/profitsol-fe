@@ -9,8 +9,18 @@
   </div>
 </template>
 <script setup>
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import Editor from "@tinymce/tinymce-vue";
+
+const props = defineProps({
+  modelValue: String,
+});
+
+onMounted(() => {
+  if (props.modelValue) {
+    editors.value = props.modelValue;
+  }
+});
 
 const initEditor = ref({
   selector: "textarea#open-source-plugins",
@@ -98,6 +108,7 @@ const initEditor = ref({
   content_css: "dark",
   content_style:
     "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
+  paste_data_images: true,
 });
 const emit = defineEmits("update:modelValue");
 const editors = ref("");

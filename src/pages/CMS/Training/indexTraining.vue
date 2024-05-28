@@ -22,6 +22,14 @@
           >
             <q-tooltip> Add more question. </q-tooltip>
           </q-btn>
+          <q-btn
+            color="cyan"
+            icon="add"
+            @click="onClickChooseHTML"
+            :disable="!title"
+          >
+            <q-tooltip> Add HTML Rows. </q-tooltip>
+          </q-btn>
           <q-btn color="primary" icon="search" @click="openTraining">
             <q-tooltip> Find & Edit saved question bank. </q-tooltip>
           </q-btn>
@@ -84,7 +92,7 @@
                 style="border: 1px dashed #ccc !important; border-radius: 5px"
               >
                 <div class="row">
-                  <div class="col">
+                  <!-- <div class="col-1" v-if="col.type !== 'html'">
                     <q-icon
                       name="check"
                       class="text-blue"
@@ -97,6 +105,33 @@
                       size="2em"
                       v-else
                     />
+                  </div> -->
+
+                  <div class="col-2" style="display: flex">
+                    <div v-if="col.type !== 'html'" class="q-pr-sm">
+                      <q-icon
+                        name="check"
+                        class="text-blue"
+                        size="3em"
+                        v-if="valueSubmited[idxCol]"
+                      />
+                      <q-icon
+                        name="cancel"
+                        class="text-orange"
+                        size="3em"
+                        v-else
+                      />
+                    </div>
+                    <q-input
+                      outlined
+                      v-model="col.seq_name"
+                      input-class="text-h6"
+                      dense
+                    >
+                      <template v-slot:prepend>
+                        <span class="text-h6">Page :</span>
+                      </template>
+                    </q-input>
                   </div>
 
                   <div class="col q-px-md text-right">
@@ -104,7 +139,11 @@
                       dense
                       flat
                       icon="edit"
-                      @click="onClickChooseComponent(idxCol)"
+                      @click="
+                        col.type === 'html'
+                          ? onClickChooseHTML(idxCol)
+                          : onClickChooseComponent(idxCol)
+                      "
                       color="orange"
                     >
                       <q-tooltip> Edit this question. </q-tooltip>
@@ -130,14 +169,16 @@
                   </div>
                 </div>
 
+                <div v-if="col.type === 'html'" v-html="col.content"></div>
                 <componentViewVue
+                  v-else
                   :type="col.content.component.category"
                   :type-input="col.content.component.value.type"
                   :comp="col.content.component.value.comp"
                   :label="col.content.label"
                   :detail="col.content.detail_data"
-                  mode="live"
-                  @custom-change="(val) => onChooseValue(val, idxCol)"
+                  mode="live-ans"
+                  @customAnschange="(val) => onChooseValue(val, idxCol)"
                   :key="idxCol + 'color'"
                   :ans="
                     !Array.isArray(valueSubmited[idxCol])
@@ -175,6 +216,8 @@ import { ref, watch } from "vue";
 import { useQuasar } from "quasar";
 import componentViewVue from "../componentView.vue";
 import chooseComponent from "../chooseComponent.vue";
+import addContentComponent from "../addContentComponent.vue";
+
 import apiRequest from "src/components/apiRequest";
 
 import setupTraining from "./setupTraining.vue";
@@ -230,7 +273,7 @@ const initChoice = ref({
 const onChooseValue = (val, idx) => {
   console.log([val, idx]);
   valueSubmited.value[idx] = val;
-  // explainSubmit.value[idx] = "";
+  explainSubmit.value[idx] = "";
   // forms.value[idx].value = val;
 };
 
@@ -250,7 +293,41 @@ const onClickChooseComponent = (idxForm = {}) => {
           : initChoice.value,
     },
   }).onOk(async (val) => {
+    console.log(val);
     if (forms.value[idxForm] && forms.value[idxForm].content) {
+      forms.value[idxForm] = val;
+    } else {
+      forms.value.push({
+        ...val,
+        seq_name:
+          forms.value.length > 0
+            ? parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+            : 1,
+      });
+    }
+  });
+};
+
+const onClickChooseHTML = (idxForm = {}) => {
+  $q.dialog({
+    component: addContentComponent,
+    componentProps: {
+      comp: forms.value[idxForm] ? forms.value[idxForm].content : "",
+    },
+    // componentProps: {
+    //   currComponent:
+    //     forms.value[idxForm] && forms.value[idxForm].content
+    //       ? {
+    //           content: {
+    //             ...forms.value[idxForm].content,
+    //             multipleOnly: true,
+    //           },
+    //         }
+    //       : initChoice.value,
+    // },
+  }).onOk(async (val) => {
+    console.log(val);
+    if (forms.value[idxForm]) {
       forms.value[idxForm] = val;
     } else {
       forms.value.push(val);
@@ -297,6 +374,7 @@ const deleteQuestion = (idx) => {
 };
 
 const onSaveQuestion = () => {
+  console.log(forms.value);
   $q.dialog({
     title: "Confirm",
     message: "Do you really want to save this quiz ?",
@@ -349,7 +427,6 @@ const openTraining = () => {
     },
   }).onOk(async (val) => {
     setupTrainingSetup.value = null;
-    console.log(val);
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;

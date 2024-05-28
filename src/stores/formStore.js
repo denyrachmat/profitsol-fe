@@ -58,6 +58,7 @@ export const useFormStore = defineStore("form", {
     startCountDown() {
       // console.log("masuk timer 1");
       this.startTime = true;
+      this.finishQuiz = false;
 
       let initSecond =
         parseInt(this.timeData.hours) * 3600 +
@@ -81,7 +82,7 @@ export const useFormStore = defineStore("form", {
 
         if (initSecond <= 0) {
           clearInterval(this.intervalSetup);
-          this.finishQuiz = true;
+          // this.finishQuiz = true;
           // this.startTime = false;
         }
       };

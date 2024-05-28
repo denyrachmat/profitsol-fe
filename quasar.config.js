@@ -23,7 +23,7 @@ module.exports = configure(function (ctx) {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-webpack/boot-files
-    boot: ["axios", "prismBoot"],
+    boot: ["axios", "prismBoot", "pinia"],
 
     // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-css
     css: ["app.scss"],
@@ -46,7 +46,7 @@ module.exports = configure(function (ctx) {
     build: {
       vueRouterMode: "hash", // available values: 'hash', 'history'
       env: {
-        API: !ctx.dev
+        API: ctx.dev
           ? "http://localhost/STX/stx-api/public/api/"
           : "http://192.168.100.32/public/api/",
         API_DOWNLOAD: ctx.dev
