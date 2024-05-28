@@ -108,7 +108,10 @@
 <script setup>
 import { ref, defineProps, computed, onMounted } from "vue";
 import { date, useQuasar } from "quasar";
+import { useAuthStore } from "src/stores/authStore";
 import apiRequest from "src/components/apiRequest";
+
+const store = useAuthStore();
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -117,7 +120,9 @@ const emit = defineEmits(["infoView"]);
 const rows = ref([]);
 const loading = ref(false);
 
-onMounted(() => {
+onMounted(async () => {
+  rows.value = await store.getInformationList;
+
   getData();
 });
 
@@ -126,11 +131,13 @@ const getData = async () => {
   const data = await postData("get", null, `portal/notif`, false, false, true);
 
   if (data) {
-    setTimeout(() => {
-      console.log(data);
-    }, 1000);
+    // setTimeout(() => {}, 5000);
     loading.value = false;
     rows.value = data.data;
+
+    if (store.getInformationList.length === 0) {
+      store.storeInformationList(data.data);
+    }
   }
 };
 

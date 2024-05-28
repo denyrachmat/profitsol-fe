@@ -143,7 +143,7 @@ const getAnswersUsers = async () => {
     answers.value = data.data;
     grade.value = data.grade;
     isPass.value = data.is_pass;
-    questions.value = data.data_ori;
+    questions.value = data.data_ori.filter((fil) => fil.type == "form");
   }
 };
 

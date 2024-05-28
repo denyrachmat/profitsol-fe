@@ -9,7 +9,7 @@
           icon="menu"
           aria-label="Menu"
           @click="toggleLeftDrawer"
-          v-if="store.choosedRoles && store.choosedRoles.role.id === 1"
+          v-if="store && store.choosedRoles && store.choosedRoles.role.id === 1"
         />
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
         <q-toolbar-title> PT Sumitronics Indonesia </q-toolbar-title>

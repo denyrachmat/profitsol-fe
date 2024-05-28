@@ -63,7 +63,9 @@
 
           <q-card-section class="q-pt-none">
             <div class="text-subtitle1">
-              {{ store.getChoosedRole.role.rm_role_desc }}
+              {{
+                store.getChoosedRole && store.getChoosedRole.role.rm_role_desc
+              }}
             </div>
             <!-- <div class="text-caption text-grey">MIS Staff</div> -->
           </q-card-section>
@@ -102,7 +104,7 @@
                   style="overflow: scroll; max-height: 55vh"
                   :key="keyMeeting"
                 >
-                  <eventList
+                  <event-list
                     :events="mainEvent"
                     v-if="Object.values(store.msLoginDet).length > 0"
                   />
@@ -162,9 +164,10 @@
                     />
                   </div>
                 </div>
-                <div style="overflow: scroll; max-height: 55vh" :key="keyInfo">
+                <div style="overflow: scroll; max-height: 55vh">
                   <informationList
                     @info-view="(val) => onViewInformation(val)"
+                    :key="keyInfo"
                   />
                 </div>
               </div>
@@ -304,17 +307,20 @@ const onViewInformation = (val) => {
       message: "Are you sure want to start this quiz?",
       cancel: true,
       persistent: true,
-    }).onOk(() => {
+    }).onOk(async () => {
       formStore.hashFormsUpdate(val.pnm_hash_id_location);
       formStore.setStartDateForm(val.pnm_start_date);
       formStore.setEndDateForm(val.pnm_end_date);
+
+      console.log(
+        date.getDateDiff(new Date(val.pnm_end_date), new Date(), "days")
+      );
       if (
         date.getDateDiff(new Date(val.pnm_end_date), new Date(), "days") >= 0
       ) {
-        // if (val.lihatHasil.cfsd_timer == 1) {
-        // }
+        console.log(formStore);
         formStore.setStartTimeState(false);
-        formStore.setFinishQuizState(false);
+        // formStore.setFinishQuizState(false);
 
         $q.dialog({
           component: viewApps,

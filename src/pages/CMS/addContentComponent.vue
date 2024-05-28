@@ -15,9 +15,20 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import tinyEditorVue from "src/components/editors/tinyEditor.vue";
+
+const props = defineProps({
+  comp: String,
+});
+
+onMounted(() => {
+  console.log(props.comp);
+  if (props.comp) {
+    editors.value = props.comp;
+  }
+});
 
 const editors = ref("");
 

@@ -11,19 +11,21 @@
         </div>
       </div>
     </div>
-    <template v-else>
-      <div class="row">
+    <div v-else>
+      <div class="row bg-grey">
         <div class="col q-pa-sm bg-white" style="border-radius: 10px">
           <div class="row">
             <div class="col-3 text-bold self-center">
-              Question {{ nowSeq + 1 }} of {{ datanya.length }}
+              Question {{ nowSeq + 1 }} of
+              {{ datanya.filter((val) => val.type === "form").length }}
             </div>
             <div class="col">
               <div class="row">
                 <div
                   :class="`col-1 q-px-sm`"
                   style="height: 20px; width: 20px"
-                  v-for="idx in datanya.length"
+                  v-for="idx in datanya.filter((val) => val.type === 'form')
+                    .length"
                   :key="idx"
                 >
                   <div
@@ -36,7 +38,7 @@
           </div>
         </div>
         <div
-          class="col q-pa-md bg-white text-right"
+          class="col q-pa-md bg-grey text-right"
           style="border-radius: 10px"
           v-if="
             store.timeData.hours ||
@@ -49,6 +51,20 @@
             {{ String(getNowTimer.minutes).padStart(2, "0") }} :
             {{ String(getNowTimer.seconds).padStart(2, "0") }}</b
           >
+        </div>
+      </div>
+      <div
+        style="overflow: auto; max-height: 50vh"
+        v-if="checkAnySameHTML.length > 0"
+      >
+        <div
+          class="row q-pt-md"
+          v-for="(htmlCont, idxhtm) in checkAnySameHTML"
+          :key="idxhtm"
+        >
+          <div class="col bg-white" style="border-radius: 10px; padding: 15px">
+            <div v-html="htmlCont.content"></div>
+          </div>
         </div>
       </div>
       <div class="row q-pt-md" v-if="getNowQuestion">
@@ -73,6 +89,7 @@
             "
             @customChange="(val) => getAnswers(val)"
             mode="live"
+            :key="'liveView'"
           />
         </div>
       </div>
@@ -87,16 +104,23 @@
             />
             <q-btn
               color="green"
-              :label="nowSeq === datanya.length - 1 ? 'Submit' : 'Next'"
+              :label="
+                nowSeq ===
+                datanya.filter((val) => val.type === 'form').length - 1
+                  ? 'Submit'
+                  : 'Next'
+              "
               @click="
-                nowSeq === datanya.length - 1
+                nowSeq ===
+                datanya.filter((val) => val.type === 'form').length - 1
                   ? onClickSubmit(props.idDet)
                   : onClickNext()
               "
             />
           </q-btn-group>
-        </div></div
-    ></template>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script setup>
@@ -128,10 +152,11 @@ const props = defineProps({
 const doneSubmiting = ref(0);
 
 onMounted(() => {
-  console.log(props.setup);
+  console.log(store.timeData);
   if (
-    props.setup.setUpTimer &&
-    (store.timeData.hours || store.timeData.minutes || store.timeData.seconds)
+    props.setup &&
+    props.setup.setUpTimer
+    // && (store.timeData.hours || store.timeData.minutes || store.timeData.seconds)
   ) {
     store.setSetUpTimer = true;
     store.timeData.hours =
@@ -142,7 +167,6 @@ onMounted(() => {
       parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
   }
 
-  console.log(props.data);
   if (!store.startTime) {
     store.startCountDown();
   }
@@ -150,7 +174,10 @@ onMounted(() => {
   if (props.data.length > 0) {
     dataOri.value = props.data;
 
-    const dataShuf = shuffle(props.data, true);
+    const dataShuf = shuffle(
+      props.data.filter((val) => val.type === "form"),
+      true
+    );
     datanya.value = dataShuf[0];
     listQuestShuff.value = dataShuf[1];
   }
@@ -204,6 +231,28 @@ const getFinishQuizState = computed(() => {
   return store.getFinishQuizState;
 });
 
+const checkAnySameHTML = computed(() => {
+  if (getNowQuestion.value) {
+    console.log(getNowQuestion.value.seq_name);
+    console.log(
+      Object.values(
+        props.data.filter(
+          (val) =>
+            val.type == "html" && val.seq_name == getNowQuestion.value.seq_name
+        )
+      )
+    );
+    return Object.values(
+      props.data.filter(
+        (val) =>
+          val.type == "html" && val.seq_name == getNowQuestion.value.seq_name
+      )
+    );
+  }
+
+  return false;
+});
+
 const onClickNext = async () => {
   if (props.setup.showRightKeysAnswerLocation === "end") {
     nowSeq.value = nowSeq.value + 1;
@@ -225,9 +274,11 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
   let idList = [];
   if (questId.length === listQuestShuff.value.length) {
     console.log(listQuestShuff.value);
-    datanya.value.map((val) => {
-      idList.push(val.id);
-    });
+    datanya.value
+      .filter((val) => val.type == "form")
+      .map((val) => {
+        idList.push(val.id);
+      });
   } else {
     idList = questId;
   }
@@ -238,6 +289,7 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
   //   questId: idList,
   // });
   if (passConfirm) {
+    store.setFinishQuizState = true;
     const data = await postData(
       "post",
       {
@@ -253,12 +305,24 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
 
     if (data) {
       if (data.status) {
+        store.finishQuizImmediatelly();
         $q.notify({
           message: data.message,
           color: "green",
         });
 
-        showResult();
+        $q.dialog({
+          component: showQuizResultVue,
+          componentProps: {
+            resShow: props.setup.showResult,
+            answerShow: props.setup.showRightKeysAnswer,
+            dataQuiz: dataOri.value,
+            idQuiz: props.id,
+          },
+          persistent: true,
+        });
+
+        doneSubmiting.value = 1;
       }
 
       if (props.setup.showRightKeysAnswerLocation === "question") {
@@ -334,8 +398,8 @@ const getAnswers = (val) => {
 };
 
 watch(getNowTimer, (time) => {
-  console.log("watcherr", props.setup.setUpTimer);
-  if (props.setup.setUpTimer === true) {
+  // console.log("watcherr", props.setup.setUpTimer);
+  if (props.setup.setUpTimer === true && !getFinishQuizState.value) {
     console.log(props.setup.setUpTimer);
     if (time.hours === 0 && time.minutes === 1 && time.seconds === 0) {
       $q.notify({
@@ -351,14 +415,10 @@ watch(getNowTimer, (time) => {
       });
     }
 
-    if (
-      !getFinishQuizState.value &&
-      time.hours === 0 &&
-      time.minutes === 0 &&
-      time.seconds === 0
-    ) {
+    if (time.hours === 0 && time.minutes === 0 && time.seconds === 0) {
       console.log("abis boy waktunya");
       onClickSubmit(props.idDet, true);
+      store.finishQuizImmediatelly();
     }
     console.log(time);
   }

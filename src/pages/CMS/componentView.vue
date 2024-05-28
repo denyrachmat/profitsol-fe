@@ -236,9 +236,11 @@ watch(
   () => JSON.stringify(modelDataArr.value),
   (val) => {
     if (modelDataArr.value) {
-      console.log("lempar jawaban Array");
-      console.log(JSON.parse(val));
-      emit("customChange", JSON.parse(val));
+      if (props.mode == "live-ans") {
+        emit("customAnschange", JSON.parse(val));
+      } else {
+        emit("customChange", JSON.parse(val));
+      }
     }
   }
 );
@@ -247,9 +249,13 @@ watch(
   () => modelData.value,
   (val) => {
     if (modelData.value) {
-      console.log("masuk ke 2");
+      console.log(props.mode);
       console.log(val);
-      emit("customChange", val);
+      if (props.mode == "live-ans") {
+        emit("customAnschange", val);
+      } else {
+        emit("customChange", val);
+      }
     }
   }
 );
