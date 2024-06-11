@@ -331,24 +331,7 @@ const resultOpt = ref([
     value: "alert",
   },
 ]);
-const rules = ref([
-  {
-    type: "logics",
-    opr: opr.value,
-    modelValue: modelValue.value,
-    oprCont: oprCont.value,
-    result: "",
-    resultAction: {},
-  },
-  {
-    type: "results",
-    opr: opr.value,
-    modelValue: modelValue.value,
-    oprCont: oprCont.value,
-    result: "",
-    resultAction: {},
-  },
-]);
+
 const notifOpt = ref([
   {
     label: "Error (Red Notify)",

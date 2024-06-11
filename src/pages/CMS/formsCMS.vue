@@ -488,8 +488,10 @@ const onClickLogicField = (pageSel, colSel) => {
       logics: logicsFields.value,
     },
   }).onOk(async (val) => {
-    console.log(val);
-    logicsFields.value = val;
+    const idRows = forms.value.findIndex((fi) => fi.seq_name == pageSel);
+
+    forms.value[idRows].content[colSel].logics = val;
+    // logicsFields.value = val;
   });
 };
 

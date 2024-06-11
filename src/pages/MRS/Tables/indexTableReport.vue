@@ -90,7 +90,7 @@ onMounted(async () => {
   const colsnya = await getCols(idNya.value);
 
   if (colsnya) {
-    // tableRef.value.requestServerInteraction();
+    tableRef.value.requestServerInteraction();
   }
 });
 

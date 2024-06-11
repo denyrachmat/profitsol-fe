@@ -91,6 +91,7 @@
                 flat
                 color="red"
                 @click="
+                  rule.oprCont = 'then';
                   rules.splice(idx + 1, 1);
                   rules.splice(idx, 1);
                 "
@@ -340,10 +341,11 @@ const resultOpt = ref([
     value: "notif",
   },
   {
-    label: "Show Alert",
-    value: "alert",
+    label: "End Forms",
+    value: "end",
   },
 ]);
+
 const rules = ref([
   {
     type: "logics",
@@ -459,14 +461,24 @@ const onChangeOperator = (val, idx) => {
     );
   } else {
     rules.value.splice(idx + 1, rules.value.length);
-    rules.value.push({
-      type: "results",
-      opr: opr.value,
-      modelValue: modelValue.value,
-      oprCont: oprCont.value,
-      result: "",
-      resultAction: {},
-    });
+    rules.value.push(
+      {
+        type: "logics",
+        opr: opr.value,
+        modelValue: modelValue.value,
+        oprCont: oprCont.value,
+        result: "",
+        resultAction: {},
+      },
+      {
+        type: "results",
+        opr: opr.value,
+        modelValue: modelValue.value,
+        oprCont: oprCont.value,
+        result: "",
+        resultAction: {},
+      }
+    );
   }
 };
 
