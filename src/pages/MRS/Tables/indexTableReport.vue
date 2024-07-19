@@ -199,7 +199,7 @@ const onExportExcel = () => {
       true
     );
 
-    if (checkDatanya.status === true) {
+    if (checkDatanya && checkDatanya.status === true) {
       loading.value = false;
       window
         .open(process.env.API_DOWNLOAD + checkDatanya.path, "_blank")

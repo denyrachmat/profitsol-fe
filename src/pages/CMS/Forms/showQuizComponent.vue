@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-sm bg-grey">
+  <div class="q-pa-md bg-grey">
     <div class="row" v-if="doneSubmiting">
       <div class="col text-center">
         <span class="text-h3 text-bold">
@@ -53,17 +53,37 @@
           >
         </div>
       </div>
-      <div
-        style="overflow: auto; max-height: 50vh"
-        v-if="checkAnySameHTML.length > 0"
-      >
-        <div
-          class="row q-pt-md"
-          v-for="(htmlCont, idxhtm) in checkAnySameHTML"
-          :key="idxhtm"
-        >
-          <div class="col bg-white" style="border-radius: 10px; padding: 15px">
-            <div v-html="htmlCont.content"></div>
+      <div v-if="checkAnySameHTML.length > 0">
+        <div class="row q-pt-sm">
+          <div class="col bg-white text-bold q-pa-sm">
+            Please read material below, or use option on the right to download
+            or view material on the other tab.
+          </div>
+          <div class="col text-right bg-white">
+            <q-btn
+              icon="open_in_new"
+              flat
+              @click="onClickOpenNewTabHTML(props.id, nowSeq)"
+            >
+              <q-tooltip>Open in new tab</q-tooltip>
+            </q-btn>
+            <q-btn icon="download" flat>
+              <q-tooltip>Download and view as PDF</q-tooltip>
+            </q-btn>
+          </div>
+        </div>
+        <div style="overflow: auto; max-height: 40vh">
+          <div
+            class="row q-pt-sm"
+            v-for="(htmlCont, idxhtm) in checkAnySameHTML"
+            :key="idxhtm"
+          >
+            <div
+              class="col bg-white"
+              style="border-radius: 10px; padding: 15px"
+            >
+              <div v-html="htmlCont.content"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -280,7 +300,12 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
         idList.push(val.id);
       });
   } else {
-    idList = questId;
+    datanya.value
+      .filter((val) => val.type == "form")
+      .map((val) => {
+        idList.push(val.id);
+      });
+    // idList = questId;
   }
 
   // console.log({
@@ -395,6 +420,10 @@ const showResult = () => {
 
 const getAnswers = (val) => {
   store.addAnswers(nowSeq.value, val);
+};
+
+const onClickOpenNewTabHTML = (idQuiz, pageNumber) => {
+  console.log([idQuiz, pageNumber]);
 };
 
 watch(getNowTimer, (time) => {

@@ -29,7 +29,7 @@
               :key="idx + idx2 + 'child'"
               v-for="(childData, idx2) in getFailedData(
                 data.data,
-                data.data_ori
+                data.data_ori.filter((fil) => fil.type === 'form')
               )"
             >
               <q-item>
