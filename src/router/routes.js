@@ -3,7 +3,12 @@ const routes = [
   {
     path: "/login",
     component: () => import("pages/Auth"),
-    children: [{ path: "", component: () => import("pages/Auth/index.vue") }],
+    children: [{ path: "", component: () => import("pages/Auth/index.vue"), name: 'login' }],
+  },
+  {
+    path: "/reset-password/:token",
+    component: () => import("pages/Auth"),
+    children: [{ path: "", component: () => import("pages/Auth/resetPassword.vue"), name: 'reset' }],
   },
   {
     path: "/",
@@ -30,6 +35,10 @@ const routes = [
     children: [
       { path: "", component: () => import("pages/CMS/formsAsApps.vue") },
     ],
+  },
+  {
+    path: "/showHTMLTraining",
+    component: () => import("pages/CMS/Training/showHTMLTraining.vue"),
   },
   {
     path: "/settings/",

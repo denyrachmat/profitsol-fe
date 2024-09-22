@@ -121,7 +121,7 @@ const rows = ref([]);
 const loading = ref(false);
 
 onMounted(async () => {
-  rows.value = await store.getInformationList;
+  rows.value = store.getInformationList;
 
   getData();
 });
@@ -131,13 +131,10 @@ const getData = async () => {
   const data = await postData("get", null, `portal/notif`, false, false, true);
 
   if (data) {
-    // setTimeout(() => {}, 5000);
     loading.value = false;
     rows.value = data.data;
 
-    if (store.getInformationList.length === 0) {
-      store.storeInformationList(data.data);
-    }
+    store.storeInformationList(rows.value);
   }
 };
 

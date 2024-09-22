@@ -19,8 +19,55 @@ const props = defineProps({
 onMounted(() => {
   if (props.modelValue) {
     editors.value = props.modelValue;
+
+    editors.value.ui.registry.addButton("myCustomToolbarButton", {
+      text: "My Button",
+      onAction: function () {
+        editors.value.insertContent("&nbsp;<b>It's my button!</b>&nbsp;");
+      },
+    });
   }
 });
+
+const dialogConfig = {
+  title: "Pet Name Machine",
+  body: {
+    type: "panel",
+    items: [
+      {
+        type: "input",
+        name: "catdata",
+        label: "Enter Variable Name",
+      },
+    ],
+  },
+  buttons: [
+    {
+      type: "cancel",
+      name: "closeButton",
+      text: "Cancel",
+    },
+    {
+      type: "submit",
+      name: "submitButton",
+      text: "Submit",
+      buttonType: "primary",
+    },
+  ],
+  initialData: {
+    catdata: "{{username}}",
+  },
+  onSubmit: (api) => {
+    const data = api.getData();
+
+    tinymce.activeEditor.execCommand(
+      "mceInsertContent",
+      false,
+      `{{${data.catdata}}}`
+    );
+    api.close();
+  },
+};
 
 const initEditor = ref({
   selector: "textarea#open-source-plugins",
@@ -33,7 +80,7 @@ const initEditor = ref({
   imagetools_cors_hosts: ["picsum.photos"],
   menubar: "file edit view insert format tools table help",
   toolbar:
-    "undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media template link anchor codesample | ltr rtl",
+    "dialog-example-btn | undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media template link anchor codesample | ltr rtl | myCustomToolbarButton",
   toolbar_sticky: true,
   autosave_ask_before_unload: true,
   autosave_interval: "30s",
@@ -109,6 +156,13 @@ const initEditor = ref({
   content_style:
     "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
   paste_data_images: true,
+  setup: (editor) => {
+    editor.ui.registry.addButton("dialog-example-btn", {
+      icon: "format-code",
+      tooltip: "Add variable to become value",
+      onAction: () => editor.windowManager.open(dialogConfig),
+    });
+  },
 });
 const emit = defineEmits("update:modelValue");
 const editors = ref("");

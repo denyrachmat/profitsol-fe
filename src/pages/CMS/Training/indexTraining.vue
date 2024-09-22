@@ -271,9 +271,9 @@ const initChoice = ref({
 });
 
 const onChooseValue = (val, idx) => {
-  console.log([val, idx]);
-  valueSubmited.value[idx] = val;
-  explainSubmit.value[idx] = "";
+  console.log([val, idx, val.exp]);
+  // valueSubmited.value[idx] = parseInt(val);
+  // explainSubmit.value = val.exp;
   // forms.value[idx].value = val;
 };
 

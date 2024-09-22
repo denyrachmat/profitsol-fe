@@ -18,8 +18,8 @@
       </q-bar>
       <div>
         <iframe
-          v-if="dataProps.includes('http')"
-          :src="dataProps"
+          v-if="url.includes('http')"
+          :src="url"
           class="full-width window-height"
         ></iframe>
         <template v-else>
@@ -43,10 +43,13 @@ import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 import { useFormStore } from "stores/formStore";
 import error404 from "./error404.vue";
+import apiRequest from "src/components/apiRequest";
+import axios from "src/boot/axios";
 
 import DMSUploadDocument from "../DMS/uploadDocument.vue";
 
 const $q = useQuasar();
+const { postData } = apiRequest();
 const router = useRouter();
 const formStore = useFormStore();
 const props = defineProps({
@@ -62,13 +65,35 @@ const content = ref(null);
 onMounted(async () => {
   if (props.isRouter) {
     url.value = props.dataProps;
+
     router.push(url.value);
   } else {
     url.value = props.dataProps;
-    content.value = defineAsyncComponent({
-      loader: () => import("../" + url.value + ".vue"),
-      errorComponent: error404,
-    });
+
+    if (url.value.includes("http")) {
+      const res = await axios.get(url.value).then((val) => val);
+      const blob = await res.blob();
+      const urlObject = URL.createObjectURL(blob);
+      document.querySelector("iframe").setAttribute("src", urlObject);
+
+      // const data = await postData(
+      //   "get",
+      //   null,
+      //   `ams/approval`,
+      //   false,
+      //   false,
+      //   true
+      // );
+      // if (data) {
+      //   loading.value = false;
+      //   rows.value = data;
+      // }
+    } else {
+      content.value = defineAsyncComponent({
+        loader: () => import("../" + url.value + ".vue"),
+        errorComponent: error404,
+      });
+    }
   }
 });
 

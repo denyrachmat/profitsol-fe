@@ -14,7 +14,7 @@
       </div>
       <div class="col-xs-12 col-md-8">
         <q-page-container>
-          <q-page style="background-color: #31ccec;">
+          <q-page style="background-color: #31ccec">
             <transition
               appear
               enter-active-class="animated fadeIn"
@@ -34,22 +34,34 @@
 import login from "./login";
 import register from "./register";
 import forgot from "./forgotpassword";
+import reset from "./resetPassword";
 import { HelpersComponent } from "../../components/HelpersComponent";
 
 export default {
   name: "Auth",
   mixins: [HelpersComponent],
-  components: { login, register, forgot },
+  components: { login, register, forgot, reset },
   data() {
     return {
-      choosedcomp: "login"
+      choosedcomp: "login",
     };
+  },
+  mounted() {
+    if (this.$route.name) {
+      this.choosedcomp = this.$route.name;
+    }
   },
   methods: {
     routedto(val) {
       this.choosedcomp = val;
-    }
-  }
+    },
+  },
+  watch: {
+    $route(to, from) {
+      this.choosedcomp = to.name;
+      console.log(to);
+    },
+  },
 };
 </script>
 

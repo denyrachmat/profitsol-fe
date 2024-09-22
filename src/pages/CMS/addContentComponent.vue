@@ -5,11 +5,13 @@
     transition-show="slide-up"
     transition-hide="slide-down"
     full-width
+    allow-focus-outside
   >
     <q-card class="q-dialog-plugin bg-white q-pa-md">
       <tinyEditorVue v-model="editors" />
       <q-card-actions align="right">
-        <q-btn flat label="OK" color="primary" @click="onOKClick" />
+        <q-btn label="OK" color="primary" @click="onOKClick" />
+        <q-btn flat label="Cancel" color="red" @click="onDialogCancel" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -18,13 +20,11 @@
 import { onMounted, ref } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import tinyEditorVue from "src/components/editors/tinyEditor.vue";
-
 const props = defineProps({
   comp: String,
 });
 
 onMounted(() => {
-  console.log(props.comp);
   if (props.comp) {
     editors.value = props.comp;
   }

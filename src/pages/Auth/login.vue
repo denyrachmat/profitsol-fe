@@ -107,7 +107,8 @@ export default defineComponent({
     };
   },
   created() {
-    if (this.authDetail && this.authDetail.length > 0) {
+    console.log(this.authDetail);
+    if (this.authDetail && this.store.getStatusLog) {
       this.$router.push("/");
     }
     // else if (!this.$q.localStorage.has("LoggedOut")) {

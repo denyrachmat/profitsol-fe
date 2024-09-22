@@ -22,12 +22,15 @@
           </div>
         </div>
         <div class="row">
-          <div class="col text-bold text-center">
-            {{
-              isPass
-                ? `You are pass this exam.`
-                : `Sorry you doesn't pass this exam.`
-            }}
+          <div class="col text-bold text-center" v-if="isPass">
+            You are pass this exam.
+          </div>
+          <div class="col text-bold text-center" v-else>
+            Sorry you do not pass this exam.<br />
+            You shall re-do the exam until your all answers correct. Please
+            close this page, and back to main page to re-do the exam.<br />
+            You will considered finish this online training after all your
+            answers correct.
           </div>
         </div>
         <div class="row">
@@ -73,12 +76,18 @@
                       v-if="!answers[idx].status && props.answerShow === true"
                     >
                       Right answer is :
-                      <span class="text-bold">{{
-                        answers[idx].ans_value &&
-                        answers[idx].ans_value.length > 1
-                          ? answers[idx].ans_value.join(", ")
-                          : answers[idx].ans_value[0]
-                      }}</span>
+                      <div class="text-bold">
+                        <div
+                          v-if="
+                            answers[idx].ans_value &&
+                            answers[idx].ans_value.length > 1
+                          "
+                          v-html="answers[idx].ans_value.join('<br>')"
+                        ></div>
+                        <div v-else>
+                          {{ answers[idx].ans_value[0] }}
+                        </div>
+                      </div>
                     </span>
 
                     <div class="q-pt-sm" v-html="answers[idx].exp"></div>

@@ -54,7 +54,7 @@
         </div>
       </div>
       <div v-if="checkAnySameHTML.length > 0">
-        <div class="row q-pt-sm">
+        <div class="row q-py-sm">
           <div class="col bg-white text-bold q-pa-sm">
             Please read material below, or use option on the right to download
             or view material on the other tab.
@@ -67,22 +67,31 @@
             >
               <q-tooltip>Open in new tab</q-tooltip>
             </q-btn>
-            <q-btn icon="download" flat>
+            <q-btn
+              icon="download"
+              flat
+              @click="onClickDownloadMaterial(props.id)"
+            >
               <q-tooltip>Download and view as PDF</q-tooltip>
             </q-btn>
           </div>
         </div>
-        <div style="overflow: auto; max-height: 40vh">
-          <div
-            class="row q-pt-sm"
-            v-for="(htmlCont, idxhtm) in checkAnySameHTML"
-            :key="idxhtm"
-          >
+        <div
+          style="border-radius: 10px; padding: 15px"
+          class="bg-white q-pt-sm"
+        >
+          <div style="overflow: auto; max-height: 30vh">
             <div
-              class="col bg-white"
-              style="border-radius: 10px; padding: 15px"
+              class="row"
+              v-for="(htmlCont, idxhtm) in checkAnySameHTML"
+              :key="idxhtm"
             >
-              <div v-html="htmlCont.content"></div>
+              <div
+                class="col bg-white"
+                style="border-radius: 10px; padding: 15px"
+              >
+                <div v-html="htmlCont.content"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -151,6 +160,9 @@ import componentViewVue from "../componentView.vue";
 import showQuizResultVue from "./showQuizResult.vue";
 
 import { useFormStore } from "stores/formStore";
+import { useRouter, useRoute } from "vue-router";
+
+const route = useRouter();
 
 const store = useFormStore();
 
@@ -194,12 +206,16 @@ onMounted(() => {
   if (props.data.length > 0) {
     dataOri.value = props.data;
 
-    const dataShuf = shuffle(
-      props.data.filter((val) => val.type === "form"),
-      true
-    );
-    datanya.value = dataShuf[0];
-    listQuestShuff.value = dataShuf[1];
+    if (props.setup.randomizeQuestion) {
+      const dataShuf = shuffle(
+        props.data.filter((val) => val.type === "form"),
+        true
+      );
+      datanya.value = dataShuf[0];
+      listQuestShuff.value = dataShuf[1];
+    } else {
+      datanya.value = props.data.filter((val) => val.type === "form");
+    }
   }
 });
 
@@ -423,7 +439,33 @@ const getAnswers = (val) => {
 };
 
 const onClickOpenNewTabHTML = (idQuiz, pageNumber) => {
-  console.log([idQuiz, pageNumber]);
+  const { href } = route.resolve({
+    path: "showHTMLTraining",
+    query: {
+      data: idQuiz,
+    },
+  });
+  window.open(href, "_blank");
+};
+
+const onClickDownloadMaterial = async (idQuiz) => {
+  const response = await postData(
+    "post",
+    null,
+    `cms/downloadHTMLMaterial/${idQuiz}`,
+    false,
+    false,
+    true
+  );
+
+  if (response) {
+    let pdfWindow = window.open("");
+    pdfWindow.document.write(
+      "<iframe width='100%' height='100%' src='data:application/pdf;base64, " +
+        encodeURI(response) +
+        "'></iframe>"
+    );
+  }
 };
 
 watch(getNowTimer, (time) => {

@@ -33,7 +33,28 @@
           </q-menu>
         </q-btn>
 
-        <q-btn flat dense round icon="mail" aria-label="Notification"> </q-btn>
+        <q-btn flat dense round icon="mail" aria-label="Notification">
+          <q-menu>
+            <q-list>
+              <q-item>
+                <q-item-section>
+                  <q-item-label>Single line item</q-item-label>
+                  <q-item-label caption lines="2">
+                    Secondary line text. Lorem ipsum dolor sit amet, consectetur
+                    adipiscit elit.
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section side top>
+                  <q-item-label caption>5 min ago</q-item-label>
+                  <q-icon name="star" color="yellow" />
+                </q-item-section>
+              </q-item>
+
+              <q-separator spaced inset />
+            </q-list>
+          </q-menu>
+        </q-btn>
 
         <q-btn flat dense round icon="settings" aria-label="Menu">
           <q-menu>
@@ -120,6 +141,7 @@ export default defineComponent({
     const leftDrawerOpen = ref(false);
     const $q = useQuasar();
     const store = useAuthStore();
+    const listNotification = ref([]);
 
     return {
       essentialLinks: linksList,
@@ -136,7 +158,11 @@ export default defineComponent({
   },
   created() {
     console.log(JSON.stringify(this.authDetail));
-    if (!this.authDetail || this.authDetail.length === 0) {
+    if (
+      !this.authDetail ||
+      Object.keys(this.authDetail).length === 0
+      // (this.authDetail && !this.authDetail.isLoggedIn)
+    ) {
       console.log("masuk sini");
       this.$router.push("/login");
     }
@@ -182,7 +208,7 @@ export default defineComponent({
         // }
       }
 
-      this.store.logoutAction;
+      this.store.logoutAction();
       this.$router.push("/login");
     },
     changePassword() {

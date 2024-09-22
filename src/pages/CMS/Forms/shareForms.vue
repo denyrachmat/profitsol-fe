@@ -354,7 +354,14 @@ const getRoles = async () => {
 };
 
 const getUsers = async () => {
-  const data = await postData("get", null, "portal/users", false, false, true);
+  const data = await postData(
+    "get",
+    null,
+    "portal/users/ActiveOnly",
+    false,
+    false,
+    true
+  );
   if (data) {
     rows.value = data.data;
 

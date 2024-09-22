@@ -143,14 +143,21 @@ export const HelpersComponent = {
               // console.log(e.response.data);
               let errors = e.response.data.message;
               if (errors) {
-                Object.keys(errors).map((val) => {
-                  errors[val].map((val_det) => {
-                    this.$q.notify({
-                      color: "negative",
-                      message: val_det,
+                if (typeof errors === 'object') {
+                  Object.keys(errors).map((val) => {
+                    errors[val].map((val_det) => {
+                      this.$q.notify({
+                        color: "negative",
+                        message: val_det,
+                      });
                     });
                   });
-                });
+                } else {
+                  this.$q.notify({
+                    color: "negative",
+                    message: errors,
+                  });
+                }
               } else {
                 if (blob) {
                   var decodedString = String.fromCharCode.apply(

@@ -29,6 +29,19 @@
           </template>
           <template v-slot:body="props">
             <q-tr :props="props">
+              <q-td key="action" :props="props">
+                <q-toggle
+                  v-model="props.row.pud_is_active"
+                  checked-icon="check"
+                  color="red"
+                  unchecked-icon="clear"
+                  true-value="1"
+                  false-value="0"
+                  @update:model-value="
+                    (value) => onChangeActive(props.row, value)
+                  "
+                />
+              </q-td>
               <q-td key="username" :props="props">
                 {{ props.row.username }}
               </q-td>
@@ -91,6 +104,11 @@ const store = useAuthStore();
 
 const rows = ref([]);
 const columns = ref([
+  {
+    name: "active",
+    align: "center",
+    label: "Is Active ?",
+  },
   {
     name: "username",
     align: "center",
@@ -209,6 +227,27 @@ const updateProfile = async (datas) => {
 
   if (data) {
     return data;
+  }
+};
+
+const onChangeActive = async (datas, value) => {
+  const data = await postData(
+    "patch",
+    {
+      form: {
+        pud_is_active: value,
+        pud_first_name: datas.pud_first_name,
+        pud_last_name: datas.pud_last_name,
+      },
+    },
+    `portal/profiles/${btoa(datas.username)}`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    getUsers();
   }
 };
 </script>
