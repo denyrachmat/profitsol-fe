@@ -18,7 +18,8 @@ const apiRequest = () => {
     loading = false,
     auth = false,
     isApi = null,
-    isMSToken = false
+    isMSToken = false,
+    isNotifySuccess = false
   ) => {
     // Jika menggunakan loading
     if (loading) {
@@ -83,6 +84,13 @@ const apiRequest = () => {
           $q.loading.hide();
         }
 
+        if (isNotifySuccess) {
+          $q.notify({
+            color: "positive",
+            message: res.data.message,
+          });
+        }
+
         return blob ? res : res.data;
       })
       .catch((e) => {
@@ -91,20 +99,26 @@ const apiRequest = () => {
         }
 
         if (e.response) {
-          console.log(e.response);
           if (e.response.status == 422) {
-            console.log(e.response.data);
             let errors = e.response.data.errors;
             if (errors) {
-              console.log(errors)
-              Object.keys(errors).map((val) => {
-                errors[val].map((val_det) => {
-                  $q.notify({
-                    color: "negative",
-                    message: val_det,
+              console.log(typeof errors === 'object')
+              console.log(e.response.data)
+              if (!e.response.data.message) {
+                Object.keys(errors).map((val) => {
+                  errors[val].map((val_det) => {
+                    $q.notify({
+                      color: "negative",
+                      message: val_det,
+                    });
                   });
                 });
-              });
+              } else {
+                $q.notify({
+                  color: "negative",
+                  message: e.response.data.message,
+                });
+              }
             } else {
               if (blob) {
                 var decodedString = String.fromCharCode.apply(

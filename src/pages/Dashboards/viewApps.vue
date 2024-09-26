@@ -5,8 +5,7 @@
     maximized
     transition-show="slide-up"
     transition-hide="slide-down"
-    @escape-key="closeProgram()"
-    persistent
+    @escape-key="onDialogCancel()"
   >
     <q-card class="q-dialog-plugin">
       <q-bar>
@@ -63,6 +62,12 @@ const url = ref("");
 const content = ref(null);
 
 onMounted(async () => {
+  $q.notify({
+    message: "Click x button on upper right or press ESC Key to close apps.",
+    color: "orange",
+    position: "top-left",
+    icon: "info",
+  });
   if (props.isRouter) {
     url.value = props.dataProps;
 

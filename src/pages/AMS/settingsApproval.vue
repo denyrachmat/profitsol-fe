@@ -70,7 +70,7 @@
         <q-separator />
         <p class="text-bold q-pa-sm">Approval Type</p>
         <div class="row">
-          <div class="col col-xs-12 col-sm-4 q-pa-sm">
+          <div class="col col-xs-12 col-sm-6 q-pa-sm">
             <q-toggle
               v-model="forms.amssd_is_docsign"
               checked-icon="check"
@@ -80,6 +80,17 @@
               :false-value="0"
               :true-value="1"
             />
+          </div>
+          <div class="col col-xs-12 col-sm-4 q-pa-sm">
+            <q-btn
+              outline
+              color="cyan"
+              icon="integration_instructions"
+              label="Create Content"
+              @click="onClickChangeContent()"
+            >
+              <q-tooltip>Create content for approval page</q-tooltip>
+            </q-btn>
           </div>
         </div>
 
@@ -144,6 +155,7 @@
 import { ref, defineProps, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
+import addContentComponent from "../CMS/addContentComponent.vue";
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
@@ -165,6 +177,7 @@ onMounted(() => {
       amssd_unread_chktime: parseInt(props.dataExists.amssd_unread_chktime),
       amssd_autorun: parseInt(props.dataExists.amssd_autorun),
       amssd_autorun_chktime: parseInt(props.dataExists.amssd_autorun_chktime),
+      amssd_content: props.dataExists.amssd_content,
     };
   }
 });
@@ -180,7 +193,22 @@ const forms = ref({
   amssd_unread_chktime: 0,
   amssd_autorun: 0,
   amssd_autorun_chktime: 0,
+  amssd_content: "",
 });
+
+const onClickChangeContent = () => {
+  $q.dialog({
+    component: addContentComponent,
+    componentProps: {
+      comp: forms.value.amssd_content,
+    },
+  }).onOk((val) => {
+    console.log(val);
+    if (val.content) {
+      forms.value.amssd_content = val.content;
+    }
+  });
+};
 
 const onOKClick = () => {
   $q.dialog({

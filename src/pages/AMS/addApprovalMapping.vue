@@ -155,6 +155,7 @@ const title = ref("");
 const ids = ref("");
 const listApproval = ref([]);
 const listAllUsers = ref([]);
+const contents = ref("");
 const loading = ref(false);
 const isNew = ref(true);
 
@@ -167,6 +168,7 @@ onMounted(() => {
   if (props.dataUpdated.det && props.dataUpdated.det.length > 0) {
     title.value = props.dataUpdated.ams_title;
     ids.value = props.dataUpdated.id;
+    contents.value = props.dataUpdated.ams_content;
     props.dataUpdated.det.map((val) => {
       listApproval.value.push({
         amsmd_username: val.amsmd_username,
@@ -268,6 +270,9 @@ const onClickApprovalSet = (id) => {
 const onClickChangeContent = () => {
   $q.dialog({
     component: addContentComponent,
+    componentProps: {
+      comp: contents.value,
+    },
   }).onOk(async (val) => {
     if (val.content) {
       loading.value = true;

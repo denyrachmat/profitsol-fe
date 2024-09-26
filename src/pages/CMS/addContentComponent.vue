@@ -26,6 +26,7 @@ const props = defineProps({
 
 onMounted(() => {
   if (props.comp) {
+    console.log(props.comp);
     editors.value = props.comp;
   }
 });

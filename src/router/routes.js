@@ -70,7 +70,18 @@ const routes = [
       },
     ],
   },
-
+  {
+    path: "/ams/",
+    name: "apps",
+    // component: () => import("pages/Dashboards/viewApps.vue"),
+    children: [
+      {
+        path: "approvalAction/:token/:tokenHist",
+        name: "apps",
+        component: () => import("pages/AMS/approvalUpdate.vue"),
+      },
+    ],
+  },
   // Always leave this as last one,
   // but you can also remove it
   {

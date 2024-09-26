@@ -34,26 +34,51 @@
         </q-btn>
 
         <q-btn flat dense round icon="mail" aria-label="Notification">
-          <q-menu>
+          <q-menu @show="getNotif()">
             <q-list>
-              <q-item>
-                <q-item-section>
-                  <q-item-label>Single line item</q-item-label>
-                  <q-item-label caption lines="2">
-                    Secondary line text. Lorem ipsum dolor sit amet, consectetur
-                    adipiscit elit.
-                  </q-item-label>
-                </q-item-section>
+              <template v-if="listNotification.length > 0">
+                <q-item
+                  clickable
+                  v-ripple
+                  v-for="(notif, idx) in listNotification"
+                  :key="idx"
+                  :class="notif.readed_at ? 'white' : 'bg-orange-2'"
+                  @click="onClickNotification(notif.amshd_token)"
+                >
+                  <q-separator spaced v-if="idx > 0" />
+                  <q-item-section>
+                    <q-item-label
+                      >To {{ notif.receive_user.pud_first_name }}
+                      {{ notif.receive_user.pud_last_name }}</q-item-label
+                    >
+                    <q-item-label caption lines="2">
+                      {{
+                        notif.amshd_stat == "sent"
+                          ? "Send approval is success, please wait recepient approve it."
+                          : "Not yet"
+                      }}
+                    </q-item-label>
+                  </q-item-section>
 
-                <q-item-section side top>
-                  <q-item-label caption>5 min ago</q-item-label>
-                  <q-icon name="star" color="yellow" />
+                  <q-item-section side top>
+                    <q-item-label caption>{{
+                      getTimeDifference(notif.created_at)
+                    }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <q-item v-else>
+                <q-item-section>
+                  <q-item-label>No new notification for you :(</q-item-label>
                 </q-item-section>
               </q-item>
-
-              <q-separator spaced inset />
             </q-list>
           </q-menu>
+
+          <q-badge color="red" floating>
+            {{ totalUnread }}
+          </q-badge>
         </q-btn>
 
         <q-btn flat dense round icon="settings" aria-label="Menu">
@@ -102,8 +127,11 @@ import { defineComponent, ref } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import { useAuthStore } from "stores/authStore";
 import { Providers, Msal2Provider, ProviderState } from "@microsoft/mgt";
-import { useQuasar } from "quasar";
+import { useQuasar, date } from "quasar";
 import { PublicClientApplication } from "@azure/msal-browser";
+import apiRequest from "src/components/apiRequest";
+import viewApps from "src/pages/Dashboards/viewApps.vue";
+const { postData } = apiRequest();
 
 import ChangePasswordVue from "src/pages/Dashboards/changePassword.vue";
 
@@ -142,6 +170,8 @@ export default defineComponent({
     const $q = useQuasar();
     const store = useAuthStore();
     const listNotification = ref([]);
+    const loading = ref(false);
+    const tab = ref("approval");
 
     return {
       essentialLinks: linksList,
@@ -151,6 +181,9 @@ export default defineComponent({
       },
       store,
       $q,
+      listNotification,
+      loading,
+      tab,
     };
   },
   beforeCreate() {
@@ -163,11 +196,9 @@ export default defineComponent({
       Object.keys(this.authDetail).length === 0
       // (this.authDetail && !this.authDetail.isLoggedIn)
     ) {
-      console.log("masuk sini");
       this.$router.push("/login");
     }
 
-    console.log(Providers);
     if (Providers.globalProvider) {
       console.log(Providers.globalProvider.state);
 
@@ -183,6 +214,8 @@ export default defineComponent({
         cacheLocation: "localStorage",
       },
     });
+
+    this.getNotif();
   },
   computed: {
     authDetail() {
@@ -190,6 +223,9 @@ export default defineComponent({
     },
     listRoles() {
       return this.store.authDet.rolesGroup.roles;
+    },
+    totalUnread() {
+      return this.listNotification.filter((fil) => !fil.readed_at).length;
     },
   },
   methods: {
@@ -245,6 +281,64 @@ export default defineComponent({
           this.store.storeChoosedRole(data);
           this.store.storeMenu(data.role.role_app_map);
         });
+    },
+    async getNotif() {
+      const data = await postData(
+        "post",
+        {
+          filter: [
+            {
+              cols: "amshd_username_apprv",
+              param: "=",
+              value: this.store.authDet.username,
+            },
+            {
+              step: "or",
+              cols: "p_u_username",
+              param: "=",
+              value: this.store.authDet.username,
+            },
+          ],
+        },
+        `ams/approveHist`,
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        this.loading = false;
+        this.listNotification = data.data;
+      }
+    },
+    getTimeDifference(timestmp) {
+      const dates = new Date(timestmp);
+      const dateNow = new Date();
+
+      let days = date.getDateDiff(dateNow, dates, "days");
+      let hours = date.getDateDiff(dateNow, dates, "hour");
+      let minutes = date.getDateDiff(dateNow, dates, "minute");
+      let seconds = date.getDateDiff(dateNow, dates, "second");
+
+      return days > 30
+        ? "A Long ago"
+        : `${days} days, ${hours > 23 ? parseInt(hours / 24) : hours} hours, ${
+            minutes > 60 ? parseInt(minutes / 60) : minutes
+          } minutes ago`;
+    },
+    onClickNotification(token) {
+      this.$q
+        .dialog({
+          component: viewApps,
+
+          // props forwarded to your custom component
+          componentProps: {
+            dataProps: `AMS/approvalUpdate`,
+            title: "Approval Action",
+            // ...more..props...
+          },
+        })
+        .onOk(async (val) => {});
     },
   },
 });

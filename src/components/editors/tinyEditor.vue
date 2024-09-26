@@ -19,13 +19,6 @@ const props = defineProps({
 onMounted(() => {
   if (props.modelValue) {
     editors.value = props.modelValue;
-
-    editors.value.ui.registry.addButton("myCustomToolbarButton", {
-      text: "My Button",
-      onAction: function () {
-        editors.value.insertContent("&nbsp;<b>It's my button!</b>&nbsp;");
-      },
-    });
   }
 });
 
@@ -55,7 +48,7 @@ const dialogConfig = {
     },
   ],
   initialData: {
-    catdata: "{{username}}",
+    catdata: "username",
   },
   onSubmit: (api) => {
     const data = api.getData();
