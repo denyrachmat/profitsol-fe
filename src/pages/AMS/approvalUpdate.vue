@@ -8,7 +8,12 @@
       <div class="q-pa-md">
         <div class="row">
           <div class="col text-center">
-            <span class="text-bold text-h3">Approval Action</span>
+            <span class="text-bold text-h3"
+              >Approval
+              {{
+                datas.token && datas.token.deleted_at ? "Complete" : "Action"
+              }}</span
+            >
           </div>
         </div>
         <div class="row q-pt-md">
@@ -40,7 +45,13 @@
     </q-page-container>
 
     <q-footer class="text-primary bg-white" style="z-index: 1059">
-      <div class="row q-pb-md">
+      <div
+        class="row q-pb-md"
+        v-if="
+          !(route.params.mode && route.params.mode == 'disp') &&
+          !(datas.token && datas.token.deleted_at)
+        "
+      >
         <div class="col">
           <q-btn
             color="primary"
@@ -95,7 +106,9 @@ const getData = async () => {
   const data = await postData(
     "get",
     null,
-    `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}`,
+    route.params.mode
+      ? `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}/1`
+      : `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}`,
     false,
     false,
     true
@@ -129,11 +142,12 @@ const actionApprove = (stat) => {
       const data = await postData(
         "post",
         {
-          username: datas.value.token.hist[0].amshd_username_apprv,
-          amsm_id: datas.value.token.hist[0].amsm_id,
+          username: datas.value.token.selected_hist[0].amshd_username_apprv,
+          amsm_id: datas.value.token.selected_hist[0].amsm_id,
           stat: stat,
           remarks: dataRemarks,
-          data: JSON.parse(datas.value.token.hist[0].amshd_paramstore),
+          token: datas.value.token.selected_hist[1].amshd_token,
+          ...JSON.parse(datas.value.token.selected_hist[0].amshd_paramstore),
         },
         `ams/approveAction`,
         false,
@@ -144,11 +158,13 @@ const actionApprove = (stat) => {
       if (data) {
         loading.value = false;
         let seconds = 5;
+        getData();
+        setTimeout(window.close, 5000);
 
         const dialog = $q
           .dialog({
-            title: "Alert",
-            message: `Autoclosing in ${seconds} seconds.`,
+            title: "Success",
+            message: `Approval has been sent, Autoclosing in ${seconds} seconds.`,
           })
           .onOk(() => {
             // console.log('OK')
@@ -167,7 +183,7 @@ const actionApprove = (stat) => {
 
           if (seconds > 0) {
             dialog.update({
-              message: `Autoclosing in ${seconds} second${
+              message: `Approval has been sent, Autoclosing in ${seconds} second${
                 seconds > 1 ? "s" : ""
               }.`,
             });

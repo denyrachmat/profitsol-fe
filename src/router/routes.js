@@ -76,7 +76,7 @@ const routes = [
     // component: () => import("pages/Dashboards/viewApps.vue"),
     children: [
       {
-        path: "approvalAction/:token/:tokenHist",
+        path: "approvalAction/:token/:tokenHist/:mode?",
         name: "apps",
         component: () => import("pages/AMS/approvalUpdate.vue"),
       },

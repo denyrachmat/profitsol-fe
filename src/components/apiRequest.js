@@ -131,7 +131,7 @@ const apiRequest = () => {
                   message: decodedString,
                 });
               } else {
-                if (e.response.data.message) {
+                if (e.response.data) {
                   $q.notify({
                     color: "negative",
                     message: e.response.data.message,

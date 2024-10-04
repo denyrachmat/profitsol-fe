@@ -34,8 +34,43 @@
         </q-btn>
 
         <q-btn flat dense round icon="mail" aria-label="Notification">
-          <q-menu @show="getNotif()">
-            <q-list>
+          <q-menu @show="getNotif()" style="width: 30%">
+            <q-list style="overflow: auto; height: 40%">
+              <q-item-label header>
+                <q-tabs
+                  v-model="tab"
+                  inline-label
+                  class="text-dark"
+                  dense
+                  narrow-indicator
+                  @update:model-value="getNotif()"
+                  justify
+                >
+                  <q-tab
+                    name="inbox"
+                    icon="inbox"
+                    label="Inbox"
+                    :disable="loading"
+                  />
+                  <q-tab
+                    name="outbox"
+                    icon="outgoing_mail"
+                    label="Outbox"
+                    :disable="loading"
+                  />
+                </q-tabs>
+                <br />
+                <q-btn
+                  outline
+                  color="blue"
+                  dense
+                  class="full-width"
+                  @click="onClickReadAll()"
+                  :disable="loading"
+                >
+                  Mark all as read
+                </q-btn>
+              </q-item-label>
               <template v-if="listNotification.length > 0">
                 <q-item
                   clickable
@@ -43,19 +78,43 @@
                   v-for="(notif, idx) in listNotification"
                   :key="idx"
                   :class="notif.readed_at ? 'white' : 'bg-orange-2'"
-                  @click="onClickNotification(notif.amshd_token)"
+                  @click="
+                    onClickNotification(notif.amshd_token, notif.amstd_token)
+                  "
                 >
                   <q-separator spaced v-if="idx > 0" />
                   <q-item-section>
-                    <q-item-label
-                      >To {{ notif.receive_user.pud_first_name }}
-                      {{ notif.receive_user.pud_last_name }}</q-item-label
-                    >
+                    <q-item-label v-if="tab === 'outbox'">
+                      To
+                      <b
+                        >{{ notif.receive_user.pud_first_name }}
+                        {{ notif.receive_user.pud_last_name }}</b
+                      >
+                      -
+                      {{
+                        getFirstParamIfExists(
+                          JSON.parse(notif.amshd_paramstore).data
+                        )
+                      }}
+                    </q-item-label>
+                    <q-item-label v-else>
+                      From
+                      <b
+                        >{{ notif.sender_user.pud_first_name }}
+                        {{ notif.sender_user.pud_last_name }}</b
+                      >
+                      -
+                      {{
+                        getFirstParamIfExists(
+                          JSON.parse(notif.amshd_paramstore).data
+                        )
+                      }}
+                    </q-item-label>
                     <q-item-label caption lines="2">
                       {{
-                        notif.amshd_stat == "sent"
-                          ? "Send approval is success, please wait recepient approve it."
-                          : "Not yet"
+                        tab === "outbox"
+                          ? "Send approval is success, click to view content."
+                          : "You receive new notification, click to view content."
                       }}
                     </q-item-label>
                   </q-item-section>
@@ -70,13 +129,17 @@
 
               <q-item v-else>
                 <q-item-section>
-                  <q-item-label>No new notification for you :(</q-item-label>
+                  <q-item-label>{{
+                    loading
+                      ? "Loading Data, please wait"
+                      : "No new notification for you :("
+                  }}</q-item-label>
                 </q-item-section>
               </q-item>
             </q-list>
           </q-menu>
 
-          <q-badge color="red" floating>
+          <q-badge color="red" floating v-if="totalUnread > 0">
             {{ totalUnread }}
           </q-badge>
         </q-btn>
@@ -170,8 +233,9 @@ export default defineComponent({
     const $q = useQuasar();
     const store = useAuthStore();
     const listNotification = ref([]);
+    const listInboxOnly = ref([]);
     const loading = ref(false);
-    const tab = ref("approval");
+    const tab = ref("inbox");
 
     return {
       essentialLinks: linksList,
@@ -184,6 +248,7 @@ export default defineComponent({
       listNotification,
       loading,
       tab,
+      listInboxOnly,
     };
   },
   beforeCreate() {
@@ -225,7 +290,9 @@ export default defineComponent({
       return this.store.authDet.rolesGroup.roles;
     },
     totalUnread() {
-      return this.listNotification.filter((fil) => !fil.readed_at).length;
+      return !this.listInboxOnly
+        ? 0
+        : this.listInboxOnly.filter((fil) => !fil.readed_at).length;
     },
   },
   methods: {
@@ -283,20 +350,22 @@ export default defineComponent({
         });
     },
     async getNotif() {
+      this.loading = true;
+      this.listNotification = [];
       const data = await postData(
         "post",
         {
           filter: [
             {
-              cols: "amshd_username_apprv",
+              cols:
+                this.tab == "inbox" ? "amshd_username_apprv" : "p_u_username",
               param: "=",
               value: this.store.authDet.username,
             },
             {
-              step: "or",
-              cols: "p_u_username",
+              cols: "amshd_stat",
               param: "=",
-              value: this.store.authDet.username,
+              value: "sent",
             },
           ],
         },
@@ -309,6 +378,10 @@ export default defineComponent({
       if (data) {
         this.loading = false;
         this.listNotification = data.data;
+
+        if (this.tab === "inbox") {
+          this.listInboxOnly = data.data;
+        }
       }
     },
     getTimeDifference(timestmp) {
@@ -326,19 +399,42 @@ export default defineComponent({
             minutes > 60 ? parseInt(minutes / 60) : minutes
           } minutes ago`;
     },
-    onClickNotification(token) {
+    onClickNotification(token, tokenAprv) {
       this.$q
         .dialog({
           component: viewApps,
 
           // props forwarded to your custom component
           componentProps: {
-            dataProps: `AMS/approvalUpdate`,
+            dataProps: `http://localhost:8080/#/ams/approvalAction/${tokenAprv}/${token}/disp`,
             title: "Approval Action",
             // ...more..props...
           },
         })
-        .onOk(async (val) => {});
+        .onDismiss(async (val) => {
+          this.getNotif();
+        });
+    },
+    async onClickReadAll() {
+      const data = await postData(
+        "get",
+        null,
+        `ams/readAllNotif`,
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        this.loading = false;
+        this.getNotif();
+      }
+    },
+    getFirstParamIfExists(paramSet) {
+      const getFirstKey = Object.keys(paramSet)[0];
+
+      return paramSet[getFirstKey];
+      // amshd_paramstore
     },
   },
 });
