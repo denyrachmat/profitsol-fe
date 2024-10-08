@@ -28,6 +28,7 @@
     "pinia": "^2.0.11",
     "pinia-plugin-persistedstate": "^3.2.1",
     "quasar": "^2.6.0",
+    "socket.io-client": "^4.8.0",
     "stylus-loader": "^7.0.0",
     "tiny-emitter": "^2.1.0",
     "vue": "^3.0.0",

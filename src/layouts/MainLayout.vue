@@ -194,6 +194,8 @@ import { useQuasar, date } from "quasar";
 import { PublicClientApplication } from "@azure/msal-browser";
 import apiRequest from "src/components/apiRequest";
 import viewApps from "src/pages/Dashboards/viewApps.vue";
+import { socket } from "src/boot/socket";
+
 const { postData } = apiRequest();
 
 import ChangePasswordVue from "src/pages/Dashboards/changePassword.vue";
@@ -237,6 +239,63 @@ export default defineComponent({
     const loading = ref(false);
     const tab = ref("inbox");
 
+    socket.on("server-stxi", (data) => {
+      console.log(data);
+      if (
+        data.app === "portal_notif" &&
+        data.data.username_dest === store.authDet.username
+      ) {
+        $q.notify({
+          message: data.message,
+          caption: "New Notification",
+          color: data.type,
+          timeout: 10000,
+          onDismiss: () => {},
+        });
+
+        getNotif();
+      }
+    });
+
+    const getNotif = async () => {
+      loading.value = true;
+      listNotification.value = [];
+      const data = await postData(
+        "post",
+        {
+          filter: [
+            {
+              cols:
+                tab.value == "inbox" ? "amshd_username_apprv" : "p_u_username",
+              param: "=",
+              value: store.authDet.username,
+            },
+            {
+              cols: "amshd_stat",
+              param: "=",
+              value: "sent",
+            },
+          ],
+        },
+        `ams/approveHist`,
+        false,
+        false,
+        true
+      );
+
+      if (data) {
+        loading.value = false;
+        listNotification.value = data.data;
+
+        if (tab.value === "inbox") {
+          listInboxOnly.value = data.data;
+        }
+      } else {
+        loading.value = false;
+        listInboxOnly.value = [];
+      }
+    };
+
     return {
       essentialLinks: linksList,
       leftDrawerOpen,
@@ -249,6 +308,8 @@ export default defineComponent({
       loading,
       tab,
       listInboxOnly,
+      socket,
+      getNotif,
     };
   },
   beforeCreate() {
@@ -348,41 +409,6 @@ export default defineComponent({
           this.store.storeChoosedRole(data);
           this.store.storeMenu(data.role.role_app_map);
         });
-    },
-    async getNotif() {
-      this.loading = true;
-      this.listNotification = [];
-      const data = await postData(
-        "post",
-        {
-          filter: [
-            {
-              cols:
-                this.tab == "inbox" ? "amshd_username_apprv" : "p_u_username",
-              param: "=",
-              value: this.store.authDet.username,
-            },
-            {
-              cols: "amshd_stat",
-              param: "=",
-              value: "sent",
-            },
-          ],
-        },
-        `ams/approveHist`,
-        false,
-        false,
-        true
-      );
-
-      if (data) {
-        this.loading = false;
-        this.listNotification = data.data;
-
-        if (this.tab === "inbox") {
-          this.listInboxOnly = data.data;
-        }
-      }
     },
     getTimeDifference(timestmp) {
       const dates = new Date(timestmp);

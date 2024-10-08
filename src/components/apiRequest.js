@@ -119,31 +119,32 @@ const apiRequest = () => {
                   message: e.response.data.message,
                 });
               }
-            } else {
-              if (blob) {
-                var decodedString = String.fromCharCode.apply(
-                  null,
-                  new Uint8Array(e.response.data)
-                );
-
-                $q.notify({
-                  color: "negative",
-                  message: decodedString,
-                });
-              } else {
-                if (e.response.data) {
-                  $q.notify({
-                    color: "negative",
-                    message: e.response.data.message,
-                  });
-                } else {
-                  $q.notify({
-                    color: "negative",
-                    message: "Undefined error!!",
-                  });
-                }
-              }
             }
+            // else {
+            //   if (blob) {
+            //     var decodedString = String.fromCharCode.apply(
+            //       null,
+            //       new Uint8Array(e.response.data)
+            //     );
+
+            //     $q.notify({
+            //       color: "negative",
+            //       message: decodedString,
+            //     });
+            //   } else {
+            //     if (e.response.data && e.response.data.message) {
+            //       $q.notify({
+            //         color: "red",
+            //         message: e.response.data.message,
+            //       });
+            //     } else {
+            //       $q.notify({
+            //         color: "negative",
+            //         message: "Undefined error!!",
+            //       });
+            //     }
+            //   }
+            // }
           }
 
           if (e.response.status == 401) {
@@ -169,7 +170,7 @@ const apiRequest = () => {
             });
           }
 
-          return e.response;
+          // return e.response;
         }
       });
 
