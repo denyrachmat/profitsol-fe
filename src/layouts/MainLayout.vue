@@ -1,6 +1,11 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated class="bg-cyan">
+    <q-header
+      elevated
+      :class="
+        store.choosedDomain ? store.choosedDomain.pd_base_color : 'bg-cyan'
+      "
+    >
       <q-toolbar>
         <q-btn
           flat
@@ -12,7 +17,13 @@
           v-if="store && store.choosedRoles && store.choosedRoles.role.id === 1"
         />
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
-        <q-toolbar-title> PT Sumitronics Indonesia </q-toolbar-title>
+        <q-toolbar-title>
+          {{
+            store.choosedDomain
+              ? store.choosedDomain.pd_desc
+              : "Undefined Domain"
+          }}</q-toolbar-title
+        >
 
         <div>Portal Application v2.0.0</div>
         <q-btn flat dense aria-label="Roles" icon-right="group">
@@ -168,6 +179,9 @@
           :key="link.title"
           v-bind="link"
         />
+
+        <q-separator></q-separator>
+        <appListRows :dataProps="getRoleAppMap" />
       </q-list>
     </q-drawer>
 
@@ -175,7 +189,13 @@
       <router-view />
     </q-page-container>
 
-    <q-footer reveal elevated class="bg-cyan">
+    <q-footer
+      reveal
+      elevated
+      :class="
+        store.choosedDomain ? store.choosedDomain.pd_base_color : 'bg-cyan'
+      "
+    >
       <q-toolbar>
         <q-toolbar-title>
           <div>{{ store.choosedRoles.role.rm_role_name }}</div></q-toolbar-title
@@ -186,7 +206,7 @@
 </template>
 
 <script>
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, computed } from "vue";
 import EssentialLink from "components/EssentialLink.vue";
 import { useAuthStore } from "stores/authStore";
 import { Providers, Msal2Provider, ProviderState } from "@microsoft/mgt";
@@ -195,6 +215,7 @@ import { PublicClientApplication } from "@azure/msal-browser";
 import apiRequest from "src/components/apiRequest";
 import viewApps from "src/pages/Dashboards/viewApps.vue";
 import { socket } from "src/boot/socket";
+import appListRows from "src/pages/Dashboards/appListRows.vue";
 
 const { postData } = apiRequest();
 
@@ -228,6 +249,7 @@ export default defineComponent({
     EssentialLink,
     // eslint-disable-next-line vue/no-unused-components
     ChangePasswordVue,
+    appListRows,
   },
 
   setup() {
@@ -296,6 +318,12 @@ export default defineComponent({
       }
     };
 
+    const getRoleAppMap = computed(() =>
+      store.getChoosedRole.role.role_app_map.filter(
+        (f) => f.apps.am_is_drawer == 1
+      )
+    );
+
     return {
       essentialLinks: linksList,
       leftDrawerOpen,
@@ -310,6 +338,7 @@ export default defineComponent({
       listInboxOnly,
       socket,
       getNotif,
+      getRoleAppMap,
     };
   },
   beforeCreate() {

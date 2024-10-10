@@ -8,6 +8,27 @@
               <q-img src="~assets/sumitronics_OGP.png" />
               <div class="text-h4">Application Portal</div>
               <div class="text-h6">v2.0.1</div>
+              <div class="q-pt-md">
+                <q-select
+                  filled
+                  v-model="domain"
+                  use-input
+                  input-debounce="0"
+                  label="Choose Domain"
+                  :options="options"
+                  @filter="filterFn"
+                  option-label="pd_desc"
+                  @update:model-value="onSelectStore"
+                >
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No results
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
             </div>
           </q-page>
         </q-page-container>
@@ -36,6 +57,7 @@ import register from "./register";
 import forgot from "./forgotpassword";
 import reset from "./resetPassword";
 import { HelpersComponent } from "../../components/HelpersComponent";
+import { useAuthStore } from "stores/authStore";
 
 export default {
   name: "Auth",
@@ -44,16 +66,42 @@ export default {
   data() {
     return {
       choosedcomp: "login",
+      options: [],
+      domain: "",
+      store: useAuthStore(),
     };
   },
   mounted() {
     if (this.$route.name) {
       this.choosedcomp = this.$route.name;
     }
+
+    console.log(this.store.getChoosedDomain);
+    this.getListDomain();
   },
   methods: {
     routedto(val) {
       this.choosedcomp = val;
+    },
+    async getListDomain() {
+      let hasil = await this.postData({
+        methods: "get",
+        url: "domain",
+      });
+
+      if (hasil) {
+        this.options = [];
+        hasil.data.map((val) => {
+          this.options.push(val);
+        });
+
+        this.domain = this.options[0];
+        this.onSelectStore(this.domain);
+      }
+    },
+    onSelectStore(val) {
+      console.log("change domain");
+      this.store.storeDomain(val);
     },
   },
   watch: {

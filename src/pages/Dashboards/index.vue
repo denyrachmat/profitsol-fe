@@ -4,7 +4,7 @@
     <div class="row q-py-sm">
       <div class="col-12 col-sm-3 q-pa-sm">
         <q-card class="my-card" v-if="store.getDetail">
-          <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg">
+          <q-img src="~assets/sumitronics_OGP.png" height="35vh">
             <div class="text-center full-width full-height">
               <q-avatar
                 size="150px"

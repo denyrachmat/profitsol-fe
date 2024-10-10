@@ -8,7 +8,8 @@ export const useAuthStore = defineStore("auth", {
     isLoggedIn: false,
     latestStatusLog: "",
     choosedRoles: null,
-    informationList: []
+    informationList: [],
+    choosedDomain: null
   }),
   persist: true,
   getters: {
@@ -23,6 +24,9 @@ export const useAuthStore = defineStore("auth", {
     },
     getChoosedRole(state) {
       return state.choosedRoles;
+    },
+    getChoosedDomain(state) {
+      return state.choosedDomain;
     },
     getMSLogDet(state) {
       return state.msLoginDet;
@@ -53,6 +57,9 @@ export const useAuthStore = defineStore("auth", {
     },
     storeInformationList(data) {
       this.informationList = data;
+    },
+    storeDomain(data) {
+      this.choosedDomain = data
     },
     toggleLoggedIn() {
       this.isLoggedIn = !this.isLoggedIn;

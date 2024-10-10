@@ -1,6 +1,5 @@
 <template>
   <q-list
-    bordered
     separator
     class="full-width bg-white"
     v-for="(element, idx) in dataProps"

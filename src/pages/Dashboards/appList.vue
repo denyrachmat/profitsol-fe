@@ -30,13 +30,18 @@
       </div>
       <div class="row q-pa-sm">
         <div class="col">
-          <q-input label="Search App" v-model="searchApp" />
+          <q-input
+            label="Search App"
+            v-model="searchApp"
+            @update:model-value="(val) => onSearchApp(val)"
+            :debounce="1000"
+          />
         </div>
       </div>
       <div class="row" v-if="mode === 'apps'">
         <div
           class="col-12 col-md-4 q-pa-sm text-center"
-          v-for="(menu, idx) in listMenu"
+          v-for="(menu, idx) in searchApp ? searchedApp : listMenu"
           :key="idx"
         >
           <q-card style="min-height: 20em" class="relative-position text-wrap">
@@ -96,13 +101,18 @@ const props = defineProps({
 const store = useAuthStore();
 
 const clickedApp = ref([]);
+const searchedApp = ref([]);
 const searchApp = ref("");
 
 const listMenu = computed(() => {
   return clickedApp.value.length === 0
-    ? store.getChoosedRole.role.role_app_map
+    ? getRoleAppMap.value
     : findApps(store.getChoosedRole.role.role_app_map, clickedApp.value)[0];
 });
+
+const getRoleAppMap = computed(() =>
+  store.getChoosedRole.role.role_app_map.filter((f) => f.apps.am_is_drawer == 0)
+);
 
 const findApps = (arr, id = []) => {
   return arr.reduce((r, o) => {
@@ -191,5 +201,37 @@ const goToNav = (idx) => {
   datanya.splice(idx + 1, clickedApp.value.length - (idx + 1));
 
   clickedApp.value = datanya;
+};
+
+const findChildById = (arr, id) => {
+  const result = arr.find((o) => o.apps.am_app_name.includes(id));
+  if (result) return result;
+  for (const cm of arr) {
+    const result = cm.child_roles.find((o) => o.apps.am_app_name.includes(id));
+    if (result) return result;
+  }
+};
+
+const find = (arraynya, searchData, accum = []) => {
+  console.log(arraynya);
+  if (arraynya.length > 0) {
+    arraynya.forEach((f) => {
+      if (f.apps.am_app_name.toLowerCase().includes(searchData.toLowerCase())) {
+        accum.push(f);
+      }
+      if (f.child_roles.length > 0) {
+        find(f.child_roles, searchData, accum);
+      }
+    });
+  }
+
+  return accum;
+};
+
+const onSearchApp = (val) => {
+  const menunya = listMenu.value;
+  const result1 = find(menunya, val);
+
+  searchedApp.value = result1;
 };
 </script>

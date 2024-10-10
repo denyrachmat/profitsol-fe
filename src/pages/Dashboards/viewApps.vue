@@ -18,7 +18,7 @@
       <div>
         <iframe
           v-if="url.includes('http')"
-          :src="url"
+          :src="changeParamURL(url)"
           class="full-width window-height"
         ></iframe>
         <template v-else>
@@ -41,6 +41,7 @@ import {
 import { useDialogPluginComponent, date, useQuasar } from "quasar";
 import { useRouter } from "vue-router";
 import { useFormStore } from "stores/formStore";
+import { useAuthStore } from "stores/authStore";
 import error404 from "./error404.vue";
 import apiRequest from "src/components/apiRequest";
 import axios from "src/boot/axios";
@@ -51,6 +52,7 @@ const $q = useQuasar();
 const { postData } = apiRequest();
 const router = useRouter();
 const formStore = useFormStore();
+const authStore = useAuthStore();
 const props = defineProps({
   dataProps: String,
   title: String,
@@ -60,6 +62,9 @@ const props = defineProps({
 
 const url = ref("");
 const content = ref(null);
+
+const changeParamURL = (urlNya) =>
+  urlNya.replace("{{username}}", authStore.authDet.username);
 
 onMounted(async () => {
   $q.notify({
@@ -76,7 +81,15 @@ onMounted(async () => {
     url.value = props.dataProps;
 
     if (url.value.includes("http")) {
-      const res = await axios.get(url.value).then((val) => val);
+      // Find Username variable
+      const urlNew = url.value.replace(
+        "{{username}}",
+        authStore.authDet.username
+      );
+
+      console.log(urlNew);
+
+      const res = await axios.get(urlNew).then((val) => val);
       const blob = await res.blob();
       const urlObject = URL.createObjectURL(blob);
       document.querySelector("iframe").setAttribute("src", urlObject);
