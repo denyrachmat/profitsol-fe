@@ -49,7 +49,12 @@
             </q-img>
           </div>
           <div class="col q-pl-sm">
-            <q-input filled v-model="formnya.pd_base_color" class="my-input">
+            <q-input
+              filled
+              v-model="formnya.pd_base_color"
+              class="my-input"
+              label="Base Color"
+            >
               <template v-slot:append>
                 <q-icon name="colorize" class="cursor-pointer">
                   <q-popup-proxy
@@ -63,8 +68,7 @@
               </template>
             </q-input>
             <div
-              class="height:40vh"
-              :style="`background-color: ${formnya.pd_base_color};`"
+              :style="`height:40vh; background-color: ${formnya.pd_base_color};`"
             ></div>
           </div>
         </div>

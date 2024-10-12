@@ -58,6 +58,15 @@
                   color="orange"
                   flat
                   dense
+                  icon="edit"
+                  @click="editData(props.row.id)"
+                >
+                  <q-tooltip> Delete </q-tooltip>
+                </q-btn>
+                <q-btn
+                  color="red"
+                  flat
+                  dense
                   icon="delete"
                   @click="deleteData(props.row.id)"
                 >
@@ -169,31 +178,5 @@ const onClickFilter = () => {
   });
 };
 
-const onClickSend = () => {
-  $q.dialog({
-    title: "Confirmation",
-    message: `Are you sure want to send all unapprove data ?`,
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
-    loading.value = true;
-    const datanya = await api
-      .post(process.env.API + `div/log/HSCodeSendApproval`, {
-        username: route.params.username,
-        data: listData.value,
-      })
-      .then((val) => {
-        loading.value = false;
-        $q.notify({
-          color: "green",
-          message: "Success",
-        });
-
-        return val.data;
-      })
-      .catch((e) => {
-        loading.value = false;
-      });
-  });
-};
+const editData = (id) => {};
 </script>
