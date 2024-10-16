@@ -26,6 +26,24 @@
         >
 
         <div>Portal Application v2.0.0</div>
+
+        <q-select
+          filled
+          v-model="domain"
+          use-input
+          input-debounce="0"
+          :options="options"
+          @filter="filterFn"
+          option-label="pd_desc"
+          @update:model-value="onSelectStore"
+          dense
+        >
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey"> No results </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>
             <q-list style="min-width: 100px">
