@@ -88,6 +88,10 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
+const props = defineProps({
+  dataEdit: Object,
+});
+
 const formnya = ref({
   pd_name: "",
   pd_desc: "",
@@ -96,6 +100,12 @@ const formnya = ref({
   pd_base_color: "",
 });
 const img = ref("");
+
+onMounted(() => {
+  if (props.dataEdit) {
+    formnya.value = props.dataEdit;
+  }
+});
 
 const onUploadImage = async (imgnya) => {
   const hasilnya = await getBase64(imgnya);

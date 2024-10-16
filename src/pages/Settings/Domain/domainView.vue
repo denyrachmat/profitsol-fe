@@ -59,7 +59,7 @@
                   flat
                   dense
                   icon="edit"
-                  @click="editData(props.row.id)"
+                  @click="editData(props.row)"
                 >
                   <q-tooltip> Delete </q-tooltip>
                 </q-btn>
@@ -178,5 +178,17 @@ const onClickFilter = () => {
   });
 };
 
-const editData = (id) => {};
+const editData = (val) => {
+  $q.dialog({
+    component: DomainManage,
+    componentProps: {
+      dataEdit: val,
+    },
+    // persistent: true,
+  }).onOk(async (val) => {
+    getData();
+  });
+};
+
+const submitData = () => {};
 </script>

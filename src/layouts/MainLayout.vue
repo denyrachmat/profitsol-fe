@@ -18,32 +18,28 @@
         />
         <q-btn flat dense round icon="home" aria-label="Menu" to="/" />
         <q-toolbar-title>
-          {{
-            store.choosedDomain
-              ? store.choosedDomain.pd_desc
-              : "Undefined Domain"
-          }}</q-toolbar-title
-        >
+          <q-select
+            borderless
+            v-model="domain"
+            use-input
+            input-debounce="0"
+            :options="options"
+            @filter="filterFn"
+            option-label="pd_desc"
+            @update:model-value="onSelectStore"
+            dense
+            dark
+          >
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey"> No results </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+        </q-toolbar-title>
 
         <div>Portal Application v2.0.0</div>
 
-        <q-select
-          filled
-          v-model="domain"
-          use-input
-          input-debounce="0"
-          :options="options"
-          @filter="filterFn"
-          option-label="pd_desc"
-          @update:model-value="onSelectStore"
-          dense
-        >
-          <template v-slot:no-option>
-            <q-item>
-              <q-item-section class="text-grey"> No results </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>
             <q-list style="min-width: 100px">
@@ -278,6 +274,8 @@ export default defineComponent({
     const listInboxOnly = ref([]);
     const loading = ref(false);
     const tab = ref("inbox");
+    const domain = ref("");
+    const options = ref([]);
 
     socket.on("server-stxi", (data) => {
       console.log(data);
@@ -357,6 +355,8 @@ export default defineComponent({
       socket,
       getNotif,
       getRoleAppMap,
+      options,
+      domain,
     };
   },
   beforeCreate() {
@@ -389,6 +389,7 @@ export default defineComponent({
     });
 
     this.getNotif();
+    this.getListDomain();
   },
   computed: {
     authDetail() {
@@ -508,6 +509,19 @@ export default defineComponent({
 
       return paramSet[getFirstKey];
       // amshd_paramstore
+    },
+    async getListDomain() {
+      let hasil = await postData("get", null, "domain");
+
+      if (hasil) {
+        this.options = [];
+        hasil.data.map((val) => {
+          this.options.push(val);
+        });
+
+        this.domain = this.options[0];
+        this.onSelectStore(this.domain);
+      }
     },
   },
 });
