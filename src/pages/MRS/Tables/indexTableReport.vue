@@ -90,7 +90,9 @@ onMounted(async () => {
   const colsnya = await getCols(idNya.value);
 
   if (colsnya) {
-    tableRef.value.requestServerInteraction();
+    if (propsReports.value !== "sp") {
+      tableRef.value.requestServerInteraction();
+    }
   }
 });
 

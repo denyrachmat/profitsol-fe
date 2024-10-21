@@ -44,6 +44,15 @@
           >
             <q-tooltip> Refresh </q-tooltip></q-btn
           >
+          <q-btn
+            flat
+            color="indigo"
+            icon="share"
+            @click="onClickShare"
+            :disabled="!(selectedItems.length > 0 || selectedFiles.length > 0)"
+          >
+            <q-tooltip> Share Items </q-tooltip>
+          </q-btn>
         </q-btn-group>
       </div>
     </div>
@@ -100,6 +109,17 @@
             </q-item>
 
             <q-separator />
+
+            <q-item
+              clickable
+              v-close-popup
+              @click="onClickShare"
+              :disable="
+                !(selectedItems.length === 1 || selectedFiles.length === 1)
+              "
+            >
+              <q-item-section>Share</q-item-section>
+            </q-item>
 
             <q-item clickable v-close-popup @click="addFolder" :disable="true">
               <q-item-section>Move Items</q-item-section>
@@ -498,4 +518,6 @@ const renameItems = () => {
     console.log(datas);
   });
 };
+
+const onClickShare = () => {};
 </script>
