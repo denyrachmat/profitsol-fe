@@ -100,9 +100,12 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
+import apiRequest from "src/components/apiRequest";
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
+const $q = useQuasar();
+const { postData } = apiRequest();
 
 const props = defineProps({
   dataEdit: Object,
@@ -118,6 +121,13 @@ const formnya = ref({
   ddrm_password: "",
   ddrm_url: "",
 });
+
+onMounted(() => {
+  if (props.dataEdit) {
+    formnya.value = props.dataEdit;
+  }
+});
+
 const loading = ref(false);
 
 const onOKClick = () => {

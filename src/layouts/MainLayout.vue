@@ -59,7 +59,7 @@
         </q-btn>
 
         <q-btn flat dense round icon="mail" aria-label="Notification">
-          <q-menu @show="getNotif()" style="width: 30%">
+          <q-menu @show="getNotif()" style="width: 50%">
             <q-list style="overflow: auto; height: 40%">
               <q-item-label header>
                 <q-tabs
@@ -118,7 +118,7 @@
                       -
                       {{
                         getFirstParamIfExists(
-                          JSON.parse(notif.amshd_paramstore).data
+                          JSON.parse(notif.amshd_paramstore)
                         )
                       }}
                     </q-item-label>
@@ -131,7 +131,7 @@
                       -
                       {{
                         getFirstParamIfExists(
-                          JSON.parse(notif.amshd_paramstore).data
+                          JSON.parse(notif.amshd_paramstore)
                         )
                       }}
                     </q-item-label>
@@ -310,8 +310,8 @@ export default defineComponent({
             },
             {
               cols: "amshd_stat",
-              param: "=",
-              value: "sent",
+              param: tab.value == "inbox" ? "<>" : "=",
+              value: tab.value == "inbox" ? "receive" : "sent",
             },
           ],
         },
@@ -480,7 +480,8 @@ export default defineComponent({
 
           // props forwarded to your custom component
           componentProps: {
-            dataProps: `http://localhost:8080/#/ams/approvalAction/${tokenAprv}/${token}/disp`,
+            dataProps: `http://192.168.100.32:8081/portal_v2/#/ams/approvalAction/${tokenAprv}/${token}`,
+            // dataProps: `http://localhost:8080/#/ams/approvalAction/${tokenAprv}/${token}`,
             title: "Approval Action",
             // ...more..props...
           },
@@ -505,9 +506,15 @@ export default defineComponent({
       }
     },
     getFirstParamIfExists(paramSet) {
-      const getFirstKey = Object.keys(paramSet)[0];
+      // msgkey
+      let getFirstKey;
+      if (paramSet.msgkey) {
+        getFirstKey = paramSet.msgkey;
+      } else {
+        getFirstKey = Object.keys(paramSet.data)[0];
+      }
 
-      return paramSet[getFirstKey];
+      return paramSet.data[getFirstKey];
       // amshd_paramstore
     },
     async getListDomain() {

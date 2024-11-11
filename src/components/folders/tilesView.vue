@@ -15,7 +15,15 @@
         </div>
         <div class="row">
           <div class="col text-center">
-            <q-icon size="5em" color="cyan" name="folder" />
+            <q-icon
+              size="5em"
+              color="cyan"
+              :name="
+                folder.shared && folder.shared.length > 0
+                  ? 'folder_shared'
+                  : 'folder'
+              "
+            />
           </div>
         </div>
         <div>
@@ -42,7 +50,16 @@
               size="5em"
               :color="getIcon(doc.ddm_doc_real_name).color"
               :name="`las ${getIcon(doc.ddm_doc_real_name).icon}`"
-            />
+            >
+              <q-badge
+                color="orange"
+                align="bottom"
+                floating
+                v-if="doc.shared.length > 0"
+              >
+                <q-icon size="15px" color="white" :name="`share`"></q-icon>
+              </q-badge>
+            </q-icon>
           </div>
         </div>
         <div>
@@ -55,14 +72,7 @@
   </div>
 </template>
 <script setup>
-import {
-  defineProps,
-  ref,
-  onMounted,
-  useContext,
-  defineEmits,
-  watch,
-} from "vue";
+import { defineProps, ref, onMounted, defineEmits, watch } from "vue";
 import extList from "./extList.json";
 
 const selectedFolder = ref([]);

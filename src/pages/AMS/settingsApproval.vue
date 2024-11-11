@@ -84,12 +84,51 @@
           <div class="col col-xs-12 col-sm-4 q-pa-sm">
             <q-btn
               outline
-              color="cyan"
+              :color="forms.amssd_content ? 'orange' : 'cyan'"
               icon="integration_instructions"
-              label="Create Content"
+              :label="forms.amssd_content ? 'Update Content' : 'Create Content'"
               @click="onClickChangeContent()"
             >
-              <q-tooltip>Create content for approval page</q-tooltip>
+              <q-tooltip>{{
+                forms.amssd_content
+                  ? "Content already create, click again to edit."
+                  : "Create content for approval page"
+              }}</q-tooltip>
+            </q-btn>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col col-xs-12 col-sm-6 q-pa-sm">
+            <q-toggle
+              v-model="forms.amssd_attachment"
+              checked-icon="check"
+              color="primary"
+              label="Use attachment ?"
+              unchecked-icon="clear"
+              :false-value="0"
+              :true-value="1"
+            />
+          </div>
+          <div
+            class="col col-xs-12 col-sm-4 q-pa-sm"
+            v-if="forms.amssd_attachment"
+          >
+            <q-btn
+              outline
+              :color="forms.attch.length > 0 ? 'orange' : 'cyan'"
+              icon="attach_file"
+              :label="
+                forms.attch.length > 0
+                  ? 'Update Attachment Store Setup'
+                  : 'Create Attachment Store Setup'
+              "
+              @click="onClickAddAttachmentStorage()"
+            >
+              <q-tooltip>{{
+                forms.attch.length > 0
+                  ? "Attachment Store Setup already create, click again to edit."
+                  : "Create attachment Store Setup for approval page"
+              }}</q-tooltip>
             </q-btn>
           </div>
         </div>
@@ -156,6 +195,7 @@ import { ref, defineProps, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import addContentComponent from "../CMS/addContentComponent.vue";
+import approvalAttachmentSet from "./approvalAttachmentSet.vue";
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
@@ -166,6 +206,7 @@ const props = defineProps({
 });
 
 onMounted(() => {
+  console.log(props.dataExists);
   if (props.dataExists) {
     forms.value = {
       amssd_quotkn: parseInt(props.dataExists.amssd_quotkn),
@@ -178,6 +219,8 @@ onMounted(() => {
       amssd_autorun: parseInt(props.dataExists.amssd_autorun),
       amssd_autorun_chktime: parseInt(props.dataExists.amssd_autorun_chktime),
       amssd_content: props.dataExists.amssd_content,
+      amssd_attachment: parseInt(props.dataExists.amssd_attachment),
+      attch: props.dataExists.attch,
     };
   }
 });
@@ -194,6 +237,8 @@ const forms = ref({
   amssd_autorun: 0,
   amssd_autorun_chktime: 0,
   amssd_content: "",
+  amssd_attachment: 0,
+  attch: [],
 });
 
 const onClickChangeContent = () => {
@@ -217,6 +262,18 @@ const onOKClick = () => {
     cancel: true,
   }).onOk(async () => {
     onDialogOK(forms.value);
+  });
+};
+
+const onClickAddAttachmentStorage = () => {
+  console.log(forms.value.attch);
+  $q.dialog({
+    component: approvalAttachmentSet,
+    componentProps: {
+      dataExists: forms.value.attch,
+    },
+  }).onOk((val) => {
+    forms.value.attch = val;
   });
 };
 </script>

@@ -5,7 +5,7 @@
     class="shadow-2 rounded-borders"
   >
     <q-page-container>
-      <div class="q-pa-md">
+      <div class="q-pa-lg">
         <div class="row">
           <div class="col text-center">
             <span class="text-bold text-h3"
@@ -21,7 +21,58 @@
             <span class="text-h6">{{ datas ? datas.ams_title : "" }}</span>
           </div>
         </div>
-
+        <q-separator spaced />
+        <div class="row" v-if="datas.token && datas.token.selected_hist">
+          <div
+            class="col"
+            v-for="(attch, idx) in datas.token.selected_hist[1].attch"
+            :key="idx"
+          >
+            <q-btn-dropdown
+              :icon="`las ${getIcon(attch.amaad_filename).icon}`"
+              :label="attch.amaad_filename"
+              outline
+              :color="getIcon(attch.amaad_filename).color"
+              size="lg"
+            >
+              <q-list>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onDownloadAttachment(attch, true)"
+                >
+                  <q-item-section avatar>
+                    <q-avatar
+                      icon="open_in_new"
+                      color="primary"
+                      text-color="white"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Open File</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onDownloadAttachment(attch)"
+                >
+                  <q-item-section avatar>
+                    <q-avatar
+                      icon="download"
+                      color="primary"
+                      text-color="white"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Download File</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+          </div>
+        </div>
+        <q-separator spaced />
         <div class="row">
           <div class="col text-center" v-if="loading">
             <div class="text-h6 text-center">
@@ -33,10 +84,10 @@
             v-else-if="!loading && datas && datas.apprv_set"
             v-html="datas.apprv_set.amssd_content"
           ></div>
-          <div class="col text-center" v-else>
+          <div class="col text-center" v-else-if="!loading && !datas">
             <q-img src="~assets/401.png" width="30%" />
             <div class="text-h6 text-center">
-              Sorry you're doesn't have authorize to approve this approval or
+              Sorry you're doesn't have authorize to view this notification or
               token is expired
             </div>
           </div>
@@ -86,8 +137,11 @@ import { ref, defineProps, onMounted, computed, watch, onUnmounted } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import { useRoute } from "vue-router";
+import extList from "src/components/folders/extList.json";
+import { fileTypeFromBuffer } from "file-type";
 
 import addApprovalMapping from "./addApprovalMapping.vue";
+import openFiles from "src/components/files/openFiles.vue";
 
 const $q = useQuasar();
 const route = useRoute();
@@ -95,18 +149,19 @@ const { postData } = apiRequest();
 
 const datas = ref({});
 const loading = ref(false);
+const base64Files = ref("");
 
 onMounted(() => {
   getData();
 });
 
-const getData = async () => {
+const getData = async (mode) => {
   // route.params.username
   loading.value = true;
   const data = await postData(
     "get",
     null,
-    route.params.mode
+    mode
       ? `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}/1`
       : `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}`,
     false,
@@ -117,10 +172,15 @@ const getData = async () => {
   if (data) {
     loading.value = false;
     datas.value = data.data;
+  } else {
+    getData(1);
   }
 };
 
 const actionApprove = (stat) => {
+  if (datas.value.token.selected_hist[1].attch) {
+  }
+
   $q.dialog({
     dark: stat !== 1,
     title: stat === 1 ? "Approve" : "Reject",
@@ -135,9 +195,6 @@ const actionApprove = (stat) => {
     persistent: true,
   })
     .onOk(async (dataRemarks) => {
-      // console.log('>>>> OK, received', data)
-      // approveAction
-
       loading.value = true;
       const data = await postData(
         "post",
@@ -203,5 +260,58 @@ const actionApprove = (stat) => {
     .onDismiss(() => {
       // console.log('I am triggered on both OK and Cancel')
     });
+};
+
+const getIcon = (filename) => {
+  const splitter = filename.split(".");
+  const getfileIcon = extList.filter(
+    (fil) => fil.ext === splitter[splitter.length - 1]
+  );
+
+  return getfileIcon[0];
+};
+
+const onDownloadAttachment = async (dataAttch, open = false) => {
+  const dataFetch = JSON.parse(dataAttch.amaad_dl_link);
+  loading.value = true;
+  const dataCheck = await postData(
+    dataFetch.method,
+    dataFetch.param ?? null,
+    dataFetch.url,
+    false,
+    false,
+    true,
+    dataFetch.url
+  );
+
+  if (dataCheck) {
+    console.log(dataCheck);
+    loading.value = false;
+    if (open) {
+      $q.dialog({
+        component: openFiles,
+
+        // props forwarded to your custom component
+        componentProps: {
+          base64File: dataCheck.data.base64Files,
+          ext: dataCheck.data.ext,
+          mime: dataCheck.data.mime,
+          title: dataCheck.data.filename,
+          // ...more..props...
+        },
+      }).onOk(async (val) => {
+        console.log(val);
+      });
+    } else {
+      const win = window.open();
+      win.document.write(
+        '<iframe src="' +
+          dataCheck.data.base64Files +
+          '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>'
+      );
+    }
+  } else {
+    loading.value = false;
+  }
 };
 </script>

@@ -1,10 +1,29 @@
 <template>
   <div class="q-pa-md">
     <div class="row">
+      <div class="col" v-if="!isOutsider">
+        <q-select
+          dense
+          filled
+          label="Choose Root Name"
+          v-model="dudrm_source"
+          use-input
+          input-debounce="500"
+          :options="listRoots"
+          @filter="(val, update, abort) => filterFn(val, update, abort, 'root')"
+          behavior="dialog"
+          option-label="ddrm_desc"
+          option-value="ddrm_name"
+          map-options
+          emit-value
+          :loading="isLoading"
+          @update:model-value="(value) => onChooseItem(value)"
+        />
+      </div>
       <div class="col">
         <q-input label="Search file / Folder" outlined dense v-model="search" />
       </div>
-      <div class="col-2 text-right">
+      <div class="col-2 text-right" v-if="!isOutsider">
         <q-btn-group spread flat>
           <q-btn flat color="green" icon="upload" @click="uploadExcel">
             <q-tooltip> Upload Items </q-tooltip>
@@ -46,6 +65,14 @@
           >
           <q-btn
             flat
+            color="purple"
+            icon="refresh"
+            @click="syncWithRealFolder()"
+          >
+            <q-tooltip> Re-sync with current folder </q-tooltip></q-btn
+          >
+          <q-btn
+            flat
             color="indigo"
             icon="share"
             @click="onClickShare"
@@ -83,7 +110,11 @@
         </q-breadcrumbs>
       </div>
     </div>
-    <div class="row" style="height: 78vh">
+    <div
+      class="row"
+      style="height: 78vh"
+      v-if="(isOutsider && tokenDetail.length > 0) || !isOutsider"
+    >
       <div class="col">
         <tilesView
           :folders="folders"
@@ -94,7 +125,8 @@
           @onSelectedFilesCheck="selectedFile"
           @onRightClickItems="rightClickItem"
           :key="refresher"
-        />
+        >
+        </tilesView>
 
         <q-menu touch-position context-menu @hide="onCloseContext">
           <q-list dense style="min-width: 100px">
@@ -153,6 +185,7 @@
         >
       </div>
     </div>
+    <error401 v-else />
   </div>
 </template>
 <script setup>
@@ -160,24 +193,123 @@ import { onMounted, ref, watch } from "vue";
 import apiRequest from "src/components/apiRequest";
 import { useAuthStore } from "src/stores/authStore";
 import { useQuasar } from "quasar";
+import { useRoute } from "vue-router";
 
 import uploadPhoto from "../../components/uploadPhoto";
 
 import tilesView from "src/components/folders/tilesView.vue";
 import openFiles from "src/components/files/openFiles.vue";
+import shareFolderFile from "./shareFolderFile.vue";
+import error401 from "../Dashboards/error401.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
 const store = useAuthStore();
+const route = useRoute();
+
 const folders = ref([]);
 const files = ref([]);
-const rootData = ref(null);
+const rootData = ref([]);
 const refresher = ref(0);
 const selectedPath = ref([]);
 const isLoading = ref(false);
 const selectedItems = ref([]);
 const selectedFiles = ref([]);
 const search = ref("");
+const listRoots = ref([]);
+const dudrm_source = ref("");
+
+const isOutsider = ref(false);
+const tokenDetail = ref([]);
+
+onMounted(async () => {
+  console.log(route);
+  if (route.fullPath.includes("dms/show")) {
+    isOutsider.value = true;
+    const checkToken = await checkTokenAccess(
+      route.params.token,
+      route.params.id
+    );
+    if (checkToken.length > 0) {
+      tokenDetail.value = checkToken;
+
+      folders.value = [];
+      files.value = [];
+
+      for (let index = 0; index < tokenDetail.value.length; index++) {
+        let IDFolder = tokenDetail.value[index].dfm_id ?? [];
+        let IDFiles = tokenDetail.value[index].ddm_id ?? [];
+        initProcess(
+          tokenDetail.value[index].p_u_username,
+          tokenDetail.value[0].folder.dfm_root_mstr,
+          IDFolder,
+          IDFiles
+        );
+      }
+    }
+  } else {
+    initProcess();
+  }
+});
+
+const initProcess = async (
+  username = "",
+  root = "",
+  IDFolder = "",
+  IDFiles = []
+) => {
+  if (username) {
+    if (IDFolder) {
+      const data = await getData(username, IDFolder, root);
+      if (data) {
+        rootData.value.push(data.data.child_folders[0]);
+        folders.value.push(data.data.child_folders[0]);
+      }
+    }
+  } else {
+    await getRoot();
+
+    if (listRoots.value.length > 0) {
+      dudrm_source.value = root ? root : listRoots.value[0].ddrm_name;
+    }
+
+    const data = await getData();
+
+    if (data) {
+      folders.value = data.data.child_folders;
+      files.value = data.data.doc;
+      rootData.value = data.data;
+      refresher.value = refresher.value + 1;
+    }
+  }
+};
+
+const filterFn = (val, update, abort, fun) => {
+  update(async () => {
+    if (fun === "root") {
+      await getRoot(val);
+    }
+  });
+};
+
+const getRoot = async (val = "") => {
+  isLoading.value = true;
+  const data = await postData(
+    "get",
+    null,
+    `dms/documentsRoots/getRegisteredRoot/${store.authDet.username}`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    isLoading.value = false;
+    listRoots.value = data.data;
+  } else {
+    isLoading.value = false;
+  }
+};
 
 const selectedItem = (val) => {
   selectedItems.value = val;
@@ -200,33 +332,20 @@ const onCloseContext = () => {
   selectedFiles.value = [];
 };
 
-const getData = async () => {
+const getData = async (username = "", id = "", root = "") => {
   isLoading.value = true;
-  const data = await postData(
-    "get",
-    null,
-    `dms/folders/${store.authDet.username}`,
-    false,
-    false,
-    true
-  );
+
+  let url = `dms/folderList/list/${store.authDet.username}/${dudrm_source.value}`;
+  if (username) {
+    url = `dms/folderList/list/${username}/${root}/${id}`;
+  }
+  const data = await postData("get", null, url, false, false, true);
 
   if (data) {
     isLoading.value = false;
     return data;
   }
 };
-
-onMounted(async () => {
-  const data = await getData();
-
-  if (data) {
-    folders.value = data.data.child_folders;
-    files.value = data.data.doc;
-    rootData.value = data.data;
-    refresher.value = refresher.value + 1;
-  }
-});
 
 watch(
   () => JSON.stringify(selectedPath.value),
@@ -287,6 +406,8 @@ const onSelectFiles = async (val) => {
 };
 
 const findChoosedFolder = (arr, id) => {
+  console.log(arr);
+  console.log(id);
   return id.length > 0
     ? arr.reduce((r, o) => {
         const children = findChoosedFolder(o.child_folders, id);
@@ -352,6 +473,7 @@ const uploadExcel = () => {
         dfm_id: selectedPath.value[selectedPath.value.length - 1],
         fileName: val.fileName,
         file_all: val.result,
+        dfm_root_mstr: dudrm_source.value,
       },
       `dms/documents`,
       false,
@@ -385,6 +507,7 @@ const addFolder = () => {
         p_u_username: store.authDet.username,
         dfm_folder_name: data,
         dfm_parent_id: getLatestFolder ? getLatestFolder : null,
+        dfm_root_mstr: dudrm_source.value,
       },
       `dms/folders`,
       false,
@@ -414,8 +537,6 @@ const refreshCurrentPath = async () => {
       rootData.value.child_folders,
       getSelected
     );
-
-    console.log(foldernya);
 
     if (foldernya.length > 0) {
       folders.value = foldernya[foldernya.length - 1].child_folders;
@@ -482,8 +603,6 @@ const moveItems = () => {
 };
 
 const renameItems = () => {
-  console.log(selectedItems.value);
-  console.log(selectedFiles.value);
   const cariFolder = findChoosedFolder(
     rootData.value.child_folders,
     selectedFiles.value
@@ -519,5 +638,67 @@ const renameItems = () => {
   });
 };
 
-const onClickShare = () => {};
+const syncWithRealFolder = () => {
+  $q.dialog({
+    title: "Confirmation",
+    message: "Do you want resync with current folder ?",
+    cancel: true,
+  }).onOk(async () => {
+    isLoading.value = true;
+    const data = await postData(
+      "get",
+      null,
+      `dms/documentsRoots/resyncFolderToDB/${store.authDet.username}/${dudrm_source.value}`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      isLoading.value = false;
+      refreshCurrentPath();
+    } else {
+      isLoading.value = false;
+    }
+  });
+};
+
+const onClickShare = (id, idFiles = []) => {
+  console.log(selectedItems.value);
+  $q.dialog({
+    component: shareFolderFile,
+    componentProps: {
+      root: dudrm_source.value,
+      idFolder: selectedItems.value,
+      idFiles: selectedFiles.value,
+    },
+  })
+    .onOk(async (val) => {
+      getData();
+    })
+    .onDismiss(() => {
+      getData();
+    });
+};
+
+const onChooseItem = (val) => {
+  refreshCurrentPath();
+};
+
+const checkTokenAccess = async (token, id) => {
+  isLoading.value = true;
+  const data = await postData(
+    "get",
+    null,
+    `dms/documentsRoots/getSharedToken/${token + (id ? "/" + id : "")}`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    isLoading.value = false;
+    return data;
+  }
+};
 </script>

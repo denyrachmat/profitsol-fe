@@ -165,6 +165,7 @@ const props = defineProps({
 });
 
 onMounted(() => {
+  console.log(props.dataUpdated);
   if (props.dataUpdated.det && props.dataUpdated.det.length > 0) {
     title.value = props.dataUpdated.ams_title;
     ids.value = props.dataUpdated.id;

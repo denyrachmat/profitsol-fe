@@ -48,7 +48,7 @@ const dialogConfig = {
     },
   ],
   initialData: {
-    catdata: "username",
+    catdata: "$username",
   },
   onSubmit: (api) => {
     const data = api.getData();
@@ -56,7 +56,7 @@ const dialogConfig = {
     tinymce.activeEditor.execCommand(
       "mceInsertContent",
       false,
-      `{{${data.catdata}}}`
+      `{{$${data.catdata}}}`
     );
     api.close();
   },

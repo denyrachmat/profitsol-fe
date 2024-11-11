@@ -1,7 +1,7 @@
 <template>
   <div>
     <prism-editor
-      class="my-editor"
+      class="my-editor height-200"
       v-model="code"
       :highlight="highlighter"
       line-numbers
@@ -10,7 +10,7 @@
 </template>
 <script setup>
 // import Prism Editor
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { PrismEditor } from "vue-prism-editor";
 import "vue-prism-editor/dist/prismeditor.min.css"; // import the styles somewhere
 
@@ -19,16 +19,24 @@ import { highlight, languages } from "prismjs/components/prism-core";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-sql";
+import "prismjs/components/prism-json";
 import "prismjs/themes/prism-tomorrow.css"; // import syntax highlighting styles
 
 const props = defineProps({
   modelValue: String,
+  lang: String,
 });
 
 const code = ref(props.modelValue);
-const highlighter = () => highlight(code.value, languages.sql);
+const highlighter = ref(() => highlight(code.value, languages["sql"]));
 
 const emit = defineEmits(["update:modelValue"]);
+
+onMounted(() => {
+  if (props.lang === "json") {
+    highlighter.value = () => highlight(code.value, languages["json"]);
+  }
+});
 
 watch(props, (val) => {
   console.log(val);
@@ -51,6 +59,10 @@ watch(code, (val) => {
   font-size: 14px;
   line-height: 1.5;
   padding: 5px;
+}
+
+.height-200 {
+  height: 150px;
 }
 
 /* optional class for removing the outline */

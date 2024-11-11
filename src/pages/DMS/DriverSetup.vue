@@ -72,6 +72,22 @@
                 >
                   <q-tooltip> Delete Approval </q-tooltip>
                 </q-btn>
+                <q-btn
+                  :color="props.row.config_status ? 'grey' : 'indigo'"
+                  flat
+                  dense
+                  icon="settings"
+                  @click="onClickInstallDiskRoot(props.row.id)"
+                  :disable="props.row.config_status"
+                >
+                  <q-tooltip>
+                    {{
+                      props.row.config_status
+                        ? "Disk has been installed"
+                        : "Disk not installed yet, Install Disk Root now"
+                    }}</q-tooltip
+                  >
+                </q-btn>
               </q-td>
             </q-tr>
           </template>
@@ -87,6 +103,7 @@ import apiRequest from "src/components/apiRequest";
 
 import dataFilter from "./dataFilter.vue";
 import DriverSetupManage from "./DriverSetupManage.vue";
+import UserMappingRoot from "./UserMappingRoot.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -175,7 +192,38 @@ const onClickManage = (data = null) => {
   });
 };
 
-const onClickMapping = () => {};
+const onClickMapping = (data = null) => {
+  $q.dialog({
+    component: UserMappingRoot,
+    componentProps: {
+      dataEdit: data,
+    },
+  }).onOk(async (val) => {
+    // console.log(val)
+    getData();
+  });
+};
 
-const onEditData = () => {};
+const onClickInstallDiskRoot = (val) => {
+  $q.dialog({
+    title: "Alert",
+    message: `Are you sure want to install this disk Root?`,
+    cancel: true,
+  }).onOk(async () => {
+    loading.value = true;
+    const data = await postData(
+      "get",
+      null,
+      `dms/documentsRoots/installDisk/${val}`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      loading.value = false;
+      getData();
+    }
+  });
+};
 </script>

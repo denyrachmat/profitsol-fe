@@ -138,5 +138,20 @@
     "ext": "gif",
     "icon": "la-file-image",
     "color": "cyan"
+  },
+  {
+    "ext": "txt",
+    "icon": "la-file-alt",
+    "color": "cyan"
+  },
+  {
+    "ext": "pem",
+    "icon": "la-file-alt",
+    "color": "cyan"
+  },
+  {
+    "ext": "key",
+    "icon": "la-file-alt",
+    "color": "cyan"
   }
 ]

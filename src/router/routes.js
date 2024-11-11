@@ -60,12 +60,12 @@ const routes = [
   },
   {
     path: "/dms/",
-    name: "apps",
-    component: () => import("pages/Dashboards/viewApps.vue"),
+    name: "dms",
+    // component: () => import("pages/Dashboards/viewApps.vue"),
     children: [
       {
-        path: "uploadDocument",
-        name: "apps",
+        path: "show/:token/:id?",
+        name: "dms",
         component: () => import("pages/DMS/uploadDocument.vue"),
       },
     ],
