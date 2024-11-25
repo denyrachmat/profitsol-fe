@@ -136,7 +136,7 @@
 import { ref, defineProps, onMounted, computed, watch, onUnmounted } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import extList from "src/components/folders/extList.json";
 import { fileTypeFromBuffer } from "file-type";
 
@@ -145,6 +145,7 @@ import openFiles from "src/components/files/openFiles.vue";
 
 const $q = useQuasar();
 const route = useRoute();
+const router = useRouter();
 const { postData } = apiRequest();
 
 const datas = ref({});
@@ -152,7 +153,11 @@ const loading = ref(false);
 const base64Files = ref("");
 
 onMounted(() => {
-  getData();
+  if (route.params.mode == "disp") {
+    getData(1);
+  } else {
+    getData();
+  }
 });
 
 const getData = async (mode) => {
@@ -173,14 +178,12 @@ const getData = async (mode) => {
     loading.value = false;
     datas.value = data.data;
   } else {
+    router.push(route.fullPath + "/disp");
     getData(1);
   }
 };
 
 const actionApprove = (stat) => {
-  if (datas.value.token.selected_hist[1].attch) {
-  }
-
   $q.dialog({
     dark: stat !== 1,
     title: stat === 1 ? "Approve" : "Reject",

@@ -23,6 +23,7 @@
                 label="Columns need to filtered"
                 emit-value
                 map-options
+                :readonly="isNonEdit"
               ></q-select>
             </div>
             <div class="col q-pl-md">
@@ -34,13 +35,14 @@
                 outlined
                 emit-value
                 map-options
+                :readonly="isNonEdit"
               >
               </q-select>
             </div>
             <div class="col q-pl-md">
               <q-input label="value" v-model="list.value" filled dense />
             </div>
-            <div class="col-1 q-pl-md">
+            <div class="col-1 q-pl-md" v-if="!isNonEdit">
               <q-btn
                 :icon="idx === 0 ? 'add' : 'delete'"
                 :color="idx === 0 ? 'green' : 'red'"
@@ -66,13 +68,21 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 const props = defineProps({
   colsData: Array,
   filtered: Array,
+  nonEdit: Boolean,
 });
 
 onMounted(() => {
   if (props.filtered.length > 0) {
     filterList.value = props.filtered;
   }
+
+  console.log(props.nonEdit);
+  if (props.nonEdit) {
+    isNonEdit.value = props.nonEdit;
+  }
 });
+
+const isNonEdit = ref(false);
 
 const oprOpt = ref([
   {

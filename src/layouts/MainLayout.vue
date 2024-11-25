@@ -59,7 +59,7 @@
         </q-btn>
 
         <q-btn flat dense round icon="mail" aria-label="Notification">
-          <q-menu @show="getNotif()" style="width: 50%">
+          <q-menu @show="getNotif()" style="width: 50%" @hide="initPage = 1">
             <q-list style="overflow: auto; height: 40%">
               <q-item-label header>
                 <q-tabs
@@ -85,16 +85,33 @@
                   />
                 </q-tabs>
                 <br />
-                <q-btn
-                  outline
-                  color="blue"
-                  dense
-                  class="full-width"
-                  @click="onClickReadAll()"
-                  :disable="loading"
-                >
-                  Mark all as read
-                </q-btn>
+                <div class="row">
+                  <div class="col">
+                    <q-btn
+                      outline
+                      color="blue"
+                      dense
+                      class="full-width"
+                      @click="onClickReadAll()"
+                      :disable="loading"
+                    >
+                      Mark all as read
+                    </q-btn>
+                  </div>
+                  <div class="col-2 q-pl-sm">
+                    <q-btn
+                      outline
+                      color="orange"
+                      dense
+                      class="full-width"
+                      :disable="loading"
+                      icon-right="search"
+                      @click="onClickSearchOption()"
+                    >
+                      Search
+                    </q-btn>
+                  </div>
+                </div>
               </q-item-label>
               <template v-if="listNotification.length > 0">
                 <q-item
@@ -148,6 +165,13 @@
                     <q-item-label caption>{{
                       getTimeDifference(notif.created_at)
                     }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    <q-btn full-width color="indigo" @click="onClickMoreNotif"
+                      >Load More</q-btn
+                    >
                   </q-item-section>
                 </q-item>
               </template>
@@ -230,6 +254,7 @@ import apiRequest from "src/components/apiRequest";
 import viewApps from "src/pages/Dashboards/viewApps.vue";
 import { socket } from "src/boot/socket";
 import appListRows from "src/pages/Dashboards/appListRows.vue";
+import dataFilter from "src/pages/AMS/dataFilter.vue";
 
 const { postData } = apiRequest();
 
@@ -276,6 +301,7 @@ export default defineComponent({
     const tab = ref("inbox");
     const domain = ref("");
     const options = ref([]);
+    const initPage = ref(1);
 
     socket.on("server-stxi", (data) => {
       console.log(data);
@@ -295,7 +321,7 @@ export default defineComponent({
       }
     });
 
-    const getNotif = async () => {
+    const getNotif = async (filteredData = []) => {
       loading.value = true;
       listNotification.value = [];
       const data = await postData(
@@ -313,7 +339,8 @@ export default defineComponent({
               param: tab.value == "inbox" ? "<>" : "=",
               value: tab.value == "inbox" ? "receive" : "sent",
             },
-          ],
+          ].concat(filteredData),
+          page: initPage.value,
         },
         `ams/approveHist`,
         false,
@@ -357,6 +384,7 @@ export default defineComponent({
       getRoleAppMap,
       options,
       domain,
+      initPage,
     };
   },
   beforeCreate() {
@@ -529,6 +557,47 @@ export default defineComponent({
         this.domain = this.options[0];
         this.onSelectStore(this.domain);
       }
+    },
+    onClickMoreNotif() {
+      this.initPage = this.initPage + 1;
+      this.getNotif();
+    },
+    onClickSearchOption() {
+      this.$q
+        .dialog({
+          component: dataFilter,
+          componentProps: {
+            colsData: [
+              {
+                field: "p_u_username",
+                name: "p_u_username",
+                label: "From",
+              },
+              {
+                field: "amshd_paramstore",
+                name: "amshd_paramstore",
+                label: "Subject",
+              },
+            ],
+            filtered: [
+              {
+                cols: "p_u_username",
+                param: "like",
+                value: "",
+              },
+              {
+                cols: "amshd_paramstore",
+                param: "like",
+                value: "",
+              },
+            ],
+            nonEdit: true,
+          },
+        })
+        .onOk(async (val) => {
+          this.getNotif(val);
+          console.log(val);
+        });
     },
   },
 });

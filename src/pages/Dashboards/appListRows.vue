@@ -4,6 +4,7 @@
     class="full-width bg-white"
     v-for="(element, idx) in dataProps"
     :key="idx"
+    dense
   >
     <q-item
       v-if="element.child_roles.length === 0"
@@ -26,6 +27,7 @@
       :caption="element.apps.am_app_desc"
       :content-inset-level="1"
       default-opened
+      dense
       v-else
     >
       <appListRows :dataProps="element.child_roles" />

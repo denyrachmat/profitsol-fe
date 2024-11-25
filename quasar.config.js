@@ -52,8 +52,11 @@ module.exports = configure(function (ctx) {
         API_DOWNLOAD: ctx.dev
           ? "http://localhost/STX/stx-api/"
           : // : "http://api.sumitronics-indonesia.com/",
-            // : "https://192.168.100.32/stx_api_v2/",
-            "http://192.168.100.32:8081/stx_api_v2/",
+          // : "https://192.168.100.32/stx_api_v2/",
+          "http://192.168.100.32:8081/stx_api_v2/",
+        API_DMS: ctx.dev
+          ? "http://localhost/STX/stx-api/public/api/dms/documentsRoots/getSharedFilesFolder"
+          : "http://192.168.100.32/public/api/dms/documentsRoots/getSharedFilesFolder",
         MS_CLIENTID: "fad753b2-465c-4663-b44b-50aabeb3a4ed",
         MS_AUTHORITY:
           "https://login.microsoftonline.com/0891bc2a-866c-4709-950d-c2d0ef23bbe7",

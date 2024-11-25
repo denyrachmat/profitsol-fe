@@ -10,7 +10,7 @@
             color="green"
             icon="save"
             @click="onSaveQuestion"
-            :disable="!title || valueSubmited.length !== forms.length"
+            :disable="!title || valueSubmited.length !== getFormsOnly.length"
           >
             <q-tooltip> Save question bank. </q-tooltip>
           </q-btn>
@@ -212,7 +212,7 @@
   </div>
 </template>
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useQuasar } from "quasar";
 import componentViewVue from "../componentView.vue";
 import chooseComponent from "../chooseComponent.vue";
@@ -269,6 +269,10 @@ const initChoice = ref({
   },
   value: null,
 });
+
+const getFormsOnly = computed(() =>
+  forms.value.filter((fil) => fil.type === "form")
+);
 
 const onChooseValue = (val, idx) => {
   console.log([val, idx, val.exp]);

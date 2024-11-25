@@ -51,19 +51,26 @@
               <q-td v-for="col in props.cols" :key="col.name" :props="props">
                 {{ col.value }}
               </q-td>
-              <q-td auto-width>
+              <q-td auto-width class="text-center">
                 <q-circular-progress
                   show-value
                   font-size="12px"
                   :value="props.row.percent"
-                  size="35px"
-                  :thickness="0.22"
+                  size="45px"
+                  :thickness="0.52"
                   color="teal"
                   track-color="grey-3"
                   class="q-ma-md"
+                  v-if="props.row.percent < 100"
                 >
                   {{ props.row.percent }}%
                 </q-circular-progress>
+                <q-icon
+                  name="done_all"
+                  v-else
+                  size="45px"
+                  color="cyan"
+                ></q-icon>
               </q-td>
             </q-tr>
           </template>
@@ -88,22 +95,9 @@ const store = useAuthStore();
 const listData = ref([]);
 const columns = ref([
   {
-    name: "amstd_token",
-    label: "Token Approval",
-    field: "amstd_token",
-    sortable: true,
-    align: "left",
-  },
-  {
     name: "approval_keys",
     label: "Keys Value",
-    field: (row) =>
-      JSON.parse(row.amshd_paramstore).data &&
-      JSON.parse(row.amshd_paramstore).key
-        ? JSON.parse(row.amshd_paramstore).data[
-            JSON.parse(row.amshd_paramstore).key
-          ]
-        : Object.values(JSON.parse(row.amshd_paramstore).data)[0],
+    field: (row) => row.dataKey,
     sortable: true,
     align: "left",
   },

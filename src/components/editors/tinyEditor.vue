@@ -150,6 +150,15 @@ const initEditor = ref({
     "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
   paste_data_images: true,
   setup: (editor) => {
+    //To add a simple triangle icon:
+    // editor.ui.registry.addIcon('format-code', '<svg height="24" width="24"><path d="M12 0 L24 24 L0 24 Z" /></svg>');
+
+    editor.ui.registry.addButton("dialog-example-btn", {
+      icon: "format-code",
+      tooltip: "Add variable to become value",
+      onAction: () => editor.windowManager.open(dialogConfig),
+    });
+
     editor.ui.registry.addButton("dialog-example-btn", {
       icon: "format-code",
       tooltip: "Add variable to become value",

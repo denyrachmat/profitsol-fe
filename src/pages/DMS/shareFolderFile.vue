@@ -39,8 +39,23 @@
                 </q-item-section>
 
                 <q-item-section>{{ form.name }}</q-item-section>
+                <q-item-section
+                  >{{ rootURL }}/{{ getTokenAll(form.shared) }}</q-item-section
+                >
                 <q-item-section side>
-                  <q-btn icon="delete" color="red" @click="onDelete(idx)" />
+                  <div class="q-gutter-xs">
+                    <q-btn
+                      icon="content_copy"
+                      outline
+                      color="orange"
+                      @click="
+                        onClickCopy(`${rootURL}/${getTokenAll(form.shared)}`)
+                      "
+                    >
+                      <q-tooltip>Copy URL to direct download</q-tooltip>
+                    </q-btn>
+                    <q-btn icon="delete" color="red" @click="onDelete(idx)" />
+                  </div>
                 </q-item-section>
               </q-item>
               <q-item clickable v-ripple v-if="forms.length === 0">
@@ -153,8 +168,10 @@ const selected = ref([]);
 const selectedTable = ref([]);
 const canWrite = ref(false);
 const isSharedOutside = ref(false);
+const rootURL = ref("");
 
 onMounted(async () => {
+  rootURL.value = process.env.API_DMS;
   getUsers();
   const checkFold = await props.idFolder.map((valFold) => {
     return getFolderDetail(valFold);
@@ -166,6 +183,19 @@ onMounted(async () => {
     });
   }
 });
+
+const getTokenAll = (datas) => {
+  let datanya = null;
+  if (datas.length > 0) {
+    datanya = datas.filter((fil) => fil.ddfus_p_u_username === "all")[0];
+  } else {
+    datanya = datas.filter(
+      (fil) => fil.ddfus_p_u_username === store.authDet.username
+    )[0];
+  }
+
+  return `${datanya.ddfus_token}/${datanya.id}`;
+};
 
 const getFolderDetail = async (id) => {
   const data = await postData(
@@ -203,6 +233,7 @@ const getFilesDetail = async (id) => {
       type: "files",
       id: id,
       name: data.data.data.ddm_doc_real_name,
+      shared: data.data.data.shared,
     });
     console.log(data);
   }
@@ -291,5 +322,47 @@ const onOKClick = () => {
       onDialogOK();
     }
   });
+};
+
+const onClickCopy = (str) => {
+  $q.dialog({
+    dark: true,
+    title: "Copy",
+    message: "Copy below URL ?",
+    prompt: {
+      model: str,
+      type: "text", // optional
+      readonly: true,
+    },
+    cancel: true,
+    persistent: true,
+  })
+    .onOk(async (data) => {
+      // console.log('>>>> OK, received', data)
+      try {
+        await navigator.clipboard.writeText(data);
+        $q.notify({
+          message: `URL Copied !!`,
+          caption: "Copy URL",
+          color: "green",
+          timeout: 3000,
+        });
+      } catch (e) {
+        $q.notify({
+          message: `Failed to copy text: ${e}`,
+          caption: "Copy URL",
+          color: "red",
+          timeout: 3000,
+        });
+        console.error("Failed to copy text: ", e);
+        copySuccess.value = false;
+      }
+    })
+    .onCancel(() => {
+      // console.log('>>>> Cancel')
+    })
+    .onDismiss(() => {
+      // console.log('I am triggered on both OK and Cancel')
+    });
 };
 </script>
