@@ -61,7 +61,7 @@
           style="max-height: 50vh; overflow: auto"
         >
           <template v-if="listApproval.length > 0">
-            <template v-for="(apprvGrp, idx) in viewBasedOnOrder" :key="idx">
+            <div v-for="(apprvGrp, idx) in viewBasedOnOrder" :key="idx">
               <q-separator spaced v-if="parseInt(idx) > 1" />
               <q-item-label header>Approval Order : {{ idx }}</q-item-label>
 
@@ -107,7 +107,7 @@
                   </q-btn-group>
                 </q-item-section>
               </q-item>
-            </template>
+            </div>
           </template>
           <q-item clickable v-ripple v-else>
             <q-item-section> No data found here </q-item-section>

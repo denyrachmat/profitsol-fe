@@ -60,7 +60,7 @@
                       header-class="text-weight-bold"
                       :label="scope.opt.label"
                     >
-                      <template
+                      <div
                         v-for="child in scope.opt.children"
                         :key="child.label"
                       >
@@ -80,7 +80,7 @@
                             ></q-item-label>
                           </q-item-section>
                         </q-item>
-                      </template>
+                      </div>
                     </q-expansion-item>
                   </template>
 
@@ -125,6 +125,7 @@
                 :detail="detailData"
                 @onDeleted="onDeleteOpt"
                 mode="edit"
+                @paste="onPasteData"
               />
             </template>
             <template v-else>
@@ -197,6 +198,29 @@ const addDetail = () => {
     value: parseInt(detailData.value.length) + 1,
     label: "",
   });
+};
+
+const onPasteData = (event) => {
+  event.preventDefault();
+  let pasteData = (event.clipboardData || window.clipboardData).getData("text");
+  const lines = pasteData.split(/\r?\n/);
+
+  detailData.value[0] = {
+    col_det_id: "opt-" + (parseInt(detailData.value.length) + 1),
+    col_det_label: lines[0],
+    value: 1,
+    label: lines[0],
+  };
+
+  for (let index = 1; index < lines.length; index++) {
+    detailData.value.push({
+      col_det_id: "opt-" + (parseInt(detailData.value.length) + 1),
+      col_det_label: lines[index],
+      value: parseInt(detailData.value.length) + 1,
+      label: lines[index],
+    });
+  }
+  console.log(lines);
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =

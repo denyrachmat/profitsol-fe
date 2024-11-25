@@ -1,22 +1,70 @@
 <template>
   <div class="q-pa-md">
     <div class="row">
+      <div class="col">
+        <q-btn-group flat>
+          <q-btn color="primary" label="File" flat no-caps>
+            <q-menu>
+              <q-list dense style="min-width: 100px">
+                <q-item clickable v-close-popup>
+                  <q-item-section>New Quiz</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="openTraining">
+                  <q-item-section>Open...</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onSaveQuestion"
+                  :disable="!title || valueSubmited.length !== forms.length"
+                >
+                  <q-item-section>Save Quiz</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+          <q-btn color="primary" label="Action" flat no-caps>
+            <q-menu>
+              <q-list dense style="min-width: 100px">
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openPreview"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Test your question</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickSetupTraining"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Setting this question bank</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickShare"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Share this question</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </q-btn-group>
+      </div>
+    </div>
+    <div class="row q-pt-sm">
       <div class="col q-pr-md">
         <q-input outlined label="Question Bank Title" v-model="title" dense />
       </div>
-      <div class="col-4 text-right">
+      <div class="col-2 text-right">
         <q-btn-group>
           <q-btn
-            color="green"
-            icon="save"
-            @click="onSaveQuestion"
-            :disable="!title || valueSubmited.length !== getFormsOnly.length"
-          >
-            <q-tooltip> Save question bank. </q-tooltip>
-          </q-btn>
-          <q-btn
             color="accent"
-            icon="add"
+            icon="description"
             @click="onClickChooseComponent"
             :disable="!title"
           >
@@ -24,38 +72,11 @@
           </q-btn>
           <q-btn
             color="cyan"
-            icon="add"
+            icon="html"
             @click="onClickChooseHTML"
             :disable="!title"
           >
             <q-tooltip> Add HTML Rows. </q-tooltip>
-          </q-btn>
-          <q-btn color="primary" icon="search" @click="openTraining">
-            <q-tooltip> Find & Edit saved question bank. </q-tooltip>
-          </q-btn>
-          <q-btn
-            color="orange"
-            icon="visibility"
-            @click="openPreview"
-            :disable="!idRef"
-          >
-            <q-tooltip> Test your question bank. </q-tooltip>
-          </q-btn>
-          <q-btn
-            color="red"
-            icon="settings"
-            @click="onClickSetupTraining"
-            :disable="!idRef"
-          >
-            <q-tooltip> Setting this question bank </q-tooltip>
-          </q-btn>
-          <q-btn
-            color="cyan"
-            icon="share"
-            @click="onClickShare"
-            :disable="!idRef"
-          >
-            <q-tooltip> Share this form </q-tooltip>
           </q-btn>
         </q-btn-group>
       </div>
@@ -276,9 +297,9 @@ const getFormsOnly = computed(() =>
 
 const onChooseValue = (val, idx) => {
   console.log([val, idx, val.exp]);
-  // valueSubmited.value[idx] = parseInt(val);
+  valueSubmited.value[idx] = parseInt(val);
   // explainSubmit.value = val.exp;
-  // forms.value[idx].value = val;
+  forms.value[idx].value = val;
 };
 
 const onClickChooseComponent = (idxForm = {}) => {
