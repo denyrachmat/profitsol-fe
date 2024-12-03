@@ -5,7 +5,8 @@
         <q-page-container>
           <q-page id="troublemaker">
             <div class="center q-pa-sm text-center">
-              <q-img src="~assets/sumitronics_OGP.png" />
+              <q-img :src="domain.pd_img" v-if="domain.pd_img" />
+              <q-img :src="'~assets/logo-new.png'" v-else />
               <div class="text-h4">Application Portal</div>
               <div class="text-h6">v2.0.1</div>
               <div class="q-pt-md">

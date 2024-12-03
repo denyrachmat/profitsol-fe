@@ -36,6 +36,7 @@
               </q-btn>
             </div>
           </template>
+
           <!-- For header -->
           <template v-slot:header="props">
             <q-tr :props="props">
@@ -46,32 +47,30 @@
             </q-tr>
           </template>
 
+          <!-- For body with full row progress bar -->
           <template v-slot:body="props">
-            <q-tr :props="props">
+            <q-tr :props="props" class="progress-row">
               <q-td v-for="col in props.cols" :key="col.name" :props="props">
                 {{ col.value }}
               </q-td>
               <q-td auto-width class="text-center">
-                <q-circular-progress
-                  show-value
-                  font-size="12px"
-                  :value="props.row.percent"
-                  size="45px"
-                  :thickness="0.52"
-                  color="teal"
-                  track-color="grey-3"
-                  class="q-ma-md"
-                  v-if="props.row.percent < 100"
-                >
+                <span v-if="props.row.percent < 100">
                   {{ props.row.percent }}%
-                </q-circular-progress>
+                </span>
                 <q-icon
-                  name="done_all"
                   v-else
-                  size="45px"
+                  name="done_all"
+                  size="15px"
                   color="cyan"
                 ></q-icon>
               </q-td>
+              <q-linear-progress
+                :value="props.row.percent / 100"
+                color="primary"
+                track-color="grey-3"
+                height="100%"
+                class="full-row-progress"
+              />
             </q-tr>
           </template>
         </q-table>
@@ -95,6 +94,13 @@ const store = useAuthStore();
 const listData = ref([]);
 const columns = ref([
   {
+    name: "approval_title",
+    label: "Title",
+    field: (row) => row.master.ams_title,
+    sortable: true,
+    align: "left",
+  },
+  {
     name: "approval_keys",
     label: "Keys Value",
     field: (row) => row.dataKey,
@@ -104,7 +110,7 @@ const columns = ref([
   {
     name: "created_at",
     label: "Created Date",
-    field: "created_at",
+    field: (row) => date.formatDate(row.created_at, "D MMM YYYY HH:MM"),
     sortable: true,
     align: "left",
   },
@@ -222,3 +228,23 @@ const onClickFilter = () => {
   });
 };
 </script>
+<style>
+.progress-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.full-row-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.progress-row q-td,
+.progress-row q-th {
+  position: relative;
+  z-index: 2;
+}
+</style>

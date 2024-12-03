@@ -2,9 +2,9 @@
   <q-layout view="lHh Lpr lFf">
     <q-header
       elevated
-      :class="
-        store.choosedDomain ? store.choosedDomain.pd_base_color : 'bg-cyan'
-      "
+      :style="`background-color:${
+        store.choosedDomain ? store.choosedDomain.pd_base_color : 'cyan'
+      }`"
     >
       <q-toolbar>
         <q-btn
@@ -230,9 +230,9 @@
     <q-footer
       reveal
       elevated
-      :class="
-        store.choosedDomain ? store.choosedDomain.pd_base_color : 'bg-cyan'
-      "
+      :style="`background-color:${
+        store.choosedDomain ? store.choosedDomain.pd_base_color : 'cyan'
+      }`"
     >
       <q-toolbar>
         <q-toolbar-title>
@@ -557,6 +557,10 @@ export default defineComponent({
         this.domain = this.options[0];
         this.onSelectStore(this.domain);
       }
+    },
+    onSelectStore(val) {
+      console.log("change domain");
+      this.store.storeDomain(val);
     },
     onClickMoreNotif() {
       this.initPage = this.initPage + 1;

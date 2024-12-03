@@ -61,7 +61,7 @@
                   icon="edit"
                   @click="editData(props.row)"
                 >
-                  <q-tooltip> Delete </q-tooltip>
+                  <q-tooltip> Edit Domain </q-tooltip>
                 </q-btn>
                 <q-btn
                   color="red"
@@ -71,6 +71,18 @@
                   @click="deleteData(props.row.id)"
                 >
                   <q-tooltip> Delete </q-tooltip>
+                </q-btn>
+                <q-btn
+                  :color="getStatusDB(props.row.checkCoreDB).colors"
+                  flat
+                  dense
+                  icon="download_done"
+                  @click="installData(props.row.id)"
+                  :disable="getStatusDB(props.row.checkCoreDB).status"
+                >
+                  <q-tooltip>
+                    {{ getStatusDB(props.row.checkCoreDB).message }}
+                  </q-tooltip>
                 </q-btn>
               </q-td>
             </q-tr>
@@ -82,7 +94,7 @@
 </template>
 <script setup>
 import { onMounted, ref } from "vue";
-import { date, useDialogPluginComponent, useQuasar } from "quasar";
+import { colors, date, useDialogPluginComponent, useQuasar } from "quasar";
 import { api } from "src/boot/axios";
 import dataFilter from "./dataFilter.vue";
 import { useRoute } from "vue-router";
@@ -123,6 +135,26 @@ const filter = ref([]);
 onMounted(() => {
   getData();
 });
+
+const getStatusDB = (data) => {
+  let checkFailedDB = data.filter((fil) => !fil.status);
+
+  return {
+    colors:
+      checkFailedDB.length > data.length
+        ? "orange"
+        : checkFailedDB.length === 0
+        ? "grey"
+        : "red",
+    status: checkFailedDB.length === 0,
+    message:
+      checkFailedDB.length > data.length
+        ? "Some Core DB not created yet"
+        : checkFailedDB.length === 0
+        ? "All Core DB Already created"
+        : "All Core DB not created yet",
+  };
+};
 
 const onClickAdd = () => {
   $q.dialog({
@@ -172,7 +204,7 @@ const onClickFilter = () => {
       filtered: filter.value,
     },
   }).onOk(async (val) => {
-    // console.log(val)
+    console.log(val);
     filter.value = val;
     getData();
   });
@@ -186,7 +218,23 @@ const editData = (val) => {
     },
     // persistent: true,
   }).onOk(async (val) => {
-    getData();
+    console.log(val);
+
+    let hasil = await postData(
+      "put",
+      val,
+      `domain/${val.id}`,
+      false,
+      true,
+      false,
+      null,
+      false,
+      true
+    );
+
+    if (hasil) {
+      getData();
+    }
   });
 };
 

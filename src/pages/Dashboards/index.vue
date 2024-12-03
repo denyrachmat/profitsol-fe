@@ -101,8 +101,9 @@
                   </div>
                 </div>
                 <div
-                  style="overflow: scroll; max-height: 55vh"
+                  style="overflow: scroll"
                   :key="keyMeeting"
+                  class="full-height"
                 >
                   <event-list
                     :events="mainEvent"
@@ -164,7 +165,7 @@
                     />
                   </div>
                 </div>
-                <div style="overflow: scroll; max-height: 55vh">
+                <div style="overflow: scroll" class="full-height">
                   <informationList
                     @info-view="(val) => onViewInformation(val)"
                     :key="keyInfo"

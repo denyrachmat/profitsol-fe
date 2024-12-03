@@ -215,14 +215,11 @@ const onSubmitData = () => {
       },
       `cms/storeAnswers`,
       false,
-      false,
+      true,
       true
     );
 
     if (data) {
-      console.log(props.id);
-      console.log(getUserAnswers.value);
-      console.log(data);
       store.restoreDefault();
     }
   });
