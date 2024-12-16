@@ -171,15 +171,27 @@ const getData = async (mode) => {
       : `ams/getMasterApprovalByToken/${route.params.token}/${route.params.tokenHist}`,
     false,
     false,
+    true,
+    null,
+    false,
+    false,
     true
   );
 
-  if (data) {
+  if (data.status) {
     loading.value = false;
     datas.value = data.data;
   } else {
-    router.push(route.fullPath + "/disp");
-    getData(1);
+    if (
+      data.message.includes("Token not found") &&
+      !route.fullPath.includes("/disp")
+    ) {
+      router.push(route.fullPath.concat("/disp"));
+      getData(1);
+    } else {
+      loading.value = false;
+      datas.value = false;
+    }
   }
 };
 

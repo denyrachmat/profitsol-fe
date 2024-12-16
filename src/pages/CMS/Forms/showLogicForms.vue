@@ -217,64 +217,6 @@ const oprEvent = ref([
     value: "onSubmit",
   },
 ]);
-// const oprOpt = ref([
-//   {
-//     label: "Equal",
-//     value: "===",
-//   },
-//   {
-//     label: "Not Equal",
-//     value: "!==",
-//   },
-//   {
-//     label: "Contains",
-//     value: "like",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-//   {
-//     label: "Not Contains",
-//     value: "not_like",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-//   {
-//     label: "Greater Than",
-//     value: ">",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-//   {
-//     label: "Greater Than Equals",
-//     value: ">=",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-//   {
-//     label: "Less Than",
-//     value: "<",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-//   {
-//     label: "Less Than Equals",
-//     value: "<=",
-//     disable:
-//       props.forms.filter((fil) => fil.seq_name == selPage.value)[0].content[
-//         selCols.value
-//       ].content.component.category === "multiple",
-//   },
-// ]);
 const oprOptCont = ref([
   {
     label: "Then",
@@ -329,6 +271,10 @@ const resultOpt = ref([
   {
     label: "Show Alert",
     value: "alert",
+  },
+  {
+    label: "API (JSON) Access",
+    value: "api",
   },
 ]);
 

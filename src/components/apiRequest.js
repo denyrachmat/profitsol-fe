@@ -19,7 +19,8 @@ const apiRequest = () => {
     auth = false,
     isApi = null,
     isMSToken = false,
-    isNotifySuccess = false
+    isNotifySuccess = false,
+    isReturnErrorData = false
   ) => {
     // Jika menggunakan loading
     if (loading) {
@@ -120,31 +121,6 @@ const apiRequest = () => {
                 });
               }
             }
-            // else {
-            //   if (blob) {
-            //     var decodedString = String.fromCharCode.apply(
-            //       null,
-            //       new Uint8Array(e.response.data)
-            //     );
-
-            //     $q.notify({
-            //       color: "negative",
-            //       message: decodedString,
-            //     });
-            //   } else {
-            //     if (e.response.data && e.response.data.message) {
-            //       $q.notify({
-            //         color: "red",
-            //         message: e.response.data.message,
-            //       });
-            //     } else {
-            //       $q.notify({
-            //         color: "negative",
-            //         message: "Undefined error!!",
-            //       });
-            //     }
-            //   }
-            // }
           }
 
           if (e.response.status == 401) {
@@ -168,6 +144,10 @@ const apiRequest = () => {
               message: e.response.data.message,
               timeout: 10000,
             });
+          }
+
+          if (isReturnErrorData) {
+            return e.response.data;
           }
 
           // return e.response;
