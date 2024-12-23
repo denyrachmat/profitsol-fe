@@ -60,10 +60,6 @@
       "
     >
       <legend>Create forms here</legend>
-
-      {{ logicsFields }}
-
-      {{ formEvents }}
       <template v-if="forms.length > 0">
         <template v-for="(form, idxForm) in forms" :key="idxForm">
           <div class="row q-pt-md">

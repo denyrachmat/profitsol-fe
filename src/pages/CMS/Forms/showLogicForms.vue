@@ -26,153 +26,161 @@
             <div
               v-for="(val, idx) in listTriggers"
               :key="idx"
-              :class="idx === 0 ? 'q-pt-md' : null"
+              :class="`row ${idx === 0 ? 'q-pt-md' : null}`"
             >
-              <fieldset
-                style="
-                  border: 1px solid #ccc !important;
-                  border-radius: 16px;
-                  max-height: 80vh;
-                  overflow: auto;
-                "
-              >
-                <legend>Create Event here</legend>
-                <div class="row q-pt-md">
-                  <div class="col">
-                    <q-select
-                      v-model="val.eventForms"
-                      :options="oprEvent"
-                      label="Event"
-                      dense
-                      outlined
-                      emit-value
-                      map-options
-                    >
-                    </q-select>
-                  </div>
-                  <div class="col-1 text-right">
-                    <q-btn
-                      flat
-                      icon="add"
-                      color="green"
-                      @click="onAddResultEvent(idx)"
-                    >
-                      <q-tooltip>Add more event</q-tooltip>
-                    </q-btn>
-                  </div>
-                </div>
-                <div
-                  class="row q-pt-md"
-                  v-for="(resDet, idxDet) in val.result"
-                  :key="idxDet"
+              <div class="col-11">
+                <fieldset
+                  style="
+                    border: 1px solid #ccc !important;
+                    border-radius: 16px;
+                    max-height: 80vh;
+                    overflow: auto;
+                  "
                 >
-                  <div class="col">
-                    <q-select
-                      v-model="resDet.trigger"
-                      :options="resultOpt"
-                      label="Choose Event"
-                      dense
-                      outlined
-                      emit-value
-                      map-options
-                    >
-                    </q-select>
+                  <legend>Create Event here</legend>
+                  <div class="row q-pt-md">
+                    <div class="col">
+                      <q-select
+                        v-model="val.eventForms"
+                        :options="oprEvent"
+                        label="Event"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                      >
+                      </q-select>
+                    </div>
+                    <div class="col-1 text-right">
+                      <q-btn
+                        flat
+                        icon="add"
+                        color="green"
+                        @click="onAddResultEvent(idx)"
+                      >
+                        <q-tooltip>Add more event</q-tooltip>
+                      </q-btn>
+                    </div>
                   </div>
-
-                  <div class="col q-pl-md" v-if="resDet.trigger == 'jump_page'">
-                    <q-select
-                      v-model="resDet.message"
-                      :options="getAllPages"
-                      label="Choose Page Label"
-                      dense
-                      outlined
-                      emit-value
-                      map-options
-                    >
-                    </q-select>
-                  </div>
-
                   <div
-                    class="col q-pl-md"
-                    v-if="
-                      resDet.trigger == 'show_cols' ||
-                      resDet.trigger == 'hide_cols' ||
-                      resDet.trigger == 'show_rows' ||
-                      resDet.trigger == 'hide_rows' ||
-                      resDet.trigger == 'disabled' ||
-                      resDet.trigger == 'enabled'
-                    "
+                    class="row q-pt-md"
+                    v-for="(resDet, idxDet) in val.result"
+                    :key="idxDet"
                   >
-                    <q-select
-                      v-model="resDet.rows"
-                      :options="getAllRows"
-                      label="Choose Rows"
-                      dense
-                      outlined
-                      emit-value
-                      map-options
-                    >
-                    </q-select>
-                  </div>
+                    <div class="col">
+                      <q-select
+                        v-model="resDet.trigger"
+                        :options="resultOpt"
+                        label="Choose Event"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                      >
+                      </q-select>
+                    </div>
 
-                  <div
-                    class="col q-pl-md"
-                    v-if="
-                      resDet.rows !== '' &&
-                      (resDet.trigger == 'show_cols' ||
+                    <div
+                      class="col q-pl-md"
+                      v-if="resDet.trigger == 'jump_page'"
+                    >
+                      <q-select
+                        v-model="resDet.message"
+                        :options="getAllPages"
+                        label="Choose Page Label"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                      >
+                      </q-select>
+                    </div>
+
+                    <div
+                      class="col q-pl-md"
+                      v-if="
+                        resDet.trigger == 'show_cols' ||
                         resDet.trigger == 'hide_cols' ||
+                        resDet.trigger == 'show_rows' ||
+                        resDet.trigger == 'hide_rows' ||
                         resDet.trigger == 'disabled' ||
-                        resDet.trigger == 'enabled')
-                    "
-                  >
-                    <q-select
-                      v-model="resDet.cols"
-                      :options="getNowFields(resDet.rows)"
-                      label="Choose Columns"
-                      dense
-                      outlined
-                      emit-value
-                      map-options
+                        resDet.trigger == 'enabled'
+                      "
                     >
-                    </q-select>
-                  </div>
+                      <q-select
+                        v-model="resDet.rows"
+                        :options="getAllRows"
+                        label="Choose Rows"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                      >
+                      </q-select>
+                    </div>
 
-                  <div class="col q-pl-md" v-if="resDet.trigger == 'notif'">
-                    <q-select
-                      v-model="resDet.event"
-                      :options="notifOpt"
-                      label="Notif Type Choose"
-                      dense
-                      outlined
+                    <div
+                      class="col q-pl-md"
+                      v-if="
+                        resDet.rows !== '' &&
+                        (resDet.trigger == 'show_cols' ||
+                          resDet.trigger == 'hide_cols' ||
+                          resDet.trigger == 'disabled' ||
+                          resDet.trigger == 'enabled')
+                      "
                     >
-                    </q-select>
-                  </div>
+                      <q-select
+                        v-model="resDet.cols"
+                        :options="getNowFields(resDet.rows)"
+                        label="Choose Columns"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                      >
+                      </q-select>
+                    </div>
 
-                  <div
-                    class="col q-pl-md"
-                    v-if="
-                      resDet.trigger === 'alert' ||
-                      (resDet.trigger == 'notif' && resDet.event)
-                    "
-                  >
-                    <q-input
-                      dense
-                      outlined
-                      label="Message"
-                      v-model="resDet.message"
-                    />
-                  </div>
+                    <div class="col q-pl-md" v-if="resDet.trigger == 'notif'">
+                      <q-select
+                        v-model="resDet.event"
+                        :options="notifOpt"
+                        label="Notif Type Choose"
+                        dense
+                        outlined
+                      >
+                      </q-select>
+                    </div>
 
-                  <div class="col-1 text-right" v-if="idxDet > 0">
-                    <q-btn
-                      icon="delete"
-                      color="red"
-                      flat
-                      @click="val.result.splice(idxDet, 1)"
-                    />
+                    <div
+                      class="col q-pl-md"
+                      v-if="
+                        resDet.trigger === 'alert' ||
+                        (resDet.trigger == 'notif' && resDet.event)
+                      "
+                    >
+                      <q-input
+                        dense
+                        outlined
+                        label="Message"
+                        v-model="resDet.message"
+                      />
+                    </div>
+
+                    <div class="col-1 text-right" v-if="idxDet > 0">
+                      <q-btn
+                        icon="delete"
+                        color="red"
+                        flat
+                        @click="val.result.splice(idxDet, 1)"
+                      />
+                    </div>
                   </div>
-                </div>
-              </fieldset>
+                </fieldset>
+              </div>
+              <div class="col-1">
+                <q-btn spread color="red" icon="delete" />
+              </div>
             </div>
           </div>
         </div>
