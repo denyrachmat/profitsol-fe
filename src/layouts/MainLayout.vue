@@ -38,7 +38,7 @@
           </q-select>
         </q-toolbar-title>
 
-        <div>Portal Application v2.0.0</div>
+        <div>Portal Application v2.1.1</div>
 
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>

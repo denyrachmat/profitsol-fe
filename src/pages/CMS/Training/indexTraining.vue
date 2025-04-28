@@ -257,6 +257,8 @@ const setupTrainingSetup = ref({
   defaultNumberOfChoice: "1",
   showResult: true,
   randomizeQuestion: true,
+  maxQuestionCount: 1,
+  skipNextButtonMedia: false,
   showRightKeysAnswer: true,
   showRightKeysAnswerLocation: "end",
   setUpTimer: false,
@@ -297,7 +299,7 @@ const getFormsOnly = computed(() =>
 
 const onChooseValue = (val, idx) => {
   console.log([val, idx, val.exp]);
-  valueSubmited.value[idx] = parseInt(val);
+  valueSubmited.value[idx] = Array.isArray(val) ? val : parseInt(val);
   // explainSubmit.value = val.exp;
   forms.value[idx].value = val;
 };
@@ -339,22 +341,12 @@ const onClickChooseHTML = (idxForm = {}) => {
     componentProps: {
       comp: forms.value[idxForm] ? forms.value[idxForm].content : "",
     },
-    // componentProps: {
-    //   currComponent:
-    //     forms.value[idxForm] && forms.value[idxForm].content
-    //       ? {
-    //           content: {
-    //             ...forms.value[idxForm].content,
-    //             multipleOnly: true,
-    //           },
-    //         }
-    //       : initChoice.value,
-    // },
   }).onOk(async (val) => {
-    console.log(val);
+    // console.log(val);
     if (forms.value[idxForm]) {
       forms.value[idxForm] = val;
     } else {
+      // console.log(val);
       forms.value.push(val);
     }
   });
@@ -451,6 +443,7 @@ const openTraining = () => {
       type: "quiz",
     },
   }).onOk(async (val) => {
+    console.log(val.forms);
     setupTrainingSetup.value = null;
     idRef.value = val.id;
     title.value = val.title;

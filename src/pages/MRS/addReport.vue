@@ -30,8 +30,8 @@
         title="Select Database"
         icon="storage"
         :done="step > 2"
-        style="max-height: 70vh; overflow: auto"
         :disable="choosedConnection"
+        style="max-height: 80vh; overflow: auto"
       >
         <div class="text-center full-width full-height" v-if="loading">
           <q-spinner-grid color="primary" size="5em" />
@@ -39,23 +39,42 @@
           <br />
           <span>Generating list</span>
         </div>
-        <q-list bordered dense separator v-else>
-          <q-item
-            clickable
-            v-ripple
-            v-for="(db, idx) in listDB"
-            :key="idx"
-            @click="onChooseDB(db)"
-            :active="db == choosedDB"
-            active-class="my-menu-link"
-          >
-            <q-item-section avatar>
-              <q-icon color="primary" name="storage" />
-            </q-item-section>
+        <template v-else>
+          <div class="row">
+            <div class="col">
+              <q-input
+                filled
+                dense
+                v-model="searchQuery"
+                label="Search Database"
+                @update:model-value="onSearchDB"
+                debounce="300"
+                clearable
+              />
+            </div>
+          </div>
+          <div class="row q-pt-sm">
+            <div class="col" style="max-height: 70vh; overflow: auto">
+              <q-list bordered dense separator>
+                <q-item
+                  clickable
+                  v-ripple
+                  v-for="(db, idx) in listDB"
+                  :key="idx"
+                  @click="onChooseDB(db)"
+                  :active="db == choosedDB"
+                  active-class="my-menu-link"
+                >
+                  <q-item-section avatar>
+                    <q-icon color="primary" name="storage" />
+                  </q-item-section>
 
-            <q-item-section>{{ db }}</q-item-section>
-          </q-item>
-        </q-list>
+                  <q-item-section>{{ db }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </div>
+        </template>
       </q-step>
 
       <q-step
@@ -391,6 +410,7 @@ const listCols = ref([]);
 const listParams = ref([]);
 const listParamsConverted = ref([]);
 const reportTitle = ref("");
+const searchQuery = ref("");
 
 const loading = ref(false);
 const validQuery = ref(false);
@@ -602,7 +622,7 @@ const onClickRunning = () => {
       true
     );
 
-    if (data.status) {
+    if (data && data.status) {
       loading.value = false;
       if (data.cols) {
         validQuery.value = true;
@@ -671,6 +691,18 @@ const onManageField = (data) => {
       data: data,
     },
   }).onOk(async () => {});
+};
+
+const onSearchDB = (val) => {
+  console.log(val);
+  if (val) {
+    listDB.value = listDB.value.filter((db) =>
+      db.toLowerCase().includes(val.toLowerCase())
+    );
+  } else {
+    onChooseConn(choosedConnection.value);
+    // getListTables(choosedConnection.value);
+  }
 };
 </script>
 <style lang="sass">

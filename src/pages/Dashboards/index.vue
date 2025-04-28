@@ -1,10 +1,189 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <div class="q-pa-sm">
-    <div class="row q-py-sm">
+    <!-- <div class="row q-py-sm">
       <div class="col-12 col-sm-3 q-pa-sm">
         <q-card class="my-card" v-if="store.getDetail">
           <q-img src="~assets/sumitronics_OGP.png" height="35vh">
+            <div class="text-center full-width full-height">
+              <q-avatar
+                size="150px"
+                style="margin: 0 auto; top: 20%"
+                v-if="
+                  store.getDetail.user_det && store.getDetail.user_det.pud_photo
+                "
+              >
+                <img
+                  :src="store.getDetail.user_det.pud_photo"
+                  style="object-fit: cover"
+                />
+              </q-avatar>
+              <q-avatar
+                v-else
+                size="150px"
+                style="margin: 0 auto; top: 20%"
+                color="teal"
+                text-color="white"
+                icon="account_circle"
+                font-size="150px"
+              />
+            </div>
+          </q-img>
+
+          <q-card-section>
+            <q-btn
+              fab
+              color="primary"
+              icon="place"
+              class="absolute"
+              style="top: 0; right: 12px; transform: translateY(-50%)"
+            />
+
+            <div class="row no-wrap items-center">
+              <div class="col text-h6 ellipsis">
+                {{
+                  store.authDet && store.getDetail.user_det
+                    ? store.getDetail.user_det.pud_first_name
+                    : ""
+                }}
+                {{
+                  store.authDet && store.getDetail.user_det
+                    ? store.getDetail.user_det.pud_last_name
+                    : ""
+                }}
+              </div>
+              <div
+                class="col-auto text-grey text-caption q-pt-md row no-wrap items-center"
+              >
+                <q-icon name="place" />
+                250 ft
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <div class="text-subtitle1">
+              {{
+                store.getChoosedRole && store.getChoosedRole.role.rm_role_desc
+              }}
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions>
+            <q-btn flat round icon="event" />
+            <q-btn flat color="primary" to="/profiles"> Edit Profile </q-btn>
+          </q-card-actions>
+        </q-card>
+      </div>
+      <div class="col-12 col-sm-9 q-pa-sm">
+        <div class="row full-height">
+          <div class="col q-py-md">
+            <div class="full-height row">
+              <div class="col-12 col-md-6 bg-grey-3">
+                <div class="text-center">
+                  <div class="row q-px-md bg-grey-3">
+                    <div class="col text-left">
+                      <strong class="text-h5 text-bold"
+                        >Meeting Schedule</strong
+                      >
+                    </div>
+                    <div class="col text-right">
+                      <q-btn
+                        icon="refresh"
+                        color="cyan"
+                        @click="getMSUserDetail()"
+                        flat
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="overflow: scroll"
+                  :key="keyMeeting"
+                  class="full-height bg-grey-3"
+                >
+                  <event-list
+                    :events="mainEvent"
+                    v-if="Object.values(store.msLoginDet).length > 0"
+                  />
+                  <div v-else class="text-center q-pa-md" style="height: 20em">
+                    <q-btn
+                      icon="ion-logo-windows"
+                      label=" Login with Microsoft"
+                      @click="SignInMs"
+                      color="blue-5"
+                      outline
+                    ></q-btn>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 q-pl-sm">
+                <div class="row q-px-md bg-grey-3">
+                  <div class="col-4">
+                    <strong class="text-h5 text-bold">Information</strong>
+                  </div>
+                  <div class="col text-right">
+                    <q-btn-toggle
+                      v-model="toggleAutoRefreshInfo"
+                      toggle-color="primary"
+                      class="q-ml-md"
+                      :options="[
+                        { value: 1, slot: 'one' },
+                        { value: 0, slot: 'two' },
+                      ]"
+                      flat
+                      dense
+                    >
+                      <template v-slot:one>
+                        <div class="row items-center no-wrap">
+                          <q-icon right name="replay_10">
+                            <q-tooltip>
+                              Auto refreshed for 10 seconds
+                            </q-tooltip>
+                          </q-icon>
+                        </div>
+                      </template>
+                      <template v-slot:two>
+                        <div class="row items-center no-wrap">
+                          <q-icon right name="sync_disabled">
+                            <q-tooltip>
+                              Disable auto refresh / Manual refresh mode
+                            </q-tooltip>
+                          </q-icon>
+                        </div>
+                      </template>
+                    </q-btn-toggle>
+                    <q-btn
+                      icon="refresh"
+                      color="cyan"
+                      @click="keyInfo = keyInfo + 1"
+                      flat
+                      :disable="toggleAutoRefreshInfo === 1"
+                    />
+                  </div>
+                </div>
+                <div
+                  style="overflow-y: auto; overflow-x: hidden; height: 100%"
+                  class="full-height bg-grey-3"
+                >
+                  <informationList
+                    @info-view="(val) => onViewInformation(val)"
+                    :key="keyInfo"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> -->
+
+    <div class="row">
+      <div class="col-12 col-md-4 q-pa-sm">
+        <q-card class="my-card" v-if="store.getDetail">
+          <q-img src="~assets/sumitronics_OGP.png" height="36vh">
             <div class="text-center full-width full-height">
               <q-avatar
                 size="150px"
@@ -78,103 +257,39 @@
           </q-card-actions>
         </q-card>
       </div>
-      <div class="col-12 col-sm-9 q-pa-sm">
-        <div class="row bg-grey-3 full-height">
-          <div class="col q-py-md">
-            <div class="full-height row">
-              <div class="col-12 col-md-6">
-                <div class="text-center">
-                  <div class="row q-px-md">
-                    <div class="col text-left">
-                      <strong class="text-h5 text-bold"
-                        >Meeting Schedule</strong
-                      >
-                    </div>
-                    <div class="col text-right">
-                      <q-btn
-                        icon="refresh"
-                        color="cyan"
-                        @click="getMSUserDetail()"
-                        flat
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div
-                  style="overflow: scroll"
-                  :key="keyMeeting"
-                  class="full-height"
-                >
-                  <event-list
-                    :events="mainEvent"
-                    v-if="Object.values(store.msLoginDet).length > 0"
-                  />
-                  <div v-else class="text-center q-pa-md" style="height: 20em">
-                    <q-btn
-                      icon="ion-logo-windows"
-                      label=" Login with Microsoft"
-                      @click="SignInMs"
-                      color="blue-5"
-                      outline
-                    ></q-btn>
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6 q-pl-sm">
-                <div class="row q-px-md">
-                  <div class="col-4">
-                    <strong class="text-h5 text-bold">Information</strong>
-                  </div>
-                  <div class="col text-right">
-                    <q-btn-toggle
-                      v-model="toggleAutoRefreshInfo"
-                      toggle-color="primary"
-                      class="q-ml-md"
-                      :options="[
-                        { value: 1, slot: 'one' },
-                        { value: 0, slot: 'two' },
-                      ]"
-                      flat
-                      dense
-                    >
-                      <template v-slot:one>
-                        <div class="row items-center no-wrap">
-                          <q-icon right name="replay_10">
-                            <q-tooltip>
-                              Auto refreshed for 10 seconds
-                            </q-tooltip>
-                          </q-icon>
-                        </div>
-                      </template>
-                      <template v-slot:two>
-                        <div class="row items-center no-wrap">
-                          <q-icon right name="sync_disabled">
-                            <q-tooltip>
-                              Disable auto refresh / Manual refresh mode
-                            </q-tooltip>
-                          </q-icon>
-                        </div>
-                      </template>
-                    </q-btn-toggle>
-                    <q-btn
-                      icon="refresh"
-                      color="cyan"
-                      @click="keyInfo = keyInfo + 1"
-                      flat
-                      :disable="toggleAutoRefreshInfo === 1"
-                    />
-                  </div>
-                </div>
-                <div style="overflow: scroll" class="full-height">
-                  <informationList
-                    @info-view="(val) => onViewInformation(val)"
-                    :key="keyInfo"
-                  />
-                </div>
-              </div>
+      <div class="col-12 col-md-4 q-pa-sm">
+        <q-card class="bg-grey">
+          <q-card-section class="bg-white text-h5 text-bold text-center">
+            Meeting Schedule
+          </q-card-section>
+          <q-card-section style="overflow-x: auto; height: 50vh">
+            <event-list
+              :events="mainEvent"
+              v-if="Object.values(store.msLoginDet).length > 0"
+            />
+            <div v-else class="text-center q-pa-md" style="height: 20em">
+              <q-btn
+                icon="ion-logo-windows"
+                label=" Login with Microsoft"
+                @click="SignInMs"
+                color="blue-5"
+              ></q-btn>
             </div>
-          </div>
-        </div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-4 q-pa-sm">
+        <q-card class="bg-grey">
+          <q-card-section class="bg-white text-h5 text-bold text-center">
+            Information
+          </q-card-section>
+          <q-card-section style="overflow-x: auto; height: 50vh">
+            <informationList
+              @info-view="(val) => onViewInformation(val)"
+              :key="keyInfo"
+            />
+          </q-card-section>
+        </q-card>
       </div>
     </div>
 

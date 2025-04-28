@@ -17,15 +17,14 @@
           <div class="row">
             <div class="col-3 text-bold self-center">
               Question {{ nowSeq + 1 }} of
-              {{ datanya.filter((val) => val.type === "form").length }}
+              {{ datanya.length }}
             </div>
             <div class="col">
               <div class="row">
                 <div
                   :class="`col-1 q-px-sm`"
                   style="height: 20px; width: 20px"
-                  v-for="idx in datanya.filter((val) => val.type === 'form')
-                    .length"
+                  v-for="idx in datanya.length"
                   :key="idx"
                 >
                   <div
@@ -80,7 +79,7 @@
           style="border-radius: 10px; padding: 15px"
           class="bg-white q-pt-sm"
         >
-          <div style="overflow: auto; max-height: 30vh">
+          <div style="overflow: auto; max-height: 70vh">
             <div
               class="row"
               v-for="(htmlCont, idxhtm) in checkAnySameHTML"
@@ -90,14 +89,21 @@
                 class="col bg-white"
                 style="border-radius: 10px; padding: 15px"
               >
-                <div v-html="htmlCont.content"></div>
+                <div
+                  :ref="(el) => setVideoContainerRef(el, idxhtm)"
+                  v-html="htmlCont.content"
+                ></div>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div class="row q-pt-md" v-if="getNowQuestion">
-        <div class="col bg-white" style="border-radius: 10px">
+        <div
+          class="col bg-white"
+          style="border-radius: 10px"
+          v-if="getNowQuestion.type === 'form'"
+        >
           <componentViewVue
             :type="getNowQuestion.content.component.category"
             :type-input="getNowQuestion.content.component.value.type"
@@ -122,7 +128,7 @@
           />
         </div>
       </div>
-      <div class="row q-pt-md">
+      <div class="absolute-bottom">
         <div class="col bg-white q-pa-md" style="border-radius: 10px">
           <q-btn-group spread>
             <q-btn
@@ -130,21 +136,25 @@
               label="Previous"
               :disable="nowSeq === 0"
               @click="onClickPrev()"
+              :loading="loading"
             />
             <q-btn
               color="green"
-              :label="
-                nowSeq ===
-                datanya.filter((val) => val.type === 'form').length - 1
-                  ? 'Submit'
-                  : 'Next'
-              "
+              :label="nowSeq === datanya.length - 1 ? 'Submit' : 'Next'"
               @click="
-                nowSeq ===
-                datanya.filter((val) => val.type === 'form').length - 1
+                nowSeq === datanya.length - 1
                   ? onClickSubmit(props.idDet)
                   : onClickNext()
               "
+              :disable="
+                getNowQuestion &&
+                getNowQuestion.type === 'html' &&
+                props.setup.skipNextButtonMedia &&
+                !videoEnded
+                  ? true
+                  : false
+              "
+              :loading="loading"
             />
           </q-btn-group>
         </div>
@@ -153,7 +163,7 @@
   </div>
 </template>
 <script setup>
-import { ref, defineProps, onMounted, computed, watch } from "vue";
+import { ref, defineProps, onMounted, computed, watch, nextTick } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
@@ -182,9 +192,20 @@ const props = defineProps({
 });
 
 const doneSubmiting = ref(0);
+const videoContainer = ref(null); // Reference to the container holding the video
+const videoContainers = ref([]);
+const videoEnded = ref(false); // State to track if the video has ended
+const loading = ref(false);
+
+const setVideoContainerRef = (el, index) => {
+  if (el) {
+    videoContainers.value[index] = el; // Store the ref in the array
+  }
+};
 
 onMounted(() => {
-  console.log(store.timeData);
+  console.log(props);
+  // console.log(store.timeData);
   if (
     props.setup &&
     props.setup.setUpTimer
@@ -211,13 +232,47 @@ onMounted(() => {
         props.data.filter((val) => val.type === "form"),
         true
       );
-      datanya.value = dataShuf[0];
+
+      const dataHtml = props.data.filter((val) => val.type === "html");
+      let shuffledData = [];
+      if (props.setup.randomizeQuestion && props.setup.maxQuestionCount > 0) {
+        shuffledData = dataShuf[0].slice(0, props.setup.maxQuestionCount);
+      }
+      datanya.value = [...dataHtml, ...shuffledData];
+      console.log(datanya.value);
       listQuestShuff.value = dataShuf[1];
     } else {
       datanya.value = props.data.filter((val) => val.type === "form");
     }
   }
+
+  if (props.setup.skipNextButtonMedia) {
+    triggerFindVideo();
+  }
 });
+
+const triggerFindVideo = () => {
+  setTimeout(() => {
+    console.log(videoContainers.value);
+    videoContainers.value.forEach((container, index) => {
+      console.log(container);
+      if (container) {
+        const videoElement = container.querySelector("video");
+        console.log(videoElement);
+        if (videoElement) {
+          // Attach the "ended" event listener
+          videoElement.addEventListener("ended", () => {
+            console.log(`Video ${index} done`);
+            videoEnded.value = true; // Update state when the video ends
+          });
+        } else {
+          console.error(`Video element not found in container ${index}.`);
+          videoEnded.value = true;
+        }
+      }
+    });
+  }, 3000);
+};
 
 const shuffle = (array, idxOnly = false) => {
   let currentIndex = array.length,
@@ -248,6 +303,8 @@ const shuffle = (array, idxOnly = false) => {
 };
 
 const getNowQuestion = computed(() => {
+  console.log(datanya.value);
+  console.log(nowSeq.value);
   return datanya.value[nowSeq.value];
 });
 
@@ -291,7 +348,25 @@ const checkAnySameHTML = computed(() => {
 
 const onClickNext = async () => {
   if (props.setup.showRightKeysAnswerLocation === "end") {
-    nowSeq.value = nowSeq.value + 1;
+    if (datanya.value[nowSeq.value].type === "html") {
+      getAnswers("html");
+    }
+
+    const getAnsw = getUserAnswers.value[nowSeq.value];
+    if (!getAnsw) {
+      $q.dialog({
+        title: "Confirm",
+        message:
+          "You're not answering this question, make sure answers before submiting.",
+        cancel: true,
+        persistent: true,
+      }).onOk(async () => {
+        getAnswers(null);
+        nowSeq.value = nowSeq.value + 1;
+      });
+    } else {
+      nowSeq.value = nowSeq.value + 1;
+    }
   } else {
     console.log(props.idDet[nowSeq.value]);
     const submiter = await onClickSubmit([props.idDet[nowSeq.value]]);
@@ -300,6 +375,9 @@ const onClickNext = async () => {
     }
     // nowSeq.value = nowSeq.value + 1;
   }
+
+  videoEnded.value = false;
+  triggerFindVideo();
 };
 
 const onClickPrev = () => {
@@ -331,11 +409,15 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
   // });
   if (passConfirm) {
     store.setFinishQuizState = true;
+
+    const dataAnswers = [...getUserAnswers.value];
+    console.log(dataAnswers);
+    loading.value = true;
     const data = await postData(
       "post",
       {
         id: props.id,
-        ans: getUserAnswers.value,
+        ans: dataAnswers,
         questId: idList,
       },
       `cms/quiz`,
@@ -369,6 +451,8 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
       if (props.setup.showRightKeysAnswerLocation === "question") {
         return data;
       }
+
+      loading.value = false;
     }
   } else {
     $q.dialog({
@@ -378,11 +462,16 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
       persistent: true,
     }).onOk(async () => {
       console.log(dataOri.value);
+      loading.value = true;
+
+      let dataAnswers = [...getUserAnswers.value];
+      dataAnswers = dataAnswers.filter((fil) => fil !== "html");
+
       const data = await postData(
         "post",
         {
           id: props.id,
-          ans: getUserAnswers.value,
+          ans: dataAnswers,
           questId: idList,
         },
         `cms/quiz`,
@@ -392,6 +481,7 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
       );
 
       if (data) {
+        loading.value = false;
         if (data.status) {
           store.finishQuizImmediatelly();
           $q.notify({

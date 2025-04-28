@@ -79,6 +79,7 @@ const tableRef = ref(null);
 const filter = ref([]);
 const idNya = ref("");
 const propsReports = ref("");
+const isFilterFirst = ref(false);
 
 onMounted(async () => {
   if (route.params.idReport) {
@@ -90,8 +91,14 @@ onMounted(async () => {
   const colsnya = await getCols(idNya.value);
 
   if (colsnya) {
-    if (propsReports.value !== "sp") {
-      tableRef.value.requestServerInteraction();
+    if (isFilterFirst.value) {
+      filterDatas();
+    } else {
+      if (propsReports.value !== "sp") {
+        tableRef.value.requestServerInteraction();
+      } else {
+        filterDatas();
+      }
     }
   }
 });
@@ -114,6 +121,7 @@ const getCols = async (id) => {
     loading.value = false;
     columns.value = checkDatanya.data.cols;
     propsReports.value = checkDatanya.data.props;
+    isFilterFirst.value = checkDatanya.data.filterFirst;
 
     if (checkDatanya.data.props === "sp") {
       columnFilter.value = checkDatanya.data.colsParam;
@@ -143,7 +151,7 @@ const onRequest = async (propsTab) => {
     true
   );
 
-  if (checkDatanya.status === true) {
+  if (checkDatanya && checkDatanya.status === true) {
     loading.value = false;
 
     rows.value = checkDatanya.data.data;
@@ -153,6 +161,11 @@ const onRequest = async (propsTab) => {
     pagination.value.rowsPerPage = checkDatanya.data.rowsPerPage;
   } else {
     loading.value = false;
+    $q.notify({
+      color: "negative",
+      message: "Failed to load data",
+      icon: "warning",
+    });
   }
 };
 
@@ -165,8 +178,13 @@ const filterDatas = () => {
       propsReports: propsReports.value,
     },
   }).onOk(async (val) => {
-    filter.value = val;
-    tableRef.value.requestServerInteraction();
+    filter.value = val.data;
+
+    if (val.type === "download") {
+      onExportExcel(true);
+    } else {
+      tableRef.value.requestServerInteraction();
+    }
   });
 };
 
@@ -182,13 +200,36 @@ const onRefresh = () => {
   tableRef.value.requestServerInteraction();
 };
 
-const onExportExcel = () => {
-  $q.dialog({
-    title: "Save Report",
-    message: "Are you sure want to export this report ?",
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
+const onExportExcel = async (bypass = false) => {
+  if (!bypass) {
+    $q.dialog({
+      title: "Save Report",
+      message: "Are you sure want to export this report ?",
+      cancel: true,
+      persistent: true,
+    }).onOk(async () => {
+      loading.value = true;
+      const checkDatanya = await postData(
+        "post",
+        {
+          filter: filter.value,
+        },
+        `mrs/exportReport/${idNya.value}`,
+        false,
+        false,
+        true
+      );
+
+      if (checkDatanya && checkDatanya.status === true) {
+        loading.value = false;
+        window
+          .open(process.env.API_DOWNLOAD + checkDatanya.path, "_blank")
+          .focus();
+      } else {
+        loading.value = false;
+      }
+    });
+  } else {
     loading.value = true;
     const checkDatanya = await postData(
       "post",
@@ -209,7 +250,7 @@ const onExportExcel = () => {
     } else {
       loading.value = false;
     }
-  });
+  }
 };
 </script>
 <style lang="sass">

@@ -1,6 +1,6 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row">
+  <div>
+    <div class="row" style="max-height: 30vh">
       <div class="col">
         <q-list class="bg-white">
           <template v-if="rows.length > 0">

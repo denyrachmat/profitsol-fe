@@ -38,9 +38,33 @@
                   true-value="1"
                   false-value="0"
                   @update:model-value="
-                    (value) => onChangeActive(props.row, value)
+                    (value) => onChangeActive(props.row, 'pud_is_active', value)
                   "
                 />
+              </q-td>
+              <q-td key="mobile" :props="props">
+                <q-toggle
+                  v-model="props.row.is_mobileacc"
+                  checked-icon="check"
+                  color="red"
+                  unchecked-icon="clear"
+                  true-value="1"
+                  false-value="0"
+                  @update:model-value="
+                    (value) => onChangeActive(props.row, 'is_mobileacc', value)
+                  "
+                />
+              </q-td>
+              <q-td key="pud_photo" :props="props">
+                <q-avatar
+                  size="30px"
+                  color="orange"
+                  v-if="!props.row.pud_photo"
+                  >{{ props.row.username.slice(0, 2).toUpperCase() }}</q-avatar
+                >
+                <q-avatar size="24px" color="orange" v-else>
+                  <img :src="props.row.pud_photo" />
+                </q-avatar>
               </q-td>
               <q-td key="username" :props="props">
                 {{ props.row.username }}
@@ -108,6 +132,18 @@ const columns = ref([
     name: "active",
     align: "center",
     label: "Is Active ?",
+  },
+  {
+    name: "mobile",
+    align: "center",
+    label: "Using Portal Mobile ?",
+  },
+  {
+    name: "pud_photo",
+    align: "center",
+    label: "Ava",
+    field: "pud_photo",
+    sortable: true,
   },
   {
     name: "username",
@@ -230,12 +266,12 @@ const updateProfile = async (datas) => {
   }
 };
 
-const onChangeActive = async (datas, value) => {
+const onChangeActive = async (datas, col = "pud_is_active", value) => {
   const data = await postData(
     "patch",
     {
       form: {
-        pud_is_active: value,
+        [col]: value,
         pud_first_name: datas.pud_first_name,
         pud_last_name: datas.pud_last_name,
       },

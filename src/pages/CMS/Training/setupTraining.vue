@@ -52,6 +52,32 @@
               </div>
             </div>
           </div>
+          <div class="row q-pt-md" v-if="randomizeQuestion">
+            <div class="col"></div>
+            <div class="col">
+              <div class="text-bold">Max of question</div>
+              <div class="q-gutter-sm">
+                <!-- maxQuestionCount -->
+                <q-input
+                  label="How much question will be provided"
+                  type="number"
+                  v-model="maxQuestionCount"
+                  dense
+                  outlined
+                />
+              </div>
+            </div>
+          </div>
+          <!-- skipNextButtonMedia -->
+          <div class="row q-pt-md">
+            <div class="col">
+              <div class="text-bold">
+                Disable next button when media (Video / Audio) is playing ?
+              </div>
+              <q-radio v-model="skipNextButtonMedia" :val="true" label="Yes" />
+              <q-radio v-model="skipNextButtonMedia" :val="false" label="No" />
+            </div>
+          </div>
           <div class="row q-pt-md">
             <div class="col">
               <div class="text-bold">Shows Right Answers ?</div>
@@ -303,6 +329,7 @@ const defaultTypeChoice = ref("multiple-radio");
 const defaultNumberOfChoice = ref(0);
 const showResult = ref(true);
 const randomizeQuestion = ref(false);
+const maxQuestionCount = ref(0);
 const showRightKeysAnswer = ref(true);
 const showRightKeysAnswerLocation = ref("end");
 const setUpTimer = ref(false);
@@ -324,6 +351,7 @@ const rowsPageMethodsOpt = ref([
     value: "one-page",
   },
 ]);
+const skipNextButtonMedia = ref(false);
 
 onMounted(() => {
   if (props.setupTrainingSetup) {
@@ -332,9 +360,13 @@ onMounted(() => {
       props.setupTrainingSetup.defaultNumberOfChoice;
     showResult.value = props.setupTrainingSetup.showResult;
     randomizeQuestion.value = props.setupTrainingSetup.randomizeQuestion;
+    maxQuestionCount.value = parseInt(
+      props.setupTrainingSetup.maxQuestionCount
+    );
     showRightKeysAnswer.value = props.setupTrainingSetup.showRightKeysAnswer;
     showRightKeysAnswerLocation.value =
       props.setupTrainingSetup.showRightKeysAnswerLocation;
+    skipNextButtonMedia.value = props.setupTrainingSetup.skipNextButtonMedia;
     setUpTimer.value = props.setupTrainingSetup.setUpTimer;
     timerEveryQuestion.value = props.setupTrainingSetup.timerEveryQuestion;
     hourTimer.value = props.setupTrainingSetup.hourTimer;
@@ -374,6 +406,8 @@ function onOKClick() {
     defaultNumberOfChoice: defaultNumberOfChoice.value,
     showResult: showResult.value,
     randomizeQuestion: randomizeQuestion.value,
+    maxQuestionCount: parseInt(maxQuestionCount.value),
+    skipNextButtonMedia: skipNextButtonMedia.value,
     showRightKeysAnswer: showRightKeysAnswer.value,
     showRightKeysAnswerLocation: showRightKeysAnswerLocation.value,
     setUpTimer: setUpTimer.value,

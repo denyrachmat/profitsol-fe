@@ -201,6 +201,13 @@
 
       <q-card-actions align="right">
         <q-btn label="Search" color="primary" @click="onOKClick" />
+        <q-btn
+          label="download"
+          color="green"
+          @click="onOKClick('download')"
+          icon="download"
+          flat
+        />
         <q-btn flat label="Cancel" color="red" @click="onDialogCancel" />
       </q-card-actions>
     </q-card>
@@ -218,6 +225,19 @@ const props = defineProps({
 });
 
 onMounted(() => {
+  if (props.colsData.filter((col) => col.sortable_def).length > 0) {
+    filterList.value = props.colsData
+      .filter((col) => col.sortable_def)
+      .map((col) => {
+        return {
+          cols: col.cols,
+          value: [""],
+          type: col.type,
+          opr: "=",
+          conmet: "and",
+        };
+      });
+  }
   if (props.filtered.length > 0) {
     console.log(props.filtered);
     filterList.value = props.filtered;
@@ -306,7 +326,7 @@ const optConMet = ref([
   },
 ]);
 
-function onOKClick() {
-  onDialogOK(filterList.value);
+function onOKClick(typeOk = "ok") {
+  onDialogOK({ data: filterList.value, type: typeOk });
 }
 </script>
