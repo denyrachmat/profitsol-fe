@@ -391,7 +391,6 @@ const deleteQuestion = (idx) => {
 };
 
 const onSaveQuestion = () => {
-  console.log(forms.value);
   $q.dialog({
     title: "Confirm",
     message: "Do you really want to save this quiz ?",

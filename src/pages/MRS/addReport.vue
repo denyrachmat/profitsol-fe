@@ -166,158 +166,172 @@
         style="max-height: 70vh; overflow: auto"
         :disable="choosedConnection"
       >
+        <!-- Loading data -->
         <div class="text-center full-width full-height" v-if="loading">
           <q-spinner-grid color="primary" size="5em" />
           <br />
           <br />
           <span>Generating list</span>
         </div>
+        <!-- If data already loaded -->
         <template v-else>
-          <div class="q-pb-md">
-            <q-input label="Report Title" filled dense v-model="reportTitle" />
+          <div class="row q-pb-md">
+            <div class="col">
+              <q-input
+                label="Report Title"
+                filled
+                dense
+                v-model="reportTitle"
+              />
+            </div>
           </div>
-          <q-list bordered class="rounded-borders">
-            <q-expansion-item
-              expand-separator
-              icon="tune"
-              label="Parameter settings (For Stored Procedure)"
-            >
-              <q-item
-                clickable
-                v-ripple
-                :active="methodsReport == 'sp'"
-                v-for="(params, idx) in listParamsConverted"
-                :key="idx"
+          <div style="max-height: 50vh; overflow: auto">
+            <q-list bordered class="rounded-borders">
+              <q-expansion-item
+                expand-separator
+                icon="tune"
+                label="Parameter settings (For Stored Procedure)"
+                :disable="methodsReport != 'sp'"
               >
-                <q-item-section class="col-2 gt-sm">
-                  <q-item-label lines="1">
-                    <q-toggle v-model="params.active" label="Using Field ?" />
-                  </q-item-label>
-                </q-item-section>
+                <q-item
+                  clickable
+                  v-ripple
+                  :active="methodsReport == 'sp'"
+                  v-for="(params, idx) in listParamsConverted"
+                  :key="idx"
+                >
+                  <q-item-section class="col-2 gt-sm">
+                    <q-item-label lines="1">
+                      <q-toggle v-model="params.active" label="Using Field ?" />
+                    </q-item-label>
+                  </q-item-section>
 
-                <q-item-section class="col-2 gt-sm">
-                  <q-item-label lines="1">
-                    <q-toggle
-                      v-model="params.filterable"
-                      label="Filterable ?"
-                      :disable="!params.active"
-                    />
-                  </q-item-label>
-                </q-item-section>
+                  <q-item-section class="col-2 gt-sm">
+                    <q-item-label lines="1">
+                      <q-toggle
+                        v-model="params.filterable"
+                        label="Filterable ?"
+                        :disable="!params.active"
+                      />
+                    </q-item-label>
+                  </q-item-section>
 
-                <q-item-section class="col-2 gt-sm">
-                  <q-item-label lines="1">{{ params.name }}</q-item-label>
-                  <q-item-label caption>Field Name</q-item-label>
-                </q-item-section>
+                  <q-item-section class="col-2 gt-sm">
+                    <q-item-label lines="1">{{ params.name }}</q-item-label>
+                    <q-item-label caption>Field Name</q-item-label>
+                  </q-item-section>
 
-                <q-item-section>
-                  <q-item-label lines="1"
-                    ><q-input
-                      dense
-                      label="Field Label"
-                      v-model="params.label"
-                      :disable="!params.active"
-                      filled
-                    ></q-input
-                  ></q-item-label>
-                </q-item-section>
+                  <q-item-section>
+                    <q-item-label lines="1"
+                      ><q-input
+                        dense
+                        label="Field Label"
+                        v-model="params.label"
+                        :disable="!params.active"
+                        filled
+                      ></q-input
+                    ></q-item-label>
+                  </q-item-section>
 
-                <q-item-section>
-                  <q-item-label lines="1">
-                    <q-select
-                      v-model="params.type"
-                      :options="optType"
-                      emit-value
-                      map-options
-                      dense
-                      filled
-                      :disable="!params.active"
-                    />
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-expansion-item>
-            <q-expansion-item
-              expand-separator
-              icon="table_view"
-              label="Columns settings"
-              caption="Columns & Filter Setup"
-            >
-              <draggable
-                tag="div"
-                v-model="listCols"
-                class="q-list q-list--bordered q-list--dense q-list--separator"
+                  <q-item-section>
+                    <q-item-label lines="1">
+                      <q-select
+                        v-model="params.type"
+                        :options="optType"
+                        emit-value
+                        map-options
+                        dense
+                        filled
+                        :disable="!params.active"
+                      />
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-expansion-item>
+              <q-expansion-item
+                expand-separator
+                icon="table_view"
+                label="Columns settings"
+                caption="Columns & Filter Setup"
               >
-                <template #item="{ element }">
-                  <q-item
-                    clickable
-                    v-ripple
-                    :active="element.active || methodsReport != 'sp'"
-                  >
-                    <q-item-section class="col-2 gt-sm">
-                      <q-item-label lines="1">
-                        <q-toggle
-                          v-model="element.active"
-                          label="Using Field ?"
-                        />
-                      </q-item-label>
-                    </q-item-section>
+                <draggable
+                  tag="div"
+                  v-model="listCols"
+                  class="q-list q-list--bordered q-list--dense q-list--separator"
+                >
+                  <template #item="{ element }">
+                    <q-item
+                      clickable
+                      v-ripple
+                      :active="element.active || methodsReport != 'sp'"
+                    >
+                      <q-item-section class="col-2 gt-sm">
+                        <q-item-label lines="1">
+                          <q-toggle
+                            v-model="element.active"
+                            label="Using Field ?"
+                          />
+                        </q-item-label>
+                      </q-item-section>
 
-                    <q-item-section class="col-2 gt-sm">
-                      <q-item-label lines="1">
-                        <q-toggle
-                          v-model="element.filterable"
-                          label="Filterable ?"
-                          :disable="!element.active || methodsReport == 'sp'"
-                        />
-                      </q-item-label>
-                    </q-item-section>
+                      <q-item-section class="col-2 gt-sm">
+                        <q-item-label lines="1">
+                          <q-toggle
+                            v-model="element.filterable"
+                            label="Filterable ?"
+                            :disable="!element.active || methodsReport == 'sp'"
+                          />
+                        </q-item-label>
+                      </q-item-section>
 
-                    <q-item-section class="col-2 gt-sm">
-                      <q-item-label lines="1">
-                        <q-toggle
-                          v-model="element.exported"
-                          label="Exportable ?"
-                          :disable="!element.active || methodsReport == 'sp'"
-                        />
-                      </q-item-label>
-                    </q-item-section>
+                      <q-item-section class="col-2 gt-sm">
+                        <q-item-label lines="1">
+                          <q-toggle
+                            v-model="element.exported"
+                            label="Exportable ?"
+                            :disable="!element.active || methodsReport == 'sp'"
+                          />
+                        </q-item-label>
+                      </q-item-section>
 
-                    <q-item-section class="col-2 gt-sm">
-                      <q-item-label lines="1">{{ element.name }}</q-item-label>
-                      <q-item-label caption>Field Name</q-item-label>
-                    </q-item-section>
+                      <q-item-section class="col-2 gt-sm">
+                        <q-item-label lines="1">{{
+                          element.name
+                        }}</q-item-label>
+                        <q-item-label caption>Field Name</q-item-label>
+                      </q-item-section>
 
-                    <q-item-section>
-                      <q-item-label lines="1"
-                        ><q-input
-                          dense
-                          label="Field Label"
-                          v-model="element.label"
-                          :disable="!element.active"
-                          filled
-                        ></q-input
-                      ></q-item-label>
-                    </q-item-section>
+                      <q-item-section>
+                        <q-item-label lines="1"
+                          ><q-input
+                            dense
+                            label="Field Label"
+                            v-model="element.label"
+                            :disable="!element.active"
+                            filled
+                          ></q-input
+                        ></q-item-label>
+                      </q-item-section>
 
-                    <q-item-section>
-                      <q-item-label lines="1">
-                        <q-select
-                          v-model="element.type"
-                          :options="optType"
-                          emit-value
-                          map-options
-                          dense
-                          filled
-                          :disable="!element.active || methodsReport == 'sp'"
-                        />
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </draggable>
-            </q-expansion-item>
-          </q-list>
+                      <q-item-section>
+                        <q-item-label lines="1">
+                          <q-select
+                            v-model="element.type"
+                            :options="optType"
+                            emit-value
+                            map-options
+                            dense
+                            filled
+                            :disable="!element.active || methodsReport == 'sp'"
+                          />
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </draggable>
+              </q-expansion-item>
+            </q-list>
+          </div>
         </template>
       </q-step>
 
@@ -355,6 +369,7 @@ import draggable from "vuedraggable";
 import { useAuthStore } from "src/stores/authStore";
 
 import manageField from "./Tables/colsManager.vue";
+import manageReport from "./manageReport.vue";
 
 const store = useAuthStore();
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -368,6 +383,7 @@ const props = defineProps({
 });
 
 onMounted(() => {
+  console.log(props.dataEdit);
   if (props.dataEdit) {
     choosedConnection.value = props.dataEdit.mdm_id;
     mdm_id.value = props.dataEdit.mdm_id;
@@ -379,6 +395,7 @@ onMounted(() => {
     listCols.value = props.dataEdit.cols;
     listParamsConverted.value = props.dataEdit.colsParam;
     step.value = 4;
+    methodsReport.value = props.dataEdit.mrm_url_gen;
   }
 });
 
@@ -687,6 +704,15 @@ const onFinishTable = () => {
 const onManageField = (data) => {
   $q.dialog({
     component: manageField,
+    componentProps: {
+      data: data,
+    },
+  }).onOk(async () => {});
+};
+
+const onManageReport = (data) => {
+  $q.dialog({
+    component: manageReport,
     componentProps: {
       data: data,
     },

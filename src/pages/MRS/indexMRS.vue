@@ -80,6 +80,14 @@
                     <q-tooltip> Open in new tab </q-tooltip>
                   </q-btn>
                   <q-btn
+                    icon="settings"
+                    color="indigo"
+                    outline
+                    @click="onManageReport(props.row.id)"
+                  >
+                    <q-tooltip> Manage Report </q-tooltip>
+                  </q-btn>
+                  <q-btn
                     icon="delete"
                     color="red"
                     outline
@@ -105,6 +113,7 @@ import { date } from "quasar";
 import addConnectionAction from "./addConnection.vue";
 import addReportAction from "./addReport.vue";
 import viewReport from "./ActionReport/viewReport.vue";
+import manageReport from "./manageReport.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -238,5 +247,14 @@ const onDelete = (id) => {
       getDatanya();
     }
   });
+};
+
+const onManageReport = (data) => {
+  $q.dialog({
+    component: manageReport,
+    componentProps: {
+      data: data,
+    },
+  }).onOk(async () => {});
 };
 </script>

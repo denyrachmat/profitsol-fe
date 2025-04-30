@@ -9,14 +9,14 @@
                 <q-item clickable v-close-popup>
                   <q-item-section>New Forms</q-item-section>
                 </q-item>
-                <q-item clickable v-close-popup @click="openTraining">
+                <q-item clickable v-close-popup @click="onClickOpenTraining">
                   <q-item-section>Open...</q-item-section>
                 </q-item>
                 <q-item
                   clickable
                   v-close-popup
                   @click="onSaveQuestion"
-                  :disable="!title || valueSubmited.length !== forms.length"
+                  :disable="!title"
                 >
                   <q-item-section>Save Quiz</q-item-section>
                 </q-item>
@@ -85,7 +85,7 @@
           style="
             border: 1px solid #ccc !important;
             border-radius: 16px;
-            max-height: 80vh;
+            max-height: 73vh;
             overflow: auto;
           "
         >
@@ -100,6 +100,9 @@
               >
                 <q-card-section>
                   <div class="row">
+                    <div class="col-4">
+                      <span class="text-h6">Rows {{ index + 1 }}</span>
+                    </div>
                     <div class="col text-right">
                       <q-btn
                         icon="fa fa-table-columns"
@@ -194,7 +197,7 @@
                             <q-btn
                               icon="arrow_back"
                               color="cyan"
-                              @click="onClickDeleteForm(index, indexCol)"
+                              @click="onClickSwap(index, 'left', indexCol)"
                               flat
                               dense
                               :disable="indexCol === 0"
@@ -204,12 +207,32 @@
                             <q-btn
                               icon="arrow_forward"
                               color="cyan"
-                              @click="onClickDeleteForm(index, indexCol)"
+                              @click="onClickSwap(index, 'right', indexCol)"
                               flat
                               dense
                               :disable="indexCol === form.content.length - 1"
                             >
                               <q-tooltip> Swap to Right</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                              icon="fa fa-brain"
+                              color="purple"
+                              @click="onClickLogics(index, indexCol)"
+                              flat
+                              dense
+                              :disable="col.type !== 'form'"
+                            >
+                              <q-tooltip>
+                                Add logic for this component</q-tooltip
+                              >
+                              <q-badge
+                                v-if="col.type === 'form'"
+                                color="green"
+                                floating
+                                align="top right"
+                                class="q-mt-xs q-mr-xs"
+                                :label="col.logics.length"
+                              ></q-badge>
                             </q-btn>
                           </div>
                         </div>
@@ -224,7 +247,9 @@
                             :type="col.content.component.category"
                             :type-input="col.content.component.value.type"
                             :comp="col.content.component.value.comp"
-                            :label="col.content.label"
+                            :label="`${col.content.label} ${
+                              col.required ? '*' : ''
+                            }`"
                             :detail="col.content.detail_data"
                             mode="live-ans"
                             @customAnschange="
@@ -254,16 +279,21 @@
 <script setup>
 import { ref } from "vue";
 import { useQuasar } from "quasar";
-import { useDialogPluginComponent } from "quasar";
 
 import chooseComponent from "../chooseComponent.vue";
 import addContentComponent from "../addContentComponent.vue";
 import componentViewVue from "../componentView.vue";
+import viewLogicHeaderForms from "./viewLogicsHeaderForms.vue";
+import openTraining from "../Training/openTraining.vue";
+import apiRequest from "src/components/apiRequest";
+
+const { postData } = apiRequest();
 
 const $q = useQuasar();
 const title = ref("");
 const idRef = ref(null);
 const forms = ref([]);
+const setupTrainingSetup = ref([]);
 
 const initChoice = ref({
   content: {
@@ -348,5 +378,97 @@ const onClickDeleteForm = (rowIndex, colIndex = null) => {
     .onCancel(() => {
       // User cancelled the action
     });
+};
+
+const onClickSwap = (index, direction, indexCol = null) => {
+  if (direction === "up" && index > 0) {
+    const temp = forms.value[index];
+    forms.value[index] = forms.value[index - 1];
+    forms.value[index - 1] = temp;
+  } else if (direction === "down" && index < forms.value.length - 1) {
+    const temp = forms.value[index];
+    forms.value[index] = forms.value[index + 1];
+    forms.value[index + 1] = temp;
+  } else if (direction === "left" && indexCol !== null && indexCol > 0) {
+    const temp = forms.value[index].content[indexCol];
+    forms.value[index].content[indexCol] =
+      forms.value[index].content[indexCol - 1];
+    forms.value[index].content[indexCol - 1] = temp;
+  } else if (
+    direction === "right" &&
+    indexCol !== null &&
+    indexCol < forms.value[index].content.length - 1
+  ) {
+    const temp = forms.value[index].content[indexCol];
+    forms.value[index].content[indexCol] =
+      forms.value[index].content[indexCol + 1];
+    forms.value[index].content[indexCol + 1] = temp;
+  }
+};
+
+const onClickLogics = (index, indexCol) => {
+  $q.dialog({
+    component: viewLogicHeaderForms,
+    componentProps: {
+      comp: forms.value[index].content[indexCol],
+      forms: forms.value,
+      logics: forms.value[index].content[indexCol].logics,
+    },
+  }).onOk(async (val) => {
+    forms.value[index].content[indexCol].logics = val;
+  });
+};
+
+const onClickOpenTraining = () => {
+  $q.dialog({
+    component: openTraining,
+    componentProps: {
+      type: "forms",
+    },
+  }).onOk(async (val) => {
+    forms.value = val.forms;
+    title.value = val.title;
+    idRef.value = val.id;
+  });
+};
+
+const onSaveQuestion = () => {
+  console.log(forms.value);
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to save this quiz ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idRef.value,
+        forms: forms.value,
+        title: title.value,
+        isQuiz: false,
+      },
+      `cms/forms`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      $q.dialog({
+        title: "Confirm",
+        message: "Save Success, Do you want to continue edit this quiz ?",
+        cancel: true,
+        persistent: true,
+      })
+        .onOk(async () => {})
+        .onCancel(() => {
+          title.value = "";
+          forms.value = [];
+        });
+      console.log(data);
+    }
+  });
+  // console.log(forms.value);
 };
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md">
     <template v-if="props.type === 'normal'">
-      <q-input v-model="modelData" :label="props.label" dense>
+      <q-input v-model="modelData" :label="props.label" dense filled>
         <template
           v-slot:prepend
           v-if="props.typeInput === 'date' || props.typeInput === 'time'"
@@ -45,6 +45,7 @@
                 v-model="opt.value"
                 outlined
                 dense
+                filled
               />
             </div>
             <div class="col-6 q-pl-md">
@@ -53,6 +54,7 @@
                 v-model="opt.label"
                 outlined
                 dense
+                filled
               />
             </div>
 
@@ -80,7 +82,7 @@
           <div class="row q-pa-md" :key="refreshDetail">
             <div class="col">
               <q-select
-                outlined
+                filled
                 v-model="modelData"
                 :options="detailData"
                 :label="props.label"
@@ -113,7 +115,7 @@
       <template v-else>
         <div>
           <q-select
-            outlined
+            filled
             v-model="modelData"
             :options="detailData"
             :label="props.label"
