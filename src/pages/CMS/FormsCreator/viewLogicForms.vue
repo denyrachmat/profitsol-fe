@@ -58,6 +58,14 @@
             </div>
             <div class="col text-right">
               <q-btn
+                color="orange"
+                icon="add"
+                label="Add Trigger"
+                @click="onAddLogic('trigger')"
+                outline
+                :disable="listLogic.length > 0"
+              />
+              <q-btn
                 color="primary"
                 icon="add"
                 label="Add Logic"
@@ -92,7 +100,23 @@
               v-for="(item, index) in listLogic"
               :key="index"
             >
-              <template v-if="item.cfld_actions !== 'result'">
+              <template v-if="item.cfld_actions === 'trigger'">
+                <div class="col">
+                  <q-select
+                    filled
+                    v-model="item.cfld_opr_ctrl"
+                    :options="lisTrigger"
+                    option-label="pgm_desc"
+                    option-value="pgm_value"
+                    label="Select Trigger"
+                    emit-value
+                    map-options
+                    dense
+                  />
+                </div>
+              </template>
+
+              <template v-if="item.cfld_actions === 'logic_only'">
                 <div class="col">
                   <q-select
                     filled
@@ -112,6 +136,20 @@
                 <div class="col">
                   <q-select
                     filled
+                    v-model="item.cfld_opr"
+                    :options="listAction"
+                    option-label="pgm_desc"
+                    option-value="pgm_value"
+                    label="Select Logic"
+                    emit-value
+                    map-options
+                    dense
+                  />
+                </div>
+
+                <div class="col">
+                  <q-select
+                    filled
                     v-model="item.cfld_opr_ctrl"
                     :options="listActType"
                     option-label="pgm_desc"
@@ -124,14 +162,28 @@
                 </div>
 
                 <div class="col" v-if="item.cfld_opr_ctrl">
-                  <q-input
-                    filled
-                    v-model="item.cfld_val"
-                    label="Value"
-                    type="text"
-                    dense
-                    v-if="item.cfld_opr_ctrl === 'value'"
-                  />
+                  <template v-if="item.cfld_opr_ctrl === 'value'">
+                    <q-input
+                      filled
+                      v-model="item.cfld_val"
+                      label="Value"
+                      type="text"
+                      dense
+                      v-if="
+                        props.comp.content.component.category !== 'multiple'
+                      "
+                    />
+                    <q-select
+                      v-else
+                      filled
+                      v-model="item.cfld_val"
+                      :options="props.comp.content.detail_data"
+                      label="Select Value"
+                      emit-value
+                      map-options
+                      dense
+                    />
+                  </template>
                   <q-select
                     v-else
                     filled
@@ -165,6 +217,24 @@
                     v-model="item.cfld_val"
                     label="Value"
                     type="text"
+                    dense
+                  />
+                </div>
+
+                <div
+                  class="col"
+                  v-if="
+                    item.cfld_res === 'show_comp' ||
+                    item.cfld_res === 'hide_comp'
+                  "
+                >
+                  <q-select
+                    filled
+                    v-model="item.cfld_val"
+                    :options="listForms"
+                    label="Select Component"
+                    emit-value
+                    map-options
                     dense
                   />
                 </div>
@@ -211,6 +281,7 @@ const { postData } = apiRequest();
 
 const title = ref("");
 const desc = ref("");
+const lisTrigger = ref([]);
 const listAction = ref([]);
 const listLogic = ref([]);
 
@@ -218,7 +289,7 @@ const listForms = ref([]);
 const listActType = ref([]);
 const listResultAct = ref([]);
 
-onMounted(() => {
+onMounted(async () => {
   listForms.value = props.forms
     .flatMap((form) => (form.type === "row" ? form.content : form))
     .filter((form) => form.type === "form")
@@ -228,6 +299,7 @@ onMounted(() => {
     }));
 
   console.log(props.logic);
+  console.log(props.comp);
   if (props.logic.data.length > 0) {
     title.value = props.logic.seq_name;
     desc.value = props.logic.seq_desc;
@@ -240,9 +312,10 @@ onMounted(() => {
     }));
   }
 
-  getListAction();
-  getListActType();
-  getListResult();
+  await getListAction();
+  await getListActType();
+  await getListtrigger();
+  await getListResult();
 });
 
 const getListAction = async () => {
@@ -274,6 +347,22 @@ const getListActType = async () => {
   if (data) {
     console.log(data);
     listActType.value = data;
+  }
+};
+
+const getListtrigger = async () => {
+  const { data } = await postData(
+    "get",
+    null,
+    `portal/gencode/MRS_LOGIC_TRIGGERS`,
+    false,
+    false,
+    true
+  );
+
+  if (data) {
+    console.log(data);
+    lisTrigger.value = data;
   }
 };
 

@@ -34,6 +34,22 @@
           "type": "time",
           "comp": "q-input"
         }
+      },
+      {
+        "label": "Datetime Picker",
+        "category": "normal",
+        "value": {
+          "type": "datetime",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Upload File",
+        "category": "normal",
+        "value": {
+          "type": "upload",
+          "comp": "q-file"
+        }
       }
     ]
   },

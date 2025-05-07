@@ -1,7 +1,14 @@
 <template>
-  <div class="q-pa-md">
+  <div>
     <template v-if="props.type === 'normal'">
-      <q-input v-model="modelData" :label="props.label" dense filled>
+      <q-input
+        v-model="modelData"
+        :label="props.label"
+        dense
+        filled
+        :type="props.typeInput"
+        v-if="props.comp === 'q-input'"
+      >
         <template
           v-slot:prepend
           v-if="props.typeInput === 'date' || props.typeInput === 'time'"
@@ -33,7 +40,60 @@
             </q-popup-proxy>
           </q-icon>
         </template>
+
+        <!-- If Datetime -->
+        <template v-slot:prepend v-else-if="props.typeInput === 'datetime'">
+          <q-icon name="event" class="cursor-pointer">
+            <q-popup-proxy
+              cover
+              transition-show="scale"
+              transition-hide="scale"
+            >
+              <q-date v-model="modelData" mask="YYYY-MM-DD HH:mm">
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="Close" color="primary" flat />
+                </div>
+              </q-date>
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+
+        <template v-slot:append v-if="props.typeInput === 'datetime'">
+          <q-icon name="access_time" class="cursor-pointer">
+            <q-popup-proxy
+              cover
+              transition-show="scale"
+              transition-hide="scale"
+            >
+              <q-time v-model="modelData" mask="YYYY-MM-DD HH:mm" format24h>
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="Close" color="primary" flat />
+                </div>
+              </q-time>
+            </q-popup-proxy>
+          </q-icon>
+        </template>
       </q-input>
+      <q-file
+        filled
+        bottom-slots
+        v-model="modelData"
+        :label="props.label"
+        counter
+        max-files="12"
+        v-if="props.comp === 'q-file'"
+        dense
+      >
+        <template v-slot:before>
+          <q-icon name="folder_open" />
+        </template>
+
+        <template v-slot:hint> Field hint </template>
+
+        <template v-slot:append>
+          <q-btn round dense flat icon="add" @click.stop.prevent />
+        </template>
+      </q-file>
     </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">

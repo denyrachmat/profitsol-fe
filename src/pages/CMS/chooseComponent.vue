@@ -245,6 +245,7 @@ function onOKClick() {
       label: label.value,
     },
     required: isRequired.value,
+    logics: [],
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

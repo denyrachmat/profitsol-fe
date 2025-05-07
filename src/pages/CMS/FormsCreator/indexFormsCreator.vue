@@ -231,7 +231,7 @@
                                 floating
                                 align="top right"
                                 class="q-mt-xs q-mr-xs"
-                                :label="col.logics.length"
+                                :label="col.logics ? col.logics.length : 0"
                               ></q-badge>
                             </q-btn>
                           </div>
@@ -286,6 +286,7 @@ import componentViewVue from "../componentView.vue";
 import viewLogicHeaderForms from "./viewLogicsHeaderForms.vue";
 import openTraining from "../Training/openTraining.vue";
 import apiRequest from "src/components/apiRequest";
+import previewComponentVue from "../Forms/previewComponent.vue";
 
 const { postData } = apiRequest();
 
@@ -429,6 +430,21 @@ const onClickOpenTraining = () => {
     forms.value = val.forms;
     title.value = val.title;
     idRef.value = val.id;
+  });
+};
+
+const openPreview = () => {
+  $q.dialog({
+    component: previewComponentVue,
+    componentProps: {
+      data: forms.value,
+      setup: setupTrainingSetup.value,
+      id: idRef.value,
+      mode: "form",
+      idDet: [],
+    },
+  }).onOk(async (val) => {
+    console.log(val);
   });
 };
 
