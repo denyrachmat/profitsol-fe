@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-if="getNowData.length > 0">
+    <div v-if="getNowData.length > 0">
       <div class="row q-gutter-md" v-for="(row, idx) in getNowData" :key="idx">
         <template v-for="(col, idx2) in row['content']">
           <div class="col q-pt-md" :key="idx2" v-if="!col.hidden">
@@ -39,7 +39,7 @@
           </div>
         </template>
       </div>
-    </template>
+    </div>
     <template v-else>
       <div class="row">
         <div class="col">Nothing to show.</div>
@@ -85,21 +85,25 @@ const $q = useQuasar();
 const { postData } = apiRequest();
 
 const nowSeq = ref(null);
+const refreshKeys = ref(0);
 const props = defineProps({
   id: String,
   data: Array,
+  setup: Object,
 });
 
+const forms = ref([]);
+
 const getNowIdx = computed(() =>
-  props.data.findIndex((x) => x.seq_name == nowSeq.value)
+  forms.value.findIndex((x) => x.seq_name == nowSeq.value)
 );
 
 const getNowData = computed(() =>
-  props.data.filter((x) => x.seq_name == nowSeq.value)
+  forms.value.filter((x) => x.seq_name == nowSeq.value)
 );
 
 const getNextData = computed(() =>
-  props.data.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
+  forms.value.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
 );
 
 const getRequired = computed(() =>
@@ -107,7 +111,7 @@ const getRequired = computed(() =>
 );
 
 const isFormsExists = computed(() =>
-  props.data.filter((x) =>
+  forms.value.filter((x) =>
     x.content.length > 0
       ? x.content.filter((y) => y.type === "form").length > 0
       : []
@@ -130,7 +134,7 @@ const formItems = computed(() => {
   }
 
   // Start with the root data array
-  findForms(props.data);
+  findForms(forms.value);
 
   return result;
 });
@@ -146,21 +150,53 @@ const getAllLogics = computed(() => {
 });
 
 onMounted(() => {
-  nowSeq.value = props.data[0].seq_name;
+  forms.value = props.data;
+  if (props.setup && props.setup.isWizard) {
+    nowSeq.value = forms.value[0].seq_name;
+  } else {
+    forms.value = updateRowSeqNames(forms.value, false);
+    nowSeq.value = forms.value[0].seq_name;
+  }
 
   logicsChecker("onMounted");
-  console.log(getAllLogics.value);
+
+  console.log(forms.value);
 });
 
+const updateRowSeqNames = (data, add = false) => {
+  return data.map((row, index) => {
+    // Only modify if it's a row
+    if (row.type === "row") {
+      return {
+        ...row, // Spread all existing properties
+        seq_name: add ? (index + 1).toString() : "1", // Update seq_name based on index
+      };
+    }
+    return row; // Return unchanged if not a row
+  });
+};
+
 const logicsChecker = (valLogics, id = "") => {
+  // console.log(getAllLogics.value);
   const getLogicsList = id
     ? getAllLogics.value.filter((val) => val.id == id)
-    : getAllLogics.value;
+    : getAllLogics.value.filter(
+        (val) =>
+          val.data.filter((x) => x.cfld_opr_ctrl === valLogics).length > 0
+      );
 
+  console.log(getLogicsList);
   getLogicsList.map((val) => {
     let logicResult = false;
     let lastOperation = "||";
     val.data.some((valLogic, idx) => {
+      if (
+        valLogic.cfld_actions === "trigger" &&
+        valLogic.cfld_opr_ctrl === "onMounted"
+      ) {
+        logicResult = true;
+      }
+
       if (valLogic.cfld_opr_ctrl !== valLogics) {
         if (valLogic.cfld_actions === "logic") {
           const compare = new Function("a", "b", `return a ${lastOperation} b`);
@@ -169,16 +205,21 @@ const logicsChecker = (valLogics, id = "") => {
             logicResult,
             logicsConditionalChecker(val.id, valLogic)
           );
-        } else {
-          logicResult = true;
         }
 
         if (valLogic.cfld_actions === "logic_only") {
           lastOperation = valLogic.cfld_opr;
         }
 
-        if (logicResult && valLogic.cfld_actions === "result") {
-          console.log("result", valLogic);
+        if (logicResult === true && valLogic.cfld_actions === "result") {
+          console.log(
+            "logicResult",
+            logicResult,
+            valLogic.cfld_opr_ctrl,
+            valLogic.cfld_opr,
+            valLogic.cfld_val
+          );
+          // console.log("result", valLogic);
           modifyComponent(val.id, valLogic.cfld_res, valLogic.cfld_val);
         }
       }
@@ -358,9 +399,6 @@ const modifyComponent = (idComp, modifData, targetModifID = 0) => {
   const getCompByID = formItems.value.find((val) => val.id == idComp) || {};
   const getCompByTargetID =
     formItems.value.find((val) => val.id == targetModifID) || {};
-
-  console.log(targetModifID);
-  console.log(getCompByTargetID);
   if (modifData === "hide_this_comp") {
     getCompByID.hidden = true;
   } else if (modifData === "show_this_comp") {
@@ -371,9 +409,25 @@ const modifyComponent = (idComp, modifData, targetModifID = 0) => {
     getCompByTargetID.hidden = false;
   }
 
-  const index = formItems.value.findIndex((val) => val.id === idComp);
+  // refreshKeys.value = refreshKeys.value + 1;
+
+  const index = forms.value.findIndex((row) =>
+    row.content && Array.isArray(row.content)
+      ? row.content.some((item) => item.id === idComp)
+      : false
+  );
   if (index !== -1) {
-    formItems.value[index] = { ...getCompByID, ...getCompByTargetID };
+    const row = forms.value[index];
+    const updatedContent = row.content.map((item) => {
+      if (item.id === idComp) {
+        return { ...item, ...getCompByID };
+      }
+      if (item.id === targetModifID) {
+        return { ...item, ...getCompByTargetID };
+      }
+      return item;
+    });
+    forms.value[index] = { ...row, content: updatedContent };
   }
 };
 </script>

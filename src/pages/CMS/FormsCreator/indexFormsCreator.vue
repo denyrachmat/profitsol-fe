@@ -138,7 +138,7 @@
                         @click="onClickSwap(index, 'down')"
                         flat
                         dense
-                        :disable="index === forms.length - 1"
+                        :disable="forms && index === forms.length - 1"
                       >
                         <q-tooltip> Swap below rows</q-tooltip>
                       </q-btn>
@@ -287,6 +287,8 @@ import viewLogicHeaderForms from "./viewLogicsHeaderForms.vue";
 import openTraining from "../Training/openTraining.vue";
 import apiRequest from "src/components/apiRequest";
 import previewComponentVue from "../Forms/previewComponent.vue";
+import viewSetupForms from "./viewSetupForms.vue";
+import shareFormsVue from "../Forms/shareForms.vue";
 
 const { postData } = apiRequest();
 
@@ -295,6 +297,12 @@ const title = ref("");
 const idRef = ref(null);
 const forms = ref([]);
 const setupTrainingSetup = ref([]);
+const share = ref([]);
+const shareMainMenu = ref(false);
+const shareIsroles = ref(false);
+const shareFormsMenuIcon = ref("");
+const selectedSharedMenu = ref("");
+const selectedTableRoles = ref([]);
 
 const initChoice = ref({
   content: {
@@ -384,14 +392,20 @@ const onClickDeleteForm = (rowIndex, colIndex = null) => {
 const onClickSwap = (index, direction, indexCol = null) => {
   if (direction === "up" && index > 0) {
     const temp = forms.value[index];
+    temp.seq_name = index - 1;
+
     forms.value[index] = forms.value[index - 1];
     forms.value[index - 1] = temp;
   } else if (direction === "down" && index < forms.value.length - 1) {
     const temp = forms.value[index];
+    temp.seq_name = index + 1;
+
     forms.value[index] = forms.value[index + 1];
     forms.value[index + 1] = temp;
   } else if (direction === "left" && indexCol !== null && indexCol > 0) {
     const temp = forms.value[index].content[indexCol];
+    temp.seq_name = indexCol - 1;
+
     forms.value[index].content[indexCol] =
       forms.value[index].content[indexCol - 1];
     forms.value[index].content[indexCol - 1] = temp;
@@ -401,6 +415,8 @@ const onClickSwap = (index, direction, indexCol = null) => {
     indexCol < forms.value[index].content.length - 1
   ) {
     const temp = forms.value[index].content[indexCol];
+    temp.seq_name = indexCol + 1;
+
     forms.value[index].content[indexCol] =
       forms.value[index].content[indexCol + 1];
     forms.value[index].content[indexCol + 1] = temp;
@@ -420,6 +436,15 @@ const onClickLogics = (index, indexCol) => {
   });
 };
 
+function updateRowSeqNamesInPlace(data) {
+  data.forEach((row, index) => {
+    if (row.type === "row") {
+      row.seq_name = (index + 1).toString();
+    }
+  });
+  return data;
+}
+
 const onClickOpenTraining = () => {
   $q.dialog({
     component: openTraining,
@@ -427,9 +452,16 @@ const onClickOpenTraining = () => {
       type: "forms",
     },
   }).onOk(async (val) => {
-    forms.value = val.forms;
+    forms.value = updateRowSeqNamesInPlace(val.forms);
+    setupTrainingSetup.value = val.setupTraining;
     title.value = val.title;
     idRef.value = val.id;
+    share.value = val.share;
+    shareMainMenu.value = val.shareFormsIsMainMenu;
+    shareIsroles.value = val.shareFormsIsRoles;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedTableRoles.value = val.shareFormsRoleID;
+    selectedSharedMenu.value = val.selectedSharedMenu;
   });
 };
 
@@ -449,7 +481,6 @@ const openPreview = () => {
 };
 
 const onSaveQuestion = () => {
-  console.log(forms.value);
   $q.dialog({
     title: "Confirm",
     message: "Do you really want to save this quiz ?",
@@ -463,6 +494,7 @@ const onSaveQuestion = () => {
         forms: forms.value,
         title: title.value,
         isQuiz: false,
+        setupTraining: setupTrainingSetup.value,
       },
       `cms/forms`,
       false,
@@ -486,5 +518,36 @@ const onSaveQuestion = () => {
     }
   });
   // console.log(forms.value);
+};
+
+const onClickSetupTraining = () => {
+  $q.dialog({
+    component: viewSetupForms,
+    componentProps: {
+      setupTrainingSetup: setupTrainingSetup.value,
+    },
+  }).onOk(async (val) => {
+    setupTrainingSetup.value = val;
+  });
+};
+
+const onClickShare = () => {
+  $q.dialog({
+    component: shareFormsVue,
+    componentProps: {
+      id: idRef.value,
+      shared: share.value,
+      selectedTableRoles: selectedTableRoles.value,
+      shareMainMenu: shareMainMenu.value,
+      shareIsroles: shareIsroles.value,
+      selectedSharedMenu: selectedSharedMenu.value,
+      shareFormsMenuIcon: shareFormsMenuIcon.value,
+    },
+  }).onOk(async (val) => {
+    share.value = val.emails;
+    shareMainMenu.value = val.isMainMenu;
+    shareIsroles.value = val.isRoles;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+  });
 };
 </script>

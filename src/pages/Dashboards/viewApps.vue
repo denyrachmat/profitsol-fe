@@ -75,8 +75,9 @@ onMounted(async () => {
   });
   if (props.isRouter) {
     url.value = props.dataProps;
-
-    router.push(url.value);
+    console.log("urlnya", url.value);
+    // router.push(url.value);
+    content.value = await import(`../${url.value}.vue`);
   } else {
     url.value = props.dataProps;
 
@@ -107,6 +108,7 @@ onMounted(async () => {
       //   rows.value = data;
       // }
     } else {
+      console.log(props);
       content.value = defineAsyncComponent({
         loader: () => import("../" + url.value + ".vue"),
         errorComponent: error404,

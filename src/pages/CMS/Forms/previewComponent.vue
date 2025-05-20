@@ -12,7 +12,11 @@
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <showComponentVue :data="props.data" v-if="props.mode === 'form'" />
+        <showComponentVue
+          :data="props.data"
+          v-if="props.mode === 'form'"
+          :setup="props.setup"
+        />
         <showQuizComponentVue
           :id="props.id"
           :data="props.data"

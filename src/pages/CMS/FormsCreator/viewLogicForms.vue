@@ -298,8 +298,6 @@ onMounted(async () => {
       label: form.content.label,
     }));
 
-  console.log(props.logic);
-  console.log(props.comp);
   if (props.logic.data.length > 0) {
     title.value = props.logic.seq_name;
     desc.value = props.logic.seq_desc;
@@ -312,10 +310,10 @@ onMounted(async () => {
     }));
   }
 
-  await getListAction();
-  await getListActType();
-  await getListtrigger();
-  await getListResult();
+  getListAction();
+  getListActType();
+  getListtrigger();
+  getListResult();
 });
 
 const getListAction = async () => {

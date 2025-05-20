@@ -323,6 +323,7 @@ const onSelectData = (val) => {
 
 const onSelectDataRoles = (val) => {
   selected.value = [];
+  console.log(val);
   val.map((valMap) => {
     console.log(valMap);
     if (valMap.users_map.length > 0) {
@@ -336,6 +337,7 @@ const onSelectDataRoles = (val) => {
 };
 
 onMounted(async () => {
+  console.log(props);
   getUsers();
   getRoles();
 
@@ -365,7 +367,9 @@ const getUsers = async () => {
   if (data) {
     rows.value = data.data;
 
-    if (props.shared.length > 0) {
+    console.log(props.shared);
+
+    if (props.shared && props.shared.length > 0) {
       selected.value = props.shared;
       const checkSelectedTable = rows.value.filter((fil) =>
         props.shared.includes(fil.email)

@@ -5,6 +5,17 @@
       v-if="datas"
       :id="datas.value.id"
     />
+
+    <!-- Loading state -->
+    <div v-else-if="loading" class="loading">
+      <q-spinner size="xl" />
+    </div>
+
+    <!-- Error state -->
+    <div v-else class="error">
+      <q-icon name="error" size="xl" />
+      <p>Form not found</p>
+    </div>
   </div>
 </template>
 <!-- route.params.idReport -->
@@ -19,6 +30,7 @@ import showComponentVue from "./Forms/showComponent.vue";
 const $q = useQuasar();
 const route = useRoute();
 const { postData } = apiRequest();
+const loading = ref(false);
 
 const datas = ref(null);
 
