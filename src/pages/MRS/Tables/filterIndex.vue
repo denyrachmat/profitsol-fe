@@ -50,7 +50,10 @@
                 :disable="props.propsReports === 'sp'"
               ></q-select>
             </div>
-            <div class="col q-pl-md">
+            <div
+              class="col q-pl-md"
+              v-if="!(list.opr == '<cols>' || list.opr == '<cols>')"
+            >
               <q-input
                 label="value"
                 v-model="list.value[0]"
@@ -118,6 +121,19 @@
                   </q-icon>
                 </template>
               </q-input>
+            </div>
+            <div
+              class="col q-pl-md"
+              v-if="list.opr == '<cols>' || list.opr == '<cols>'"
+            >
+              <q-select
+                filled
+                v-model="list.value[0]"
+                :options="optionCols"
+                dense
+                label="Columns need to filtered"
+                @update:model-value="list.value.splice(1, 1)"
+              ></q-select>
             </div>
             <div class="col q-pl-md" v-if="list.opr == 'between'">
               <q-input
@@ -312,6 +328,18 @@ const optMet = ref([
   {
     label: "Less Than Equals",
     value: "<=",
+  },
+  {
+    label: "Not Equals",
+    value: "<>",
+  },
+  {
+    label: "Not Equals with other column",
+    value: "<cols>",
+  },
+  {
+    label: "Exact value with other column",
+    value: "=cols",
   },
 ]);
 

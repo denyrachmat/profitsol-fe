@@ -17,13 +17,23 @@
               @customChange="(val) => getAnswers(idx, idx2, val, col.id)"
               :ans="
                 getUserAnswers[idx] &&
-                !Array.isArray(getUserAnswers[idx] && getUserAnswers[idx][idx2])
-                  ? getUserAnswers[idx][idx2]
+                !Array.isArray(
+                  getUserAnswers[idx] && getUserAnswers[idx][col.id]
+                )
+                  ? typeof getUserAnswers[idx][col.id] === 'string' &&
+                    getUserAnswers[idx][col.id].startsWith('data:')
+                    ? base64ToFile(
+                        getUserAnswers[idx][col.id],
+                        getFileNamefromBase64(getUserAnswers[idx][col.id])
+                      )
+                    : getUserAnswers[idx][col.id]
                   : ''
               "
               :ansArr="
-                Array.isArray(getUserAnswers[idx] && getUserAnswers[idx][idx2])
-                  ? getUserAnswers[idx][idx2]
+                Array.isArray(
+                  getUserAnswers[idx] && getUserAnswers[idx][col.id]
+                )
+                  ? getUserAnswers[idx][col.id]
                   : []
               "
               v-if="col.type === 'form'"
@@ -93,6 +103,7 @@ const props = defineProps({
 });
 
 const forms = ref([]);
+const isMountedTriggered = ref(false);
 
 const getNowIdx = computed(() =>
   forms.value.findIndex((x) => x.seq_name == nowSeq.value)
@@ -158,10 +169,25 @@ onMounted(() => {
     nowSeq.value = forms.value[0].seq_name;
   }
 
-  logicsChecker("onMounted");
+  store.restoreDefault();
+  // console.log(getUserAnswers.value);
 
-  console.log(forms.value);
+  logicsChecker("onMounted");
 });
+
+const base64ToFile = (base64, filename) => {
+  const arr = base64.split(",");
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+
+  return new File([u8arr], filename, { type: mime });
+};
 
 const updateRowSeqNames = (data, add = false) => {
   return data.map((row, index) => {
@@ -185,16 +211,18 @@ const logicsChecker = (valLogics, id = "") => {
           val.data.filter((x) => x.cfld_opr_ctrl === valLogics).length > 0
       );
 
-  console.log(getLogicsList);
+  // console.log(getLogicsList);
   getLogicsList.map((val) => {
     let logicResult = false;
     let lastOperation = "||";
     val.data.some((valLogic, idx) => {
       if (
         valLogic.cfld_actions === "trigger" &&
-        valLogic.cfld_opr_ctrl === "onMounted"
+        valLogic.cfld_opr_ctrl === "onMounted" &&
+        isMountedTriggered.value === false
       ) {
         logicResult = true;
+        isMountedTriggered.value = true;
       }
 
       if (valLogic.cfld_opr_ctrl !== valLogics) {
@@ -296,9 +324,70 @@ const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
 };
 
 const getAnswers = (row, col, val, idDiv) => {
-  console.log([row, col, val, idDiv]);
-  store.addAnswersForm(row, idDiv, val);
-  logicsChecker("onInput", idDiv);
+  const prevVal = getUserAnswers.value[row]
+    ? (() => {
+        const ans = getUserAnswers.value[row][idDiv];
+        if (typeof ans === "string" && ans.startsWith("data:")) {
+          return base64ToFile(ans, getFileNamefromBase64(ans)).name;
+        }
+        // If both are File, compare by filename
+        if (ans instanceof File) {
+          return ans.name;
+        }
+
+        return ans;
+      })()
+    : undefined;
+
+  const currVal = val instanceof File ? val.name : val;
+
+  if (prevVal == currVal) {
+    return;
+  }
+
+  if (val instanceof File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Get the original filename if available, otherwise fallback to val.name
+      let filename = val && val.name ? val.name : "file";
+      // If the base64 string contains a filename, extract it
+      const base64 = e.target.result;
+      const match = base64.match(/filename=([^;]+);?/);
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1]);
+      }
+      // Append filename to base64 string if not present
+      let base64WithFilename = base64;
+      if (!/filename=/.test(base64)) {
+        // Insert filename before the base64 data
+        base64WithFilename = base64.replace(
+          /^data:([^;]+);/,
+          `data:$1;filename=${encodeURIComponent(filename)};`
+        );
+      }
+
+      store.addAnswersForm(row, idDiv, base64WithFilename);
+      logicsChecker("onInput", idDiv);
+    };
+
+    reader.readAsDataURL(val);
+    return;
+  } else {
+    store.addAnswersForm(row, idDiv, val);
+    logicsChecker("onInput", idDiv);
+  }
+
+  // store.addAnswersForm(row, idDiv, val);
+  // logicsChecker("onInput", idDiv);
+};
+
+const getFileNamefromBase64 = (base64) => {
+  const match = base64.match(/filename=([^;]+);?/);
+  if (match && match[1]) {
+    return decodeURIComponent(match[1]);
+  }
+
+  return "file";
 };
 
 const nextPage = () => {
@@ -346,7 +435,7 @@ const onSubmitData = () => {
 
     let resultReq = [];
     getRequiredFormData.map((valMap) => {
-      const listIDAnswer = Object.keys(flattenedAnswers.value);
+      const listIDAnswer = Object.keys(flattenedAnswers.value).map(Number);
 
       if (!listIDAnswer.includes(valMap.id)) {
         resultReq.push({
@@ -362,6 +451,7 @@ const onSubmitData = () => {
       }
     });
 
+    console.log(resultReq);
     if (resultReq.length > 0) {
       return false;
     }
@@ -387,6 +477,11 @@ const onSubmitData = () => {
 
     if (data) {
       store.restoreDefault();
+      $q.notify({
+        message: data.message,
+        color: "green",
+        icon: "check",
+      });
     }
   });
 };

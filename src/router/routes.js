@@ -31,10 +31,7 @@ const routes = [
     ],
   },
   {
-    path: "/forms/:linkID",
-    children: [
-      { path: "", component: () => import("pages/CMS/formsAsApps.vue") },
-    ],
+    path: "/forms/:linkID", component: () => import("pages/CMS/formsAsApps.vue")
   },
   {
     path: "/showHTMLTraining",

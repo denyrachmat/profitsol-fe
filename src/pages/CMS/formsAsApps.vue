@@ -1,55 +1,74 @@
 <template>
-  <div>
+  <div class="q-pa-md">
     <showComponentVue
-      :data="datas.value.forms"
-      v-if="datas"
-      :id="datas.value.id"
+      v-if="!loading && datas.forms"
+      :data="datas.forms"
+      :id="datas.id"
     />
-
-    <!-- Loading state -->
-    <div v-else-if="loading" class="loading">
-      <q-spinner size="xl" />
-    </div>
-
-    <!-- Error state -->
-    <div v-else class="error">
-      <q-icon name="error" size="xl" />
-      <p>Form not found</p>
+    <div v-else>
+      <span>Loading Forms...</span>
     </div>
   </div>
 </template>
-<!-- route.params.idReport -->
+
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useQuasar } from "quasar";
-import apiRequest from "src/components/apiRequest";
 import { useRoute } from "vue-router";
 
+import apiRequest from "src/components/apiRequest";
 import showComponentVue from "./Forms/showComponent.vue";
 
+const props = defineProps({
+  linkID: String, // match the parameter name
+});
+
 const $q = useQuasar();
-const route = useRoute();
 const { postData } = apiRequest();
+
 const loading = ref(false);
+// ✅ Default to empty object, not null
+const datas = ref({ forms: null, id: null });
 
-const datas = ref(null);
-
-onMounted(() => {
-  getData();
+onMounted(async () => {
+  console.log("linkID", props.linkID);
+  await getData();
 });
 
 const getData = async () => {
-  const data = await postData(
-    "get",
-    null,
-    `cms/viewByLinkForm/${route.params.linkID}`,
-    false,
-    false,
-    true
-  );
+  try {
+    const res = await postData(
+      "get",
+      null,
+      `cms/viewByLinkForm/${props.linkID}`,
+      false,
+      false,
+      true
+    );
 
-  if (data && data.status) {
-    datas.value = data.data;
+    if (res?.status) {
+      console.log("res", res);
+      loading.value = false;
+      datas.value = {
+        forms: res.data?.value.forms ?? null,
+        id: res.data?.value.id ?? null,
+      };
+      console.log("datas", datas.value);
+    } else {
+      loading.value = false;
+      $q.notify({
+        type: "negative",
+        message: "Failed to load form data",
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching form data:", err);
+    $q.notify({
+      type: "negative",
+      message: "Something went wrong",
+    });
+  } finally {
+    loading.value = false;
   }
 };
 </script>
