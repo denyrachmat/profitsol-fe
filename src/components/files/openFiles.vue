@@ -9,24 +9,22 @@
     <q-card class="q-dialog-plugin full-height q-pa-lg">
       <div class="q-pb-md" style="height: 90%; overflow: auto">
         <div>
-          <vue-pdf-embed
-            :key="refreshed"
-            v-if="getExt() === 'pdf'"
-            :source="props.base64File"
-            :style="`width: ${zoom * 10 + 100}%;`"
-          />
-          <img
-            :src="props.base64File"
-            :style="`width: ${zoom * 10 + 100}%;`"
-            v-else-if="
-              getExt() === 'png' ||
-              getExt() === 'jpg' ||
-              getExt() === 'jpeg' ||
-              getExt() === 'gif'
-            "
-          />
-          <div v-else>
-            <span class="text-h4">Sorry, no viewer for this file :(</span>
+          <div>
+            <div class="text-center" v-if="isLoading">
+              <q-spinner size="50px" class="q-mt-xl" />
+              <div class="text-h6 q-mt-md">
+                Populating your files, please wait...
+              </div>
+            </div>
+            <iframe
+              :src="officeViewerUrl"
+              width="100%"
+              frameborder="0"
+              style="border: 0; height: 80vh"
+              v-else
+            ></iframe>
+
+            <!-- <span class="text-h4">Sorry, no viewer for this file :(</span> -->
           </div>
         </div>
       </div>
@@ -75,9 +73,10 @@
 </template>
 <script setup>
 import { ref, onMounted, defineAsyncComponent, computed, watch } from "vue";
-import { useDialogPluginComponent, date } from "quasar";
+import { useDialogPluginComponent, useQuasar } from "quasar";
 import { useAuthStore } from "src/stores/authStore";
 import apiRequest from "../apiRequest";
+import { authHelper, sharePointService } from "@/components/msHelpers";
 
 import { GoogleSignInButton } from "vue3-google-signin";
 
@@ -86,16 +85,89 @@ import VuePdfEmbed from "vue-pdf-embed";
 const zoom = ref(0);
 const refreshed = ref(0);
 const openWebFiles = ref("");
+const isLoading = ref(false);
+const officeViewerUrl = ref("");
 const store = useAuthStore();
 const { postData } = apiRequest();
+
+const $q = useQuasar();
 
 const props = defineProps({
   base64File: String,
   ext: String,
   mime: String,
   title: String,
+  urlFile: String,
+  selectedSites: Object,
+  isSharepoint: Boolean,
+  ids: String,
   // ...your custom props
 });
+
+onMounted(() => {
+  if (props.isSharepoint) {
+    getOfficeViewerUrl();
+  } else {
+    console.log(props.urlFile, props.title, props.mime);
+    openUsingSharepoint(props.urlFile, props.title, props.mime);
+  }
+});
+
+const openUsingSharepoint = async (urlFile, title, mime) => {
+  isLoading.value = true;
+  const fileNya = await urltoFile(props.base64File, title, mime);
+
+  let driveItems;
+  try {
+    driveItems = await sharePointService.uploadToTempAndOpen(fileNya, title);
+  } catch (error) {
+    // If no active account or upload fails, show dialog for direct download
+    $q.dialog({
+      title: "No Active Account",
+      message:
+        "Unable to preview file through SharePoint. Would you like to download the file directly?",
+      cancel: true,
+      persistent: true,
+    })
+      .onOk(() => {
+        // Direct download
+        const link = document.createElement("a");
+        link.href = props.base64File;
+        link.download = title;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .onCancel(() => {
+        isLoading.value = false;
+      });
+    return;
+  }
+
+  if (driveItems) {
+    console.log(driveItems);
+    // Use the proper Office Online viewer URL format
+    // Check if driveItems has the expected preview URL structure
+    if (driveItems.getUrl) {
+      // For SharePoint files, construct the Office Online viewer URL
+      officeViewerUrl.value = driveItems.getUrl;
+    } else if (driveItems.previewUrl) {
+      officeViewerUrl.value = driveItems.previewUrl.includes("?")
+        ? driveItems.previewUrl + "&action=embedview&wdStartOn=1"
+        : driveItems.previewUrl + "?action=embedview&wdStartOn=1";
+    } else {
+      console.error("No preview URL available for this item");
+    }
+    isLoading.value = false;
+  } else {
+    isLoading.value = false;
+    $q.notify({
+      color: "negative",
+      message: "Failed to retrieve drives",
+      icon: "error",
+    });
+  }
+};
 
 const urltoFile = async (url, filename, mime) => {
   const getRealFileName = filename;
@@ -118,6 +190,70 @@ const getExt = () => {
   return exp[exp.length - 1];
 };
 
+const download = async () => {
+  let files;
+  if (!props.isSharepoint) {
+    files = props.base64File;
+
+    const win = window.open();
+    win.document.write(
+      '<iframe src="' +
+        files +
+        '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>'
+    );
+  } else {
+    files = officeViewerUrl.value;
+
+    const getDrives = await sharePointService.getDrives(props.selectedSites.id);
+
+    if (getDrives) {
+      const driveItems = await sharePointService.getFileFromSharePoint(
+        props.ids,
+        getDrives[0].id,
+        "content"
+      );
+
+      if (driveItems) {
+        const win = window.open();
+        win.document.write(
+          '<iframe src="' +
+            driveItems.base64File +
+            "#" +
+            driveItems.fileName +
+            '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>'
+        );
+      } else {
+        $q.notify({
+          color: "negative",
+          message: "Failed to retrieve drives",
+          icon: "error",
+        });
+      }
+    }
+  }
+};
+
+const onOpenSharepoint = async () => {
+  // const getRootSharePoint = await getSitesSharePoint();
+
+  if (props.selectedSites) {
+    const filename = "forOpenFiles" + "." + props.ext;
+    const files = await urltoFile(props.base64File, filename, props.mime);
+
+    if (files) {
+      // console.log(files);
+      const getDataUpload = await uploadFileToSharepointToRead(
+        props.selectedSites.webUrl,
+        filename,
+        files
+      );
+      if (getDataUpload) {
+        window.open(getDataUpload);
+      }
+    }
+  }
+};
+
 const uploadFileToSharepointToRead = async (rootUrl, fileName, files) => {
   const formData = new FormData();
   formData.append("file", files[0]);
@@ -138,53 +274,33 @@ const uploadFileToSharepointToRead = async (rootUrl, fileName, files) => {
   }
 };
 
-const getSitesSharePoint = async () => {
-  const data = await postData(
-    "get",
-    null,
-    null,
-    false,
-    false,
-    false,
-    process.env.GRAPH_API + `me/drive`,
-    true
-  );
+// New function to handle the core logic
+const getOfficeViewerUrl = async () => {
+  isLoading.value = true;
+  let finalUrl = "";
 
-  if (data) {
-    // openWebFiles.value = data.webUrl;
+  const getDrives = await sharePointService.getDrives(props.selectedSites.id);
 
-    return data.webUrl;
-  }
-};
+  if (getDrives) {
+    const driveItems = await sharePointService.getFileFromSharePoint(
+      props.ids,
+      getDrives[0].id,
+      "preview"
+    );
 
-const download = () => {
-  const win = window.open();
-  win.document.write(
-    '<iframe src="' +
-      props.base64File +
-      '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>'
-  );
-};
-
-const onOpenSharepoint = async () => {
-  const getRootSharePoint = await getSitesSharePoint();
-
-  if (getRootSharePoint) {
-    const filename = "forOpenFiles" + "." + props.ext;
-    const files = await urltoFile(props.base64File, filename, props.mime);
-
-    if (files) {
-      // console.log(files);
-      const getDataUpload = await uploadFileToSharepointToRead(
-        getRootSharePoint,
-        filename,
-        files
-      );
-      if (getDataUpload) {
-        window.open(getDataUpload);
-      }
+    if (driveItems) {
+      finalUrl = driveItems.getUrl;
+    } else {
+      $q.notify({
+        color: "negative",
+        message: "Failed to retrieve drives",
+        icon: "error",
+      });
     }
   }
+
+  officeViewerUrl.value = finalUrl;
+  isLoading.value = false;
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =

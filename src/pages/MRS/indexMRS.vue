@@ -211,9 +211,13 @@ const onEditreport = (valData) => {
     componentProps: {
       dataEdit: valData,
     },
-  }).onOk(async (val) => {
-    console.log(val);
-  });
+  })
+    .onOk(async (val) => {
+      console.log(val);
+    })
+    .onDismiss(() => {
+      getDatanya();
+    });
 };
 
 const onOpenNewTab = (id) => {

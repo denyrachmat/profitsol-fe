@@ -128,6 +128,7 @@ onMounted(async () => {
 
 const getData = async () => {
   loading.value = true;
+  store.storeIsNotifDone(false);
   const data = await postData("get", null, `portal/notif`, false, false, true);
 
   if (data) {
@@ -135,6 +136,9 @@ const getData = async () => {
     rows.value = data.data;
 
     store.storeInformationList(rows.value);
+    store.storeIsNotifDone(true);
+  } else {
+    store.storeIsNotifDone(true);
   }
 };
 

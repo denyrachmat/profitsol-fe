@@ -151,6 +151,83 @@
             </div>
           </div>
         </fieldset>
+
+        <fieldset
+          style="border: 1px solid #ccc !important; border-radius: 16px"
+          class="q-pa-md"
+        >
+          <legend class="text-bold text-h5">Domain Setup</legend>
+          <div class="row q-pt-sm">
+            <div class="col">
+              <!-- <q-checkbox
+                v-model="formnya.pd_is_cms"
+                label="Is CMS Domain?"
+                dense
+                false-value="0"
+                true-value="1"
+              /> -->
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formnya.pd_is_cms"
+                  label="Generate CMS (Using Statami CMS)"
+                  dense
+                  val="1"
+                />
+                <q-radio
+                  v-model="formnya.pd_is_cms"
+                  label="Configure Own CMS"
+                  dense
+                  val="2"
+                />
+              </div>
+            </div>
+            <div class="col" v-if="formnya.pd_is_cms == 1">
+              <div class="row">
+                <div class="col">
+                  <q-btn
+                    :label="
+                      formnya.CMSState !== '' &&
+                      formnya.CMSState !== 'setup_failed' &&
+                      formnya.CMSState !== 'setup_admin_done'
+                        ? 'Setup on Progress'
+                        : formnya.CMSState !== ''
+                        ? formnya.CMSState == 'setup_failed'
+                          ? 'Failed to Setup CMS'
+                          : `CMS Already Set up`
+                        : `Setup CMS Now`
+                    "
+                    :color="
+                      formnya.CMSState !== 'setup_failed' ? 'primary' : 'red'
+                    "
+                    class="full-width"
+                    @click="onSetupCmsClick"
+                    :disable="
+                      formnya.CMSState === 'setup_admin_done' &&
+                      formnya.CMSState !== 'setup_failed'
+                    "
+                    :loading="
+                      formnya.CMSState !== '' &&
+                      formnya.CMSState !== 'setup_admin_done'
+                    "
+                  />
+                </div>
+                <div class="col-1">
+                  <q-btn
+                    icon="open_in_new"
+                    color="primary"
+                    flat
+                    dense
+                    @click="onClickSetupCMS(formnya)"
+                    :disable="formnya.CMSState !== 'setup_admin_done'"
+                    class="full-width"
+                  >
+                    <q-tooltip>CMS Setup</q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -163,7 +240,10 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
+import apiRequest from "src/components/apiRequest";
+import viewApps from "../../Dashboards/viewApps.vue";
 
+const { postData } = apiRequest();
 const $q = useQuasar();
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -174,6 +254,7 @@ const props = defineProps({
 });
 
 const formnya = ref({
+  id: "",
   pd_name: "",
   pd_desc: "",
   pd_prefix_db: "",
@@ -184,6 +265,8 @@ const formnya = ref({
   pd_password: "",
   pd_img: "",
   pd_base_color: "",
+  pd_is_cms: 0,
+  CMSState: "",
 });
 const img = ref("");
 const viewPass = ref(false);
@@ -238,6 +321,50 @@ const filterFn = (val, update) => {
       (v) => v.label.toLowerCase().indexOf(needle) > -1
     );
   });
+};
+
+const onSetupCmsClick = () => {
+  $q.dialog({
+    title: "Setup CMS",
+    message: `Are you sure want to setup CMS for this domain?`,
+    cancel: true,
+  }).onOk(async () => {
+    // Logic to setup CMS goes here
+    await postData(
+      `post`,
+      null,
+      `domain/startSetupCMS/${formnya.value.id}`,
+      false,
+      true,
+      true
+    )
+      .then((response) => {
+        $q.notify({
+          type: "positive",
+          message: "CMS Setup successful!",
+        });
+      })
+      .catch((error) => {
+        $q.notify({
+          type: "negative",
+          message: "CMS Setup failed!",
+        });
+      });
+  });
+};
+
+const onClickSetupCMS = (row) => {
+  $q.dialog({
+    component: viewApps,
+
+    // props forwarded to your custom component
+    componentProps: {
+      dataProps: row.urlCMS,
+      title: row.pd_desc,
+      isRouter: row.pd_is_cms == 1,
+      // ...more..props...
+    },
+  }).onOk(async (val) => {});
 };
 
 const onOKClick = () => {

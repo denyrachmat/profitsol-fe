@@ -3,7 +3,7 @@
     <div class="row">
       <div class="col text-right">
         <q-btn-group>
-          <q-btn color="primary" icon="add" @click="onClickManage">
+          <q-btn color="primary" icon="add" @click="onClickManage()">
             <q-tooltip>Add new DMS Root</q-tooltip>
           </q-btn>
           <q-btn color="cyan" icon="person_add" @click="onClickMapping">

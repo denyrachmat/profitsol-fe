@@ -11,6 +11,9 @@
       <q-bar>
         {{ title }}
         <q-space />
+        <q-btn dense flat icon="minimize" @click="onClickMinimize">
+          <q-tooltip class="bg-white text-primary">Minimize Program</q-tooltip>
+        </q-btn>
         <q-btn dense flat icon="close" @click="closeProgram">
           <q-tooltip class="bg-white text-primary">Close</q-tooltip>
         </q-btn>
@@ -133,9 +136,15 @@ const closeProgram = () => {
     cancel: true,
     persistent: true,
   }).onOk(() => {
-    router.push("/");
+    router.push("/portal");
     onDialogCancel();
   });
+};
+
+const onClickMinimize = () => {
+  authStore.storeMinimizedMenu(authStore.getChoosedMenu);
+
+  onDialogHide();
 };
 
 // Optional: Watch formStore to close dialog on quiz finish

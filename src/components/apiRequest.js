@@ -4,9 +4,9 @@ import { useAuthStore } from "../stores/authStore";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import { useRouter } from "vue-router";
 
-const apiRequest = () => {
+const apiRequest = ($qParam) => {
   const store = useAuthStore();
-  const $q = useQuasar();
+  let $q = $qParam || useQuasar();
   const router = useRouter();
 
   const data = ref(null);
@@ -23,7 +23,13 @@ const apiRequest = () => {
     isReturnErrorData = false
   ) => {
     // Jika menggunakan loading
+    // Ensure $q is defined, fallback to useQuasar if not provided
+    if (!$q) {
+      $q = useQuasar();
+    }
+
     if (loading) {
+      console.log($q)
       $q.loading.show({
         spinner: QSpinnerFacebook,
         spinnerColor: "yellow",
@@ -152,6 +158,8 @@ const apiRequest = () => {
 
           // return e.response;
         }
+
+        return false
       });
 
     if (req) {

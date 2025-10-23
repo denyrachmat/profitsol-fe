@@ -22,6 +22,7 @@ export const useFormStore = defineStore("form", {
     },
     startFormDate: "",
     endFormDate: "",
+    CMSPageChoosed: ""
   }),
 
   getters: {
@@ -51,6 +52,9 @@ export const useFormStore = defineStore("form", {
     },
     getSetUpTimer(state) {
       return state.setUpTimer
+    },
+    getCMSPageChoosed(state) {
+      return state.CMSPageChoosed;
     }
   },
 
@@ -138,6 +142,9 @@ export const useFormStore = defineStore("form", {
     },
     setSetUpTimer(stateVal) {
       this.setUpTimer = stateVal
+    },
+    setCMSPageChoosed(page) {
+      this.CMSPageChoosed = page;
     }
   },
 });

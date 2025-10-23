@@ -45,7 +45,9 @@
           :key="idx"
         >
           <q-card style="min-height: 20em" class="relative-position text-wrap">
-            <q-card-section class="bg-primary text-white">
+            <q-card-section
+              :class="`${menu.apps.am_color ?? 'bg-primary text-white'}`"
+            >
               <div class="text-bold">{{ menu.apps.am_app_name }}</div>
             </q-card-section>
 
@@ -98,6 +100,8 @@ const props = defineProps({
   // ...your custom props
 });
 
+const authStore = useAuthStore();
+
 const store = useAuthStore();
 
 const clickedApp = ref([]);
@@ -110,11 +114,39 @@ const listMenu = computed(() => {
     : findApps(store.getChoosedRole.role.role_app_map, clickedApp.value)[0];
 });
 
-const getRoleAppMap = computed(() =>
-  store.getChoosedRole.role.role_app_map.filter((f) => f.apps.am_is_drawer == 0)
-);
+const getRoleAppMap = computed(() => {
+  let datanya = store.getChoosedRole.role.role_app_map;
+  if (store.getChoosedDomain && store.getChoosedDomain.pd_is_cms == 2) {
+    // console.log("getRoleAppMap", store.getChoosedDomain);
+    // Prevent duplicate "Update Front Page" app
+    if (
+      !datanya.some(
+        (item) => item.apps?.am_app_url === "UpdateFP/UpdateFPIndex"
+      )
+    ) {
+      datanya.push({
+        apps: {
+          am_app_name: "Update Front Page",
+          am_app_icon: "domain",
+          am_app_desc: `Update Front Page ${store.getChoosedDomain.pd_desc}`,
+          am_app_url: "UpdateFP/UpdateFPIndex",
+          am_is_drawer: 0,
+          am_color: "bg-green text-white",
+        },
+        child_roles: [],
+      });
+    }
+  } else {
+    datanya = datanya.filter((item) => item.apps?.am_app_url !== "updateFP");
+  }
+
+  return store.getChoosedRole.role.role_app_map.filter(
+    (f) => f.apps && f.apps.am_is_drawer == 0
+  );
+});
 
 const findApps = (arr, id = []) => {
+  if (!Array.isArray(arr)) return [];
   return arr.reduce((r, o) => {
     const children = findApps(o.child_roles, id);
     // console.log([children, o.am_app_id === id[id.length - 1], o]);
@@ -130,6 +162,7 @@ const findApps = (arr, id = []) => {
 };
 
 const findChoosedApps = (arr, id) => {
+  if (!Array.isArray(arr)) return [];
   return arr.reduce((r, o) => {
     const children = findChoosedApps(o.child_roles, id);
     if (id.includes(o.am_app_id) || children.length > 0) {
@@ -179,6 +212,18 @@ const chooseApp = (val) => {
         });
       }
     } else {
+      // Replace 'storeChoosedMenu' with the correct method from your authStore
+      // For example, if you have a mutation or action named 'setChoosedMenu', use that:
+      authStore.storeChoosedMenu({
+        am_app_id: val.apps.am_app_id,
+        am_app_code: val.apps.am_app_code,
+        am_app_name: val.apps.am_app_name,
+        am_app_icon: val.apps.am_app_icon,
+        am_app_url: val.apps.am_app_url,
+        am_local_form: val.apps.am_local_form,
+      });
+      // If you do not have such a method, define it in your authStore.
+
       $q.dialog({
         component: viewApps,
 

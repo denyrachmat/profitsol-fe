@@ -37,7 +37,7 @@
 import { onMounted, ref, watch } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
-import showQuizResultVue from "../CMS/Forms/showQuizResult.vue";
+import showQuizResultVue from "../CMS/Forms/showQuizResultDialog.vue";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -129,7 +129,6 @@ const getData = async () => {
 };
 
 const viewResult = async (id, dataForms) => {
-  console.log(id);
   $q.dialog({
     component: showQuizResultVue,
     componentProps: {
@@ -139,6 +138,9 @@ const viewResult = async (id, dataForms) => {
       idQuiz: id,
     },
     persistent: true,
+  }).onClose(() => {
+    console.log("closed");
+    // getData();
   });
 };
 </script>

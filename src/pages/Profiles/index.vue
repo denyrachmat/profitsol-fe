@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-md">
+  <div class="q-gutter-md q-pa-md bg-grey-2">
     <div class="row q-py-md">
       <div class="col text-center">
         <b class="text-h4">Profiles</b>
@@ -8,11 +8,12 @@
     <!-- Photo Profile -->
     <div class="row q-py-md">
       <div class="col" style="position: relative; min-height: 150px">
-        <!-- <transition
+        <transition
           appear
           enter-active-class="animated fadeIn"
           leave-active-class="animated fadeOut"
           :duration="200"
+          v-if="!changePhoto"
         >
           <q-avatar
             size="150px"
@@ -42,8 +43,8 @@
               icon="refresh"
             />
           </q-btn>
-        </transition> -->
-        <template v-if="!changePhoto">
+        </transition>
+        <!-- <template v-if="!changePhoto">
           <q-avatar
             size="150px"
             v-if="form.pud_photo"
@@ -67,7 +68,7 @@
             text-color="white"
             font-size="150px"
           />
-        </template>
+        </template> -->
         <div v-else>
           <q-btn
             round
@@ -86,409 +87,58 @@
       </div>
     </div>
     <q-separator />
-    <!-- Personal Data -->
-    <div class="row">
-      <div class="col q-px-sm">
-        <q-input
-          dense
-          outlined
-          v-model="form.pud_first_name"
-          label="First Name *"
-          lazy-rules
-          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
-        />
-      </div>
-      <div class="col q-px-sm">
-        <q-input
-          dense
-          outlined
-          v-model="form.pud_last_name"
-          label="Last Name *"
-          lazy-rules
-          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
-        />
-      </div>
-    </div>
-    <div class="row">
-      <div class="col q-px-sm">
-        <q-input
-          dense
-          outlined
-          v-model="form.pud_birth_place"
-          label="Birth Place"
-          lazy-rules
-          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
-        />
-      </div>
-      <div class="col q-px-sm">
-        <q-input
-          dense
-          outlined
-          v-model="form.pud_birth_date"
-          mask="date"
-          :rules="['date']"
-          label="Birth Date"
-          lazy-rules
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy
-                cover
-                transition-show="scale"
-                transition-hide="scale"
-              >
-                <q-date v-model="form.pud_birth_date">
-                  <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Close" color="primary" flat />
-                  </div>
-                </q-date>
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col q-px-sm">
-        <q-input
-          outlined
-          v-model="form.pud_phone"
-          label="Phone Number"
-          lazy-rules
-          mask="(+##) ###-####-####"
-          hint="(+##) ###-####-####"
-          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
-          dense
-        />
-      </div>
-    </div>
 
-    <!-- ID Number -->
-    <q-separator />
-    <div class="row">
-      <div class="col-px-sm">
-        <div class="q-gutter-sm">
-          <div><b>ID Type</b></div>
-          <q-radio
-            keep-color
-            v-model="form.pud_id_type"
-            val="nationality"
-            label="Nationality ID"
-            color="teal"
-          />
-          <q-radio
-            keep-color
-            v-model="form.pud_id_type"
-            val="driving"
-            label="Driving ID"
-            color="orange"
-          />
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col q-px-sm">
-        <q-input
-          outlined
-          v-model="form.pud_id_card"
-          label="ID Number"
-          lazy-rules
-          :rules="[(val) => (val && val.length > 0) || 'Please type something']"
-          dense
-        />
-      </div>
-    </div>
-
-    <!-- Identification Detail -->
-    <q-separator />
-    <div class="row">
-      <div class="col-12 q-px-sm col-sm-6">
-        <div class="row q-py-md">
-          <div class="col">
-            <div class="text-h5"><b>ID Address</b></div>
-          </div>
-        </div>
-        <div class="row q-py-md">
-          <div class="col">
-            <q-btn icon="place" color="cyan" no-caps @click="viewMaps('id')"
-              >Find place on Maps</q-btn
-            >
-          </div>
-        </div>
+    <q-card bordered>
+      <q-card-section>
+        <!-- Personal Data -->
         <div class="row">
-          <div class="col">
+          <div class="col q-px-sm">
             <q-input
+              dense
               outlined
-              v-model="form.pud_country"
-              label="Country"
+              v-model="form.pud_first_name"
+              label="First Name *"
               lazy-rules
               :rules="[
                 (val) => (val && val.length > 0) || 'Please type something',
               ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_states"
-              label="State / Province"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_cities"
-              label="City"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_district"
-              label="District"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_subdistrict"
-              label="Sub-District"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_addr1"
-              label="Detail Locations"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-      </div>
-      <div class="col-12 q-px-sm col-sm-6">
-        <div class="row q-py-md">
-          <div class="col">
-            <div class="text-h5"><b>Current Address</b></div>
-          </div>
-        </div>
-        <div class="row q-py-md">
-          <div class="col">
-            <q-btn-group>
-              <q-btn
-                icon="content_copy"
-                color="orange"
-                no-caps
-                @click="isSameAddr()"
-                >Same address as your ID</q-btn
-              >
-              <q-btn icon="place" color="cyan" no-caps @click="viewMaps('curr')"
-                >Find place on Maps</q-btn
-              >
-            </q-btn-group>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_country_rsdn"
-              label="Country"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_states_rsdn"
-              label="State / Province"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_cities_rsdn"
-              label="City"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_district_rsdn"
-              label="District"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_subdistrict_rsdn"
-              label="Sub-District"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="form.pud_addr1_rsdn"
-              label="Detail Locations"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <q-separator />
-    <div class="row">
-      <div class="col-10 text-h4"><b>Educations Detail</b></div>
-      <div class="col-2">
-        <q-btn icon="add" color="cyan" no-caps @click="addEdu()"
-          >Add more data</q-btn
-        >
-      </div>
-    </div>
-    <div class="row" v-if="educations.length === 0">
-      <div class="col q-pa-md text-center"><b>No data found</b></div>
-    </div>
-    <template v-else>
-      <template v-for="(edu, idx) in educations" :key="idx">
-        <div class="row">
-          <div class="col-5">
-            <q-select
-              outlined
-              v-model="edu.pusd_level"
-              :options="schoolOpt"
-              label="School Level"
-              dense
-            />
-          </div>
-          <div class="col-6 q-px-sm">
-            <q-input
-              outlined
-              v-model="edu.pusd_sch_name"
-              label="School Name"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
-            />
-          </div>
-          <div class="col-1 q-px-sm text-right">
-            <q-btn
-              round
-              color="red"
-              icon="clear"
-              outline
-              @click="removeEdu(idx)"
-            />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <q-input
-              outlined
-              v-model="edu.pusd_sch_majors"
-              label="School Major"
-              lazy-rules
-              :rules="[
-                (val) => (val && val.length > 0) || 'Please type something',
-              ]"
-              dense
             />
           </div>
           <div class="col q-px-sm">
             <q-input
+              dense
               outlined
-              v-model="edu.pusd_sch_minors"
-              label="School Minor"
+              v-model="form.pud_last_name"
+              label="Last Name *"
               lazy-rules
               :rules="[
                 (val) => (val && val.length > 0) || 'Please type something',
               ]"
-              dense
             />
           </div>
         </div>
         <div class="row">
-          <div class="col">
+          <div class="col q-px-sm">
             <q-input
-              outlined
-              v-model="edu.pusd_sch_end"
-              mask="####-##-##"
-              label="Graduate Date"
               dense
+              outlined
+              v-model="form.pud_birth_place"
+              label="Birth Place"
+              lazy-rules
+              :rules="[
+                (val) => (val && val.length > 0) || 'Please type something',
+              ]"
+            />
+          </div>
+          <div class="col q-px-sm">
+            <q-input
+              dense
+              outlined
+              v-model="form.pud_birth_date"
+              mask="date"
+              :rules="['date']"
+              label="Birth Date"
+              lazy-rules
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
@@ -497,7 +147,7 @@
                     transition-show="scale"
                     transition-hide="scale"
                   >
-                    <q-date v-model="edu.pusd_sch_end" mask="YYYY-MM-DD">
+                    <q-date v-model="form.pud_birth_date">
                       <div class="row items-center justify-end">
                         <q-btn
                           v-close-popup
@@ -512,11 +162,52 @@
               </template>
             </q-input>
           </div>
+        </div>
+        <div class="row">
           <div class="col q-px-sm">
             <q-input
               outlined
-              v-model="edu.pusd_grade"
-              label="Grade"
+              v-model="form.pud_phone"
+              label="Phone Number"
+              lazy-rules
+              mask="(+##) ###-####-####"
+              hint="(+##) ###-####-####"
+              :rules="[
+                (val) => (val && val.length > 0) || 'Please type something',
+              ]"
+              dense
+            />
+          </div>
+        </div>
+
+        <!-- ID Number -->
+        <div class="row">
+          <div class="col-px-sm">
+            <div class="q-gutter-sm">
+              <div><b>ID Type</b></div>
+              <q-radio
+                keep-color
+                v-model="form.pud_id_type"
+                val="nationality"
+                label="Nationality ID"
+                color="teal"
+              />
+              <q-radio
+                keep-color
+                v-model="form.pud_id_type"
+                val="driving"
+                label="Driving ID"
+                color="orange"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col q-px-sm">
+            <q-input
+              outlined
+              v-model="form.pud_id_card"
+              label="ID Number"
               lazy-rules
               :rules="[
                 (val) => (val && val.length > 0) || 'Please type something',
@@ -525,13 +216,354 @@
             />
           </div>
         </div>
-      </template>
-    </template>
+      </q-card-section>
+    </q-card>
+
+    <!-- Identification Detail -->
+    <q-separator />
+    <q-card bordered>
+      <q-card-section>
+        <div class="row">
+          <div class="col-12 q-px-sm col-sm-6">
+            <div class="row q-py-md">
+              <div class="col">
+                <div class="text-h5"><b>ID Address</b></div>
+              </div>
+            </div>
+            <div class="row q-py-md">
+              <div class="col">
+                <q-btn icon="place" color="cyan" no-caps @click="viewMaps('id')"
+                  >Find place on Maps</q-btn
+                >
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_country"
+                  label="Country"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_states"
+                  label="State / Province"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_cities"
+                  label="City"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_district"
+                  label="District"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_subdistrict"
+                  label="Sub-District"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_addr1"
+                  label="Detail Locations"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+          </div>
+          <div class="col-12 q-px-sm col-sm-6">
+            <div class="row q-py-md">
+              <div class="col">
+                <div class="text-h5"><b>Current Address</b></div>
+              </div>
+            </div>
+            <div class="row q-py-md">
+              <div class="col">
+                <q-btn-group>
+                  <q-btn
+                    icon="content_copy"
+                    color="orange"
+                    no-caps
+                    @click="isSameAddr()"
+                    >Same address as your ID</q-btn
+                  >
+                  <q-btn
+                    icon="place"
+                    color="cyan"
+                    no-caps
+                    @click="viewMaps('curr')"
+                    >Find place on Maps</q-btn
+                  >
+                </q-btn-group>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_country_rsdn"
+                  label="Country"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_states_rsdn"
+                  label="State / Province"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_cities_rsdn"
+                  label="City"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_district_rsdn"
+                  label="District"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_subdistrict_rsdn"
+                  label="Sub-District"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  outlined
+                  v-model="form.pud_addr1_rsdn"
+                  label="Detail Locations"
+                  lazy-rules
+                  :rules="[
+                    (val) => (val && val.length > 0) || 'Please type something',
+                  ]"
+                  dense
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <q-separator />
-    <div class="row">
+    <div class="row q-py-md">
+      <div class="col-10 text-h4"><b>Educations Detail</b></div>
+      <div class="col-2 text-right">
+        <q-btn icon="add" color="cyan" no-caps @click="addEdu()"
+          >Add more data</q-btn
+        >
+      </div>
+    </div>
+    <div class="row" v-if="educations.length === 0">
+      <div class="col q-pa-md text-center"><b>No data found</b></div>
+    </div>
+    <div v-else class="q-gutter-md">
+      <q-card v-for="(edu, idx) in educations" :key="idx" bordered>
+        <q-card-section>
+          <div class="row">
+            <div class="col">
+              <q-select
+                outlined
+                v-model="edu.pusd_level"
+                :options="schoolOpt"
+                label="School Level"
+                dense
+                emit-value
+                map-options
+              />
+            </div>
+            <div class="col-6">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_name"
+                label="School Name"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col-1 text-right">
+              <q-btn
+                round
+                color="red"
+                icon="clear"
+                outline
+                @click="removeEdu(idx)"
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_majors"
+                label="School Major"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_minors"
+                label="School Minor"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_sch_end"
+                mask="####-##-##"
+                label="Graduate Date"
+                dense
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="edu.pusd_sch_end" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+            <div class="col">
+              <q-input
+                outlined
+                v-model="edu.pusd_grade"
+                label="Grade"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <q-separator />
+    <div class="row q-pt-md">
       <div class="col-10 text-h4"><b>Families Detail</b></div>
-      <div class="col-2">
+      <div class="col-2 text-right">
         <q-btn icon="add" color="cyan" no-caps @click="addFam()"
           >Add more data</q-btn
         >
@@ -541,6 +573,109 @@
       <div class="col q-pa-md text-center">
         <b>No data found</b>
       </div>
+    </div>
+    <div v-else class="q-gutter-md">
+      <q-card v-for="(family, idx) in families" :key="idx" bordered>
+        <q-card-section>
+          <div class="row">
+            <div class="col">
+              <q-input
+                outlined
+                v-model="family.pufd_first_name"
+                label="First Name"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col">
+              <q-input
+                outlined
+                v-model="family.pufd_last_name"
+                label="Last Name"
+                lazy-rules
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col-1 text-right">
+              <q-btn
+                round
+                color="red"
+                icon="clear"
+                outline
+                @click="removeFam(idx)"
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <q-select
+                outlined
+                v-model="family.pufd_relation"
+                :options="relationOpt"
+                label="Relation"
+                dense
+                emit-value
+                map-options
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+              />
+            </div>
+            <div class="col">
+              <q-input
+                outlined
+                v-model="family.pufd_phone"
+                label="Phone Number"
+                lazy-rules
+                mask="(+##) ###-####-####"
+                hint="(+##) ###-####-####"
+                :rules="[
+                  (val) => (val && val.length > 0) || 'Please type something',
+                ]"
+                dense
+              />
+            </div>
+            <div class="col">
+              <q-input
+                outlined
+                v-model="family.pufd_birthday"
+                mask="date"
+                :rules="['date']"
+                label="Birth Date"
+                lazy-rules
+                dense
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="family.pufd_birthday">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
   </div>
 </template>
@@ -626,23 +761,77 @@ export default defineComponent({
       schoolOpt: ref([
         {
           label: "High School",
-          value: 1,
+          value: "1",
         },
         {
           label: "Associate / Diploma Degree",
-          value: 2,
+          value: "2",
         },
         {
           label: "Bachelor Degree",
-          value: 3,
+          value: "3",
         },
         {
           label: "Master Degree",
-          value: 4,
+          value: "4",
         },
         {
           label: "Doctor Degree",
-          value: 5,
+          value: "5",
+        },
+      ]),
+      relationOpt: ref([
+        {
+          label: "Father",
+          value: "father",
+        },
+        {
+          label: "Mother",
+          value: "mother",
+        },
+        {
+          label: "Brother",
+          value: "brother",
+        },
+        {
+          label: "Sister",
+          value: "sister",
+        },
+        {
+          label: "Uncle",
+          value: "uncle",
+        },
+        {
+          label: "Aunt",
+          value: "aunt",
+        },
+        {
+          label: "Cousin",
+          value: "cousin",
+        },
+        {
+          label: "Grand Father",
+          value: "grand_father",
+        },
+        {
+          label: "Grand Mother",
+          value: "grand_mother",
+        },
+        {
+          label: "Husband",
+          value: "husband",
+        },
+        {
+          label: "Wife",
+          value: "wife",
+        },
+        {
+          label: "Son",
+          value: "son",
+        },
+        {
+          label: "Daughter",
+          value: "daughter",
         },
       ]),
     };
@@ -721,8 +910,20 @@ export default defineComponent({
           this.educations.splice(idx, 1);
         });
     },
+    removeFam(idx) {
+      this.$q
+        .dialog({
+          title: "Confirm",
+          message: "Are you sure want to delete this item ?",
+          cancel: true,
+          persistent: true,
+        })
+        .onOk(() => {
+          this.families.splice(idx, 1);
+        });
+    },
     addFam() {
-      this.families.push(educationTemp);
+      this.families.push(familiesTemp);
     },
     changePhotoClick() {
       this.$q

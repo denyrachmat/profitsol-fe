@@ -11,11 +11,14 @@
         <div class="text-h6">Preview Content</div>
       </q-card-section>
 
-      <q-card-section class="q-pa-md">
+      <q-card-section class="q-pa-md" style="min-height: 40vh">
         <showComponentVue
           :data="props.data"
           v-if="props.mode === 'form'"
           :setup="props.setup"
+          :id="props.id"
+          :showFormOnly="isShowFormOnlyValue"
+          :preventClear="props.preventClear"
         />
         <showQuizComponentVue
           :id="props.id"
@@ -51,10 +54,35 @@ const props = defineProps({
   data: Array,
   setup: Object,
   mode: String,
+  showFormOnly: Boolean,
+  preventClear: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const isShowFormOnlyValue = ref(true);
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
+
+onMounted(async () => {
+  console.log("props", props);
+
+  if (props.setup && props.setup.isHistory) {
+    if (props.setup.isHistory == 1) {
+      isShowFormOnlyValue.value = false;
+    } else {
+      isShowFormOnlyValue.value = true;
+    }
+  } else {
+    isShowFormOnlyValue.value = true;
+  }
+
+  isShowFormOnlyValue.value = props.showFormOnly;
+
+  console.log("isShowFormOnlyValue", isShowFormOnlyValue.value);
+});
 
 function onOKClick() {
   // store.restoreDefault();

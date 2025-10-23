@@ -11,10 +11,26 @@ const routes = [
     children: [{ path: "", component: () => import("pages/Auth/resetPassword.vue"), name: 'reset' }],
   },
   {
-    path: "/",
+    path: "/portal",
     component: () => import("layouts/MainLayout.vue"),
     children: [
       { path: "", component: () => import("pages/Dashboards/index.vue") },
+    ],
+  },
+  {
+    path: "/",
+    component: () => import("pages/Frontpage/FrontPageIndex.vue"),
+    children: [
+      {
+        path: "/pages/:slug/:url?",
+        name: "pages",
+        component: () => import("pages/UpdateFP/pagesRedirect.vue"),
+      },
+      {
+        path: "/tags/:tag?/:orderBy?/:limit?/:order?",
+        name: "tags",
+        component: () => import("pages/Frontpage/listPostsByTags.vue"),
+      },
     ],
   },
   {
@@ -85,6 +101,10 @@ const routes = [
     path: "/:catchAll(.*)*",
     component: () => import("pages/ErrorNotFound.vue"),
   },
+  {
+    path: '/auth-popup',
+    component: () => import('pages/AuthPopup.vue')
+  }
 ];
 
 export default routes;

@@ -242,6 +242,9 @@ const onUpdatedApps = (
       if (dataSub) {
         console.log(data);
         getApps();
+      } else {
+        console.log("Error updating app");
+        onUpdatedApps(true, val.value);
       }
     })
     .onCancel(() => {

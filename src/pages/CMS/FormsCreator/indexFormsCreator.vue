@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row">
       <div class="col">
-        <q-btn-group flat>
+        <q-btn-group flat v-if="!props.mode">
           <q-btn color="primary" label="File" flat no-caps>
             <q-menu>
               <q-list dense style="min-width: 100px">
@@ -10,7 +10,7 @@
                   <q-item-section>New Forms</q-item-section>
                 </q-item>
                 <q-item clickable v-close-popup @click="onClickOpenTraining">
-                  <q-item-section>Open...</q-item-section>
+                  <q-item-section>Open... (CTRL + O)</q-item-section>
                 </q-item>
                 <q-item
                   clickable
@@ -18,7 +18,7 @@
                   @click="onSaveQuestion"
                   :disable="!title"
                 >
-                  <q-item-section>Save Quiz</q-item-section>
+                  <q-item-section>Save Forms (CTRL + S)</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -56,7 +56,7 @@
         </q-btn-group>
       </div>
     </div>
-    <div class="row q-pt-sm">
+    <div class="row q-py-sm">
       <div class="col q-pr-md">
         <q-input outlined label="Forms Title" v-model="title" dense />
       </div>
@@ -70,7 +70,29 @@
           >
             <q-tooltip> Add Rows. </q-tooltip>
           </q-btn>
+          <q-btn
+            color="primary"
+            icon="save"
+            @click="onSaveQuestion"
+            :disable="!title"
+            v-if="props.mode && props.mode == '2'"
+          >
+            <q-tooltip> Save. </q-tooltip>
+          </q-btn>
         </q-btn-group>
+      </div>
+    </div>
+    <div class="row" v-if="props.mode && props.mode == '2'">
+      <div class="col">
+        <q-input
+          outlined
+          dense
+          v-model="desc"
+          placeholder="Page Description"
+          clearable
+          class="q-mb-md"
+          type="textarea"
+        />
       </div>
     </div>
     <div class="row q-py-md">
@@ -146,7 +168,7 @@
                   </div>
                   <div class="row">
                     <div
-                      class="col"
+                      :class="col.width ? `col-${col.width}` : 'col'"
                       v-for="(col, indexCol) in form.content"
                       :key="indexCol"
                     >
@@ -156,6 +178,7 @@
                           border-radius: 16px;
                           max-height: 80vh;
                           overflow: auto;
+                          max-width: 100%;
                         "
                       >
                         <legend>Columns - {{ indexCol + 1 }}</legend>
@@ -170,6 +193,7 @@
                               "
                               flat
                               dense
+                              v-if="!props.mode"
                             >
                               <q-tooltip> Add Components</q-tooltip>
                             </q-btn>
@@ -184,6 +208,57 @@
                             >
                               <q-tooltip> Add HTML</q-tooltip>
                             </q-btn>
+                            <q-btn
+                              icon="width_wide"
+                              color="indigo"
+                              @click="
+                                onClickWidthCustom(index, indexCol, col.content)
+                              "
+                              flat
+                              dense
+                              v-if="props.mode && props.mode === '2'"
+                            >
+                              <q-tooltip> Change width columns</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                              icon="post_add"
+                              color="indigo"
+                              @click="
+                                onClickLatestPost(index, indexCol, col.content)
+                              "
+                              flat
+                              dense
+                              v-if="props.mode && props.mode === '2'"
+                            >
+                              <q-tooltip> Add Latest Post</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                              icon="cases"
+                              color="indigo"
+                              @click="
+                                onClickFilesAddon(index, indexCol, col.content)
+                              "
+                              flat
+                              dense
+                              v-if="props.mode && props.mode === '2'"
+                            >
+                              <q-tooltip>
+                                Add Files / Folders Explore</q-tooltip
+                              >
+                            </q-btn>
+                            <q-btn
+                              icon="file_present"
+                              color="indigo"
+                              @click="
+                                onClickFilesViewer(index, indexCol, col.content)
+                              "
+                              flat
+                              dense
+                              v-if="props.mode && props.mode === '2'"
+                            >
+                              <q-tooltip>Show files</q-tooltip>
+                            </q-btn>
+                            <!-- props.mode && props.mode === "2" -->
                             <q-btn
                               icon="delete"
                               color="red"
@@ -241,6 +316,320 @@
                           v-if="col.type === 'html'"
                           v-html="col.content"
                         ></div>
+
+                        <div v-else-if="col.type === 'posts'">
+                          <div class="row q-col-gutter-md">
+                            <div class="col-12">
+                              <q-input
+                                v-model="col.content.title"
+                                filled
+                                dense
+                                label="Title"
+                              />
+                            </div>
+                            <div class="col-12">
+                              <q-input
+                                v-model="col.content.desc"
+                                filled
+                                dense
+                                label="Description"
+                                type="textarea"
+                              />
+                            </div>
+                            <div class="col-12">
+                              <span class="text-bold">Show Mode</span>
+                              <div class="q-gutter-sm">
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="last"
+                                  label="Last Post Only"
+                                />
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="list"
+                                  label="List Only"
+                                />
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="all"
+                                  label="Show Both"
+                                />
+                              </div>
+                            </div>
+                            <div class="col-12">
+                              <hr />
+                            </div>
+                            <div class="col">
+                              <q-select
+                                v-model="col.content.tags"
+                                multiple
+                                filled
+                                dense
+                                label="Category"
+                                :options="listTags"
+                                emit-value
+                                map-options
+                                use-chips
+                              />
+                            </div>
+                            <div class="col">
+                              <!-- orderBy order layout maxShow -->
+                              <q-select
+                                v-model="col.content.orderBy"
+                                filled
+                                dense
+                                label="Order By"
+                                :options="[
+                                  {
+                                    label: 'Created At',
+                                    value: 'created_at',
+                                  },
+                                  {
+                                    label: 'Updated At',
+                                    value: 'updated_at',
+                                  },
+                                  { label: 'Title', value: 'title' },
+                                ]"
+                                emit-value
+                                map-options
+                                use-chips
+                              />
+                            </div>
+                            <div class="col">
+                              <!-- orderBy order layout maxShow -->
+                              <q-select
+                                v-model="col.content.order"
+                                filled
+                                dense
+                                label="Sort Order"
+                                :options="[
+                                  {
+                                    label: 'Ascending',
+                                    value: 'asc',
+                                  },
+                                  {
+                                    label: 'Descending',
+                                    value: 'desc',
+                                  },
+                                ]"
+                                emit-value
+                                map-options
+                                use-chips
+                              />
+                            </div>
+                            <template
+                              v-if="
+                                col.content.mode === 'all' ||
+                                col.content.mode === 'list'
+                              "
+                            >
+                              <div class="col-12">
+                                <q-select
+                                  v-model="col.content.layout"
+                                  filled
+                                  dense
+                                  label="Layout"
+                                  :options="[
+                                    {
+                                      label: 'Grid',
+                                      value: 'grid',
+                                      icon: 'grid_on',
+                                    },
+                                    {
+                                      label: 'List',
+                                      value: 'list',
+                                      icon: 'view_list',
+                                    },
+                                  ]"
+                                  emit-value
+                                  map-options
+                                  use-chips
+                                />
+                              </div>
+                              <div
+                                class="col-6"
+                                v-if="col.content.layout === 'grid'"
+                              >
+                                <q-input
+                                  v-model="col.content.perSlide"
+                                  filled
+                                  dense
+                                  type="number"
+                                  label="Max Show per slide"
+                                  min="1"
+                                  max="10"
+                                />
+                              </div>
+                              <div class="col">
+                                <q-input
+                                  v-model="col.content.maxShow"
+                                  filled
+                                  dense
+                                  type="number"
+                                  label="Max Show"
+                                  min="1"
+                                  max="10"
+                                />
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+
+                        <div
+                          v-else-if="
+                            col.type === 'files' || col.type === 'files_viewer'
+                          "
+                        >
+                          <div class="row q-col-gutter-md">
+                            <div class="col-8">
+                              <span class="text-bold">Show Mode</span>
+                              <div class="q-gutter-sm">
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="last"
+                                  label="Last Files Only"
+                                />
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="list"
+                                  label="List Only"
+                                />
+                                <q-radio
+                                  left-label
+                                  v-model="col.content.mode"
+                                  val="all"
+                                  label="Show Both"
+                                />
+                              </div>
+                            </div>
+                            <div class="col-4">
+                              <q-btn
+                                color="primary"
+                                label="Choose Folder"
+                                @click="
+                                  $q.dialog({
+                                    component: folderFilesChooser,
+                                    componentProps: {
+                                      propsSelectedFolders:
+                                        col.content.files ?? null,
+                                      usernameSetup:
+                                        col.content.username ??
+                                        store.getDetail.username,
+                                      folderOnly: col.type === 'files',
+                                    },
+                                  }).onOk(async (val) => {
+                                    console.log(val);
+                                    col.content.files = val;
+                                  })
+                                "
+                                dense
+                                outline
+                                class="full-width"
+                              >
+                                <q-badge
+                                  floating
+                                  color="red"
+                                  v-if="col.content.files"
+                                  >{{ col.content.files.length }}</q-badge
+                                >
+                              </q-btn>
+                            </div>
+                            <div class="col-12">
+                              <hr />
+                            </div>
+                            <div class="col">
+                              <!-- orderBy order layout maxShow -->
+                              <q-select
+                                v-model="col.content.orderBy"
+                                filled
+                                dense
+                                label="Order By"
+                                :options="[
+                                  {
+                                    label: 'Created At',
+                                    value: 'created_at',
+                                  },
+                                  {
+                                    label: 'Updated At',
+                                    value: 'updated_at',
+                                  },
+                                  { label: 'Title', value: 'title' },
+                                ]"
+                                emit-value
+                                map-options
+                                use-chips
+                              />
+                            </div>
+                            <div class="col">
+                              <!-- orderBy order layout maxShow -->
+                              <q-select
+                                v-model="col.content.order"
+                                filled
+                                dense
+                                label="Sort Order"
+                                :options="[
+                                  {
+                                    label: 'Ascending',
+                                    value: 'asc',
+                                  },
+                                  {
+                                    label: 'Descending',
+                                    value: 'desc',
+                                  },
+                                ]"
+                                emit-value
+                                map-options
+                                use-chips
+                              />
+                            </div>
+                            <template
+                              v-if="
+                                col.content.mode === 'all' ||
+                                col.content.mode === 'list'
+                              "
+                            >
+                              <div class="col-12">
+                                <q-select
+                                  v-model="col.content.layout"
+                                  filled
+                                  dense
+                                  label="Layout"
+                                  :options="[
+                                    {
+                                      label: 'Grid',
+                                      value: 'grid',
+                                      icon: 'grid_on',
+                                    },
+                                    {
+                                      label: 'List',
+                                      value: 'list',
+                                      icon: 'view_list',
+                                    },
+                                  ]"
+                                  emit-value
+                                  map-options
+                                  use-chips
+                                />
+                              </div>
+                              <div class="col">
+                                <q-input
+                                  v-model="col.content.maxShow"
+                                  filled
+                                  dense
+                                  type="number"
+                                  label="Max Show"
+                                  min="1"
+                                  max="10"
+                                />
+                              </div>
+                            </template>
+                          </div>
+                        </div>
                         <template v-else>
                           <componentViewVue
                             v-if="col.content.component"
@@ -277,7 +666,7 @@
   </div>
 </template>
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, defineEmits } from "vue";
 import { useQuasar } from "quasar";
 
 import chooseComponent from "../chooseComponent.vue";
@@ -289,11 +678,21 @@ import apiRequest from "src/components/apiRequest";
 import previewComponentVue from "../Forms/previewComponent.vue";
 import viewSetupForms from "./viewSetupForms.vue";
 import shareFormsVue from "../Forms/shareForms.vue";
+import indexPostManage from "src/pages/UpdateFP/postManage/indexPostManage.vue";
+import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+
+import folderFilesChooser from "src/pages/UpdateFP/pageManage/folderFilesChooser.vue";
+
+import { useAuthStore } from "src/stores/authStore";
 
 const { postData } = apiRequest();
+const emit = defineEmits(["save"]);
+
+const store = useAuthStore();
 
 const $q = useQuasar();
 const title = ref("");
+const desc = ref("");
 const idRef = ref(null);
 const forms = ref([]);
 const setupTrainingSetup = ref([]);
@@ -303,6 +702,11 @@ const shareIsroles = ref(false);
 const shareFormsMenuIcon = ref("");
 const selectedSharedMenu = ref("");
 const selectedTableRoles = ref([]);
+const listTags = ref([]);
+const props = defineProps({
+  mode: String,
+  dataForms: Array,
+});
 
 const initChoice = ref({
   content: {
@@ -317,12 +721,54 @@ const initChoice = ref({
   value: null,
 });
 
+function handleKeyDown(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") {
+    event.preventDefault();
+    onClickOpenTraining();
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    onSaveQuestion();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+
+  if (props.mode && props.mode === "2") {
+    title.value = props.dataForms.title || "New Form";
+    desc.value = props.dataForms.desc || "New Description";
+    idRef.value = props.dataForms.id || null;
+    forms.value = props.dataForms.forms || [
+      {
+        type: "row",
+        content: [
+          {
+            content: {
+              content: null,
+              type: "col",
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  getDataTags();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+});
+
 const onClickChooseComponent = (index, indexCol, formData = null) => {
   console.log(formData);
   $q.dialog({
     component: chooseComponent,
     componentProps: {
       currComponent: formData.type === "form" ? formData : null,
+      forms: forms.value,
     },
   }).onOk(async (val) => {
     forms.value[index].content[indexCol] = val;
@@ -336,12 +782,85 @@ const onClickChooseHTML = (index, indexCol, col) => {
   $q.dialog({
     component: addContentComponent,
     componentProps: {
-      comp: col ? col.content : "",
+      comp: typeof col === "object" ? col.content : col,
     },
   }).onOk(async (val) => {
-    console.log(val);
+    console.log(val.content);
     forms.value[index].content[indexCol] = val;
     console.log(forms.value);
+  });
+};
+
+const onClickLatestPost = (index, indexCol, col) => {
+  forms.value[index].content[indexCol] = {
+    type: "posts",
+    content: {
+      title: "",
+      desc: "",
+      tags: [],
+      orderBy: "created_at",
+      order: "desc",
+      layout: "grid",
+      maxShow: 5,
+      perSlide: 1,
+    },
+  };
+};
+
+const onClickFilesAddon = (index, indexCol, col) => {
+  forms.value[index].content[indexCol] = {
+    type: "files",
+    content: {
+      files: null,
+      orderBy: "created_at",
+      order: "desc",
+      layout: "grid",
+      maxShow: 5,
+      username: store.getDetail.username || store.getDetail.email || "guest",
+    },
+  };
+};
+
+const onClickFilesViewer = (index, indexCol, col) => {
+  forms.value[index].content[indexCol] = {
+    type: "files_viewer",
+    content: {
+      files: null,
+      orderBy: "created_at",
+      order: "desc",
+      layout: "grid",
+      maxShow: 5,
+      username: store.getDetail.username || store.getDetail.email || "guest",
+    },
+  };
+};
+
+const onClickWidthCustom = (index, indexCol, col) => {
+  const defaultLen = 12 / forms.value[index].content.length;
+  console.log(forms.value[index].content[indexCol]);
+
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "Change Width Columns",
+      initialFields: [
+        {
+          label: `Column ${indexCol + 1} Width`,
+          default:
+            parseInt(forms.value[index].content[indexCol].width) || defaultLen,
+          type: "number",
+          min: 1,
+          max: 12,
+          name: "width",
+        },
+      ],
+    },
+  }).onOk(async (values) => {
+    console.log(values);
+    forms.value[index].content[indexCol] = {
+      ...forms.value[index].content[indexCol],
+      ...values,
+    };
   });
 };
 
@@ -483,7 +1002,7 @@ const openPreview = () => {
 const onSaveQuestion = () => {
   $q.dialog({
     title: "Confirm",
-    message: "Do you really want to save this quiz ?",
+    message: "Do you really want to save this forms ?",
     cancel: true,
     persistent: true,
   }).onOk(async () => {
@@ -493,19 +1012,25 @@ const onSaveQuestion = () => {
         idRef: idRef.value,
         forms: forms.value,
         title: title.value,
-        isQuiz: false,
+        desc: desc.value,
+        isQuiz: props.mode ?? false,
         setupTraining: setupTrainingSetup.value,
+        shareForms: share.value,
+        shareFormsIsMainMenu: shareMainMenu.value,
+        shareFormsIsRoles: shareIsroles.value,
+        selectedSharedMenu: selectedSharedMenu.value,
+        shareFormsMenuIcon: shareFormsMenuIcon.value,
       },
       `cms/forms`,
       false,
-      false,
+      true,
       true
     );
 
     if (data) {
       $q.dialog({
         title: "Confirm",
-        message: "Save Success, Do you want to continue edit this quiz ?",
+        message: "Save Success, Do you want to continue edit this forms ?",
         cancel: true,
         persistent: true,
       })
@@ -513,6 +1038,7 @@ const onSaveQuestion = () => {
         .onCancel(() => {
           title.value = "";
           forms.value = [];
+          emit("save", data);
         });
       console.log(data);
     }
@@ -525,6 +1051,7 @@ const onClickSetupTraining = () => {
     component: viewSetupForms,
     componentProps: {
       setupTrainingSetup: setupTrainingSetup.value,
+      forms: forms.value,
     },
   }).onOk(async (val) => {
     setupTrainingSetup.value = val;
@@ -544,10 +1071,132 @@ const onClickShare = () => {
       shareFormsMenuIcon: shareFormsMenuIcon.value,
     },
   }).onOk(async (val) => {
+    console.log(val);
     share.value = val.emails;
     shareMainMenu.value = val.isMainMenu;
     shareIsroles.value = val.isRoles;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedSharedMenu.value = val.selectedSharedMenu;
   });
+};
+
+watch(
+  [
+    title,
+    forms,
+    setupTrainingSetup,
+    share,
+    shareMainMenu,
+    shareIsroles,
+    shareFormsMenuIcon,
+    selectedSharedMenu,
+    selectedTableRoles,
+  ],
+  (
+    [
+      newTitle,
+      newForms,
+      newSetup,
+      newShare,
+      newMainMenu,
+      newIsroles,
+      newMenuIcon,
+      newSharedMenu,
+      newTableRoles,
+    ],
+    [
+      oldTitle,
+      oldForms,
+      oldSetup,
+      oldShare,
+      oldMainMenu,
+      oldIsroles,
+      oldMenuIcon,
+      oldSharedMenu,
+      oldTableRoles,
+    ]
+  ) => {
+    console.log("Watched values changed:", {
+      title: [oldTitle, newTitle],
+      forms: [oldForms, newForms],
+      setupTrainingSetup: [oldSetup, newSetup],
+      share: [oldShare, newShare],
+      shareMainMenu: [oldMainMenu, newMainMenu],
+      shareIsroles: [oldIsroles, newIsroles],
+      shareFormsMenuIcon: [oldMenuIcon, newMenuIcon],
+      selectedSharedMenu: [oldSharedMenu, newSharedMenu],
+      selectedTableRoles: [oldTableRoles, newTableRoles],
+    });
+    if (
+      Object.entries({
+        title: [oldTitle, newTitle],
+        forms: [oldForms, newForms],
+        setupTrainingSetup: [oldSetup, newSetup],
+        share: [oldShare, newShare],
+        shareMainMenu: [oldMainMenu, newMainMenu],
+        shareIsroles: [oldIsroles, newIsroles],
+        shareFormsMenuIcon: [oldMenuIcon, newMenuIcon],
+        selectedSharedMenu: [oldSharedMenu, newSharedMenu],
+        selectedTableRoles: [oldTableRoles, newTableRoles],
+      }).filter(([key, [oldVal, newVal]]) => {
+        // Skip notification if oldVal is empty (null, undefined, or empty string/array/object)
+        if (
+          oldVal === null ||
+          oldVal === undefined ||
+          (typeof oldVal === "string" && oldVal === "") ||
+          (Array.isArray(oldVal) && oldVal.length === 0) ||
+          (typeof oldVal === "object" &&
+            !Array.isArray(oldVal) &&
+            Object.keys(oldVal).length === 0)
+        ) {
+          return false;
+        }
+        return true;
+      })
+      // }).some(([key, [oldVal, newVal]]) => JSON.stringify(oldVal) !== JSON.stringify(newVal))
+    ) {
+      $q.notify({
+        type: "info",
+        message: "Some form data has changed, please save your changes.",
+        position: "top",
+        icon: "info",
+        color: "blue",
+        persistent: true,
+        timeout: 10000,
+      });
+    }
+  },
+  { deep: true }
+);
+
+const getDataTags = async () => {
+  try {
+    const response = await postData(
+      "post",
+      {
+        filter: [],
+        selectAs: {
+          value: "pgm_value|string",
+          label: "pgm_value|string",
+          slug: "pgm_value2|string",
+          desc: "pgm_desc|string",
+        },
+      },
+      `portal/gencode/showDetail/FP_POST_TAGS`,
+      false,
+      false,
+      true
+    );
+
+    console.log("Response Data:", response);
+    if (response.data) {
+      listTags.value = response.data;
+    }
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: "Failed to fetch category",
+    });
+  }
 };
 </script>

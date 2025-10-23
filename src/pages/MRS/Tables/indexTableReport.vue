@@ -38,11 +38,98 @@
           <q-btn color="orange" icon-right="refresh" no-caps @click="onRefresh">
             <q-tooltip>Refresh Data</q-tooltip>
           </q-btn>
+          <q-btn
+            color="indigo"
+            icon-right="add"
+            no-caps
+            @click="onOpenForms"
+            v-if="
+              propsReports &&
+              (propsReports.includes('cms') || propsReports.includes('rpa'))
+            "
+          >
+            <q-tooltip>Add Data</q-tooltip>
+          </q-btn>
         </q-btn-group>
       </template>
 
       <template v-slot:loading>
         <q-inner-loading showing color="primary" />
+      </template>
+
+      <template v-slot:body="props">
+        <q-tr :props="props">
+          <q-td v-for="col in props.cols" :key="col.name" :props="props">
+            <div
+              v-if="
+                col.name !== 'action' &&
+                String(props.row[col.name]).startsWith('file:')
+              "
+            >
+              <q-btn
+                color="primary"
+                icon="download"
+                no-caps
+                @click="downloadFile(props.row[col.name])"
+                outline
+                label="Download File"
+              />
+            </div>
+            <div v-else-if="col.name === 'action'">
+              <q-btn-group outline>
+                <q-btn
+                  color="primary"
+                  icon="send"
+                  no-caps
+                  @click="onSendData(props.row)"
+                  outline
+                  :disabled="
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3
+                  "
+                  v-if="propsReports.includes('rpa')"
+                />
+                <q-btn
+                  color="primary"
+                  icon="send"
+                  no-caps
+                  @click="onSendApproval(props.row)"
+                  outline
+                  :disabled="
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3
+                  "
+                  v-if="propsReports.includes('approval')"
+                />
+                <q-btn
+                  color="orange"
+                  icon="edit"
+                  no-caps
+                  @click="onEditData(props.row)"
+                  outline
+                  :disabled="
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3
+                  "
+                />
+                <q-btn
+                  color="red"
+                  icon="delete"
+                  no-caps
+                  @click="onDelete(props.row)"
+                  outline
+                  :disabled="
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3
+                  "
+                />
+              </q-btn-group>
+            </div>
+            <span v-else>
+              {{ props.row[col.name] }}
+            </span>
+          </q-td>
+        </q-tr>
       </template>
     </q-table>
   </div>
@@ -53,14 +140,20 @@ import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import filterData from "./filterIndex.vue";
 import { useRoute } from "vue-router";
+import previewComponent from "src/pages/CMS/Forms/previewComponent.vue";
+import { socket } from "src/boot/socket";
+import { useFormStore } from "stores/formStore";
+import { useAuthStore } from "stores/authStore";
 
 const $q = useQuasar();
 const route = useRoute();
 const { postData } = apiRequest();
+const store = useAuthStore();
 
 const props = defineProps({
   idReport: String,
   TableTitle: String,
+  idForms: String,
 });
 
 const TableTitle = ref(props.TableTitle);
@@ -80,6 +173,8 @@ const filter = ref([]);
 const idNya = ref("");
 const propsReports = ref("");
 const isFilterFirst = ref(false);
+const idForms = ref(props.idForms || null);
+const formStore = useFormStore();
 
 onMounted(async () => {
   if (route.params.idReport) {
@@ -100,6 +195,16 @@ onMounted(async () => {
         filterDatas();
       }
     }
+  }
+});
+
+socket.on("server-stxi", (data) => {
+  console.log(data);
+  if (data.app === "rpa") {
+    if (propsReports.value === "rpa") {
+      tableRef.value.requestServerInteraction();
+    }
+    // console.log("Received data from server-stxi", data);
   }
 });
 
@@ -251,6 +356,193 @@ const onExportExcel = async (bypass = false) => {
       loading.value = false;
     }
   }
+};
+
+const onOpenForms = async (isEdit = false) => {
+  const checkDatanya = await checkFormsByID(idForms.value);
+  if (checkDatanya) {
+    console.log("checkDatanya", checkDatanya);
+    $q.dialog({
+      component: previewComponent,
+      componentProps: {
+        data: checkDatanya.value.forms,
+        mode: "form",
+        id: idForms.value,
+        isShowFormOnly: true,
+        setup: checkDatanya.value.setupTraining,
+        showFormOnly: true,
+        preventClear: isEdit,
+      },
+    }).onOk(async (val) => {
+      console.log(val);
+      tableRef.value.requestServerInteraction();
+    });
+  } else {
+    return;
+  }
+};
+
+const checkFormsByID = async (id) => {
+  const checkDatanya = await postData(
+    "get",
+    null,
+    `cms/viewByID/${id}`,
+    false,
+    true,
+    true
+  );
+
+  if (checkDatanya && checkDatanya.status === true) {
+    return checkDatanya.data;
+  } else {
+    $q.notify({
+      color: "negative",
+      message: "Failed to load data",
+      icon: "warning",
+    });
+  }
+};
+
+// Send RPA
+const onSendData = (row) => {
+  console.log("onSendData", row);
+  $q.dialog({
+    title: "Send Data",
+    message: `Are you sure want to send this data ?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    const checkDatanya = await postData(
+      "post",
+      row,
+      `rpa/rpaHist`,
+      false,
+      false,
+      true
+    );
+
+    if (checkDatanya && checkDatanya.status === true) {
+      loading.value = false;
+      $q.notify({
+        color: "positive",
+        message: "Data sent successfully",
+        icon: "check_circle",
+      });
+      tableRef.value.requestServerInteraction();
+    } else {
+      loading.value = false;
+      $q.notify({
+        color: "negative",
+        message: "Failed to send data",
+        icon: "warning",
+      });
+    }
+  });
+};
+
+const onSendApproval = (row) => {
+  console.log("onSendApproval", row);
+  $q.dialog({
+    title: "Send Approval",
+    message: `Are you sure want to send this data for approval ?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    const checkDatanya = await postData(
+      "post",
+      {
+        idRef: row.form_id,
+        username: store.authDet.username,
+        batch_id: row.batch_id,
+      },
+      `cms/sendApproval`,
+      false,
+      false,
+      true
+    );
+
+    if (checkDatanya && checkDatanya.status === true) {
+      loading.value = false;
+      $q.notify({
+        color: "positive",
+        message: "Data sent for approval successfully",
+        icon: "check_circle",
+      });
+      tableRef.value.requestServerInteraction();
+    } else {
+      loading.value = false;
+      $q.notify({
+        color: "negative",
+        message: "Failed to send data for approval",
+        icon: "warning",
+      });
+    }
+  });
+};
+
+const onEditData = (row) => {
+  console.log("onEdit", row);
+  const listForms = [];
+
+  for (let index = 0; index < Object.keys(row).length; index++) {
+    const idx = Object.keys(row)[index];
+    if (idx.includes("CMS_REPORT_POS")) {
+      // listForms.push()
+      const idxParts = idx.split("_");
+      console.log(
+        "idxParts",
+        row[`CMS_REPORT_${idxParts[idxParts.length - 1]}`]
+      );
+
+      const ans = row[`CMS_REPORT_VAL_${idxParts[idxParts.length - 1]}`];
+      const ansPos = row[`CMS_REPORT_POS_${idxParts[idxParts.length - 1]}`];
+
+      console.log("ansPos", ansPos);
+      console.log("answers", [ansPos[0], idxParts[idxParts.length - 1], ans]);
+      formStore.addAnswersForm(ansPos[0], idxParts[idxParts.length - 1], ans);
+    }
+  }
+
+  onOpenForms(true);
+};
+
+const onDelete = (row) => {
+  console.log("onDelete", row);
+  $q.dialog({
+    title: "Delete Data",
+    message: `Are you sure want to delete this data ?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    const checkDatanya = await postData(
+      "delete",
+      null,
+      `cms/deleteAnswers/${row.form_id}/${row.batch_id}`,
+      false,
+      false,
+      true
+    );
+
+    if (checkDatanya && checkDatanya.status === true) {
+      loading.value = false;
+      $q.notify({
+        color: "positive",
+        message: "Data deleted successfully",
+        icon: "check_circle",
+      });
+      tableRef.value.requestServerInteraction();
+    } else {
+      loading.value = false;
+      $q.notify({
+        color: "negative",
+        message: "Failed to delete data",
+        icon: "warning",
+      });
+    }
+  });
 };
 </script>
 <style lang="sass">

@@ -122,10 +122,14 @@ const filter = ref("");
 const selected = ref([]);
 
 onMounted(async () => {
-  getUsers();
+  await getUsers();
 
   if (props.dataProps && props.dataProps.length > 0) {
-    selected.value = props.dataProps;
+    console.log("checking dataProps:", props.dataProps);
+    // Filter rows to only include users present in dataProps
+    selected.value = rows.value.filter((row) =>
+      props.dataProps.some((sel) => sel === row.username)
+    );
   }
 });
 

@@ -12,6 +12,11 @@
           <div class="col-4">
             <q-checkbox v-model="selectedFolder" size="xs" :val="folder.id" />
           </div>
+          <div class="col text-right" v-if="folder.from_sharepoint">
+            <q-badge color="orange">
+              <q-icon name="ion-logo-windows" size="xs" />
+            </q-badge>
+          </div>
         </div>
         <div class="row">
           <div class="col text-center">
@@ -80,10 +85,12 @@ const selectedFiles = ref([]);
 const folderList = ref([]);
 const foldersS = ref([]);
 const filesS = ref([]);
+const generalSelected = ref([]);
 
 const props = defineProps({
   folders: Array,
   files: Array,
+  selectedSites: Object,
   // ...your custom props
 });
 
@@ -93,9 +100,12 @@ const emit = defineEmits([
   "onSelectedFileFolder",
   "onSelectedFilesCheck",
   "onRightClickItems",
+  "onSelected",
 ]);
 
 onMounted(() => {
+  console.log(props.selectedSites);
+
   emit("onMountedDone", true);
   foldersS.value = props.folders;
   filesS.value = props.files;
@@ -114,7 +124,21 @@ const getIcon = (filename) => {
 watch(
   () => JSON.stringify(selectedFolder.value),
   (val) => {
+    // console.log("Selected folders:", JSON.parse(val));
     emit("onSelectedFileFolder", JSON.parse(val));
+
+    const selectedIds = JSON.parse(val);
+    const filteredFolders = foldersS.value.filter((folder) =>
+      selectedFolder.value.includes(folder.id)
+    );
+
+    generalSelected.value = generalSelected.value.filter(
+      (item) => item.type !== "folder"
+    );
+
+    generalSelected.value = [...generalSelected.value, ...filteredFolders];
+
+    emit("onSelected", generalSelected.value);
   }
 );
 
@@ -122,6 +146,18 @@ watch(
   () => JSON.stringify(selectedFiles.value),
   (val) => {
     emit("onSelectedFilesCheck", JSON.parse(val));
+    const selectedIds = JSON.parse(val);
+    const filteredFiles = filesS.value.filter((file) =>
+      selectedFiles.value.includes(file.id)
+    );
+
+    generalSelected.value = generalSelected.value.filter(
+      (item) => item.type !== "files"
+    );
+
+    generalSelected.value = [...generalSelected.value, ...filteredFiles];
+
+    emit("onSelected", generalSelected.value);
   }
 );
 

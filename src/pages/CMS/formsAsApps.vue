@@ -4,6 +4,8 @@
       v-if="!loading && datas.forms"
       :data="datas.forms"
       :id="datas.id"
+      :setup="setup"
+      :showFormOnly="setup.isHistory != 1"
     />
     <div v-else>
       <span>Loading Forms...</span>
@@ -29,7 +31,7 @@ const { postData } = apiRequest();
 const loading = ref(false);
 // ✅ Default to empty object, not null
 const datas = ref({ forms: null, id: null });
-
+const setup = ref({});
 onMounted(async () => {
   console.log("linkID", props.linkID);
   await getData();
@@ -53,6 +55,7 @@ const getData = async () => {
         forms: res.data?.value.forms ?? null,
         id: res.data?.value.id ?? null,
       };
+      setup.value = res.data?.value.setupTraining ?? {};
       console.log("datas", datas.value);
     } else {
       loading.value = false;

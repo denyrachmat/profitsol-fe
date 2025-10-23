@@ -42,10 +42,14 @@
               enter-active-class="animated fadeIn"
               leave-active-class="animated fadeOut"
             >
-              <component :is="choosedcomp" v-on:getrouted="routedto" />
+              <div>
+                <component :is="choosedcomp" v-on:getrouted="routedto" />
+              </div>
             </transition>
           </q-page>
         </q-page-container>
+
+        <div ref="autoscrollContainer"></div>
       </div>
     </div>
   </q-layout>
@@ -59,6 +63,7 @@ import forgot from "./forgotpassword";
 import reset from "./resetPassword";
 import { HelpersComponent } from "../../components/HelpersComponent";
 import { useAuthStore } from "stores/authStore";
+import { useQuasar } from "quasar";
 
 export default {
   name: "Auth",
@@ -70,6 +75,7 @@ export default {
       options: [],
       domain: "",
       store: useAuthStore(),
+      $q: useQuasar(),
     };
   },
   mounted() {
@@ -79,6 +85,14 @@ export default {
 
     console.log(this.store.getChoosedDomain);
     this.getListDomain();
+  },
+  created() {
+    this.$nextTick(() => {
+      const container = this.$refs.autoscrollContainer;
+      if (container && container.scrollIntoView) {
+        container.scrollIntoView({ behavior: "smooth" });
+      }
+    });
   },
   methods: {
     routedto(val) {
@@ -103,6 +117,19 @@ export default {
     onSelectStore(val) {
       console.log("change domain");
       this.store.storeDomain(val);
+
+      if (val.pd_is_cms == 1 && val.urlCMS) {
+        this.$q
+          .dialog({
+            title: "Confirm",
+            message: `We found the domain ${val.pd_desc} has Intranet Features. Do you want to go there instead ?`,
+            cancel: true,
+            persistent: true,
+          })
+          .onOk(async () => {
+            window.location.href = val.urlCMS;
+          });
+      }
     },
   },
   watch: {

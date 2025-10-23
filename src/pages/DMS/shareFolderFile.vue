@@ -39,7 +39,7 @@
                 </q-item-section>
 
                 <q-item-section>{{ form.name }}</q-item-section>
-                <q-item-section
+                <q-item-section v-if="getTokenAll(form.shared)"
                   >{{ rootURL }}/{{ getTokenAll(form.shared) }}</q-item-section
                 >
                 <q-item-section side>
@@ -51,6 +51,7 @@
                       @click="
                         onClickCopy(`${rootURL}/${getTokenAll(form.shared)}`)
                       "
+                      :disable="!getTokenAll(form.shared)"
                     >
                       <q-tooltip>Copy URL to direct download</q-tooltip>
                     </q-btn>
@@ -103,7 +104,7 @@
           @click="onOKClick()"
           :disable="forms.length === 0 || selected.length === 0"
         />
-        <q-btn flat label="Cancel" color="red" @click="onDialogCancel" />
+        <q-btn flat label="Close Shared" color="red" @click="onDialogCancel" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -186,15 +187,16 @@ onMounted(async () => {
 
 const getTokenAll = (datas) => {
   let datanya = null;
-  if (datas.length > 0) {
+  if (datas && datas.length > 0) {
     datanya = datas.filter((fil) => fil.ddfus_p_u_username === "all")[0];
-  } else {
-    datanya = datas.filter(
-      (fil) => fil.ddfus_p_u_username === store.authDet.username
-    )[0];
-  }
 
-  return `${datanya.ddfus_token}/${datanya.id}`;
+    return `${datanya.ddfus_token}/${datanya.id}`;
+  }
+  // else {
+  //   datanya = datas.filter(
+  //     (fil) => fil.ddfus_p_u_username === store.authDet.username
+  //   )[0];
+  // }
 };
 
 const getFolderDetail = async (id) => {
@@ -272,7 +274,7 @@ const getUsers = async () => {
     loading.value = false;
     rows.value = data.data;
 
-    if (props.shared.length > 0) {
+    if (props.shared && props.shared.length > 0) {
       selected.value = props.shared;
       const checkSelectedTable = rows.value.filter((fil) =>
         props.shared.includes(fil.email)
@@ -319,7 +321,10 @@ const onOKClick = () => {
     );
 
     if (data) {
-      onDialogOK();
+      forms.value = [];
+      props.idFiles.map(async (valFiles) => {
+        await getFilesDetail(valFiles);
+      });
     }
   });
 };

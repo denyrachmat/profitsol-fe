@@ -7,7 +7,7 @@
     dense
   >
     <q-item
-      v-if="element.child_roles.length === 0"
+      v-if="!element.child_roles || element.child_roles.length === 0"
       clickable
       @click="chooseApp(element)"
     >

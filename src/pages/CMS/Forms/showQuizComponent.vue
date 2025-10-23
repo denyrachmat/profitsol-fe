@@ -1,14 +1,24 @@
 <template>
   <div class="q-pa-md bg-grey">
     <div class="row" v-if="doneSubmiting">
-      <div class="col text-center">
-        <span class="text-h3 text-bold">
-          You've already answers the question, click OK for close this dialog
+      <div class="col window-height-60">
+        <!-- <span class="text-h3 text-bold">
+          You've already answers the question, tap "Esc" Button or click "x"
+          button on the upper right for close this dialog
         </span>
 
         <div class="q-pt-md">
           <q-btn label="Show Result" color="green" @click="showResult()" />
-        </div>
+        </div> -->
+        <showQuizResultVue
+          :resShow="props.setup.showResult"
+          :answerShow="props.setup.showRightKeysAnswer"
+          :dataQuiz="dataOri"
+          :idQuiz="props.id"
+          :is-retry="true"
+          class="full-width"
+          @on-retry="onRetryClick"
+        />
       </div>
     </div>
     <div v-else>
@@ -79,7 +89,7 @@
           style="border-radius: 10px; padding: 15px"
           class="bg-white q-pt-sm"
         >
-          <div style="overflow: auto; max-height: 70vh">
+          <div style="overflow: auto; max-height: 45vh">
             <div
               class="row"
               v-for="(htmlCont, idxhtm) in checkAnySameHTML"
@@ -98,9 +108,13 @@
           </div>
         </div>
       </div>
-      <div class="row q-pt-md" v-if="getNowQuestion">
+      <div
+        class="row q-pt-md"
+        v-if="getNowQuestion"
+        style="overflow: auto; max-height: 80vh"
+      >
         <div
-          class="col bg-white"
+          class="col bg-white q-pa-md"
           style="border-radius: 10px"
           v-if="getNowQuestion.type === 'form'"
         >
@@ -128,7 +142,7 @@
           />
         </div>
       </div>
-      <div class="absolute-bottom">
+      <div class="sticky-bottom q-pt-md">
         <div class="col bg-white q-pa-md" style="border-radius: 10px">
           <q-btn-group spread>
             <q-btn
@@ -149,6 +163,7 @@
               :disable="
                 getNowQuestion &&
                 getNowQuestion.type === 'html' &&
+                props.setup &&
                 props.setup.skipNextButtonMedia &&
                 !videoEnded
                   ? true
@@ -227,27 +242,31 @@ onMounted(() => {
   if (props.data.length > 0) {
     dataOri.value = props.data;
 
-    if (props.setup.randomizeQuestion) {
-      const dataShuf = shuffle(
-        props.data.filter((val) => val.type === "form"),
-        true
-      );
+    if (props.setup) {
+      if (props.setup.randomizeQuestion) {
+        const dataShuf = shuffle(
+          props.data.filter((val) => val.type === "form"),
+          true
+        );
 
-      const dataHtml = props.data.filter((val) => val.type === "html");
-      let shuffledData = [];
-      if (props.setup.randomizeQuestion && props.setup.maxQuestionCount > 0) {
-        shuffledData = dataShuf[0].slice(0, props.setup.maxQuestionCount);
+        const dataHtml = props.data.filter((val) => val.type === "html");
+        let shuffledData = [];
+        if (props.setup.randomizeQuestion && props.setup.maxQuestionCount > 0) {
+          shuffledData = dataShuf[0].slice(0, props.setup.maxQuestionCount);
+        }
+        datanya.value = [...dataHtml, ...shuffledData];
+        console.log(datanya.value);
+        listQuestShuff.value = dataShuf[1];
+      } else {
+        datanya.value = props.data.filter((val) => val.type === "form");
       }
-      datanya.value = [...dataHtml, ...shuffledData];
-      console.log(datanya.value);
-      listQuestShuff.value = dataShuf[1];
+
+      if (props.setup.skipNextButtonMedia) {
+        triggerFindVideo();
+      }
     } else {
       datanya.value = props.data.filter((val) => val.type === "form");
     }
-  }
-
-  if (props.setup.skipNextButtonMedia) {
-    triggerFindVideo();
   }
 });
 
@@ -347,7 +366,7 @@ const checkAnySameHTML = computed(() => {
 });
 
 const onClickNext = async () => {
-  if (props.setup.showRightKeysAnswerLocation === "end") {
+  if (props.setup && props.setup.showRightKeysAnswerLocation === "end") {
     if (datanya.value[nowSeq.value].type === "html") {
       getAnswers("html");
     }
@@ -434,16 +453,16 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
           color: "green",
         });
 
-        $q.dialog({
-          component: showQuizResultVue,
-          componentProps: {
-            resShow: props.setup.showResult,
-            answerShow: props.setup.showRightKeysAnswer,
-            dataQuiz: dataOri.value,
-            idQuiz: props.id,
-          },
-          persistent: true,
-        });
+        // $q.dialog({
+        //   component: showQuizResultVue,
+        //   componentProps: {
+        //     resShow: props.setup.showResult,
+        //     answerShow: props.setup.showRightKeysAnswer,
+        //     dataQuiz: dataOri.value,
+        //     idQuiz: props.id,
+        //   },
+        //   persistent: true,
+        // });
 
         doneSubmiting.value = 1;
       }
@@ -584,4 +603,17 @@ watch(getNowTimer, (time) => {
     console.log(time);
   }
 });
+
+const onRetryClick = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Are you sure want to retry this quiz ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    doneSubmiting.value = 0;
+    store.restoreDefault();
+    nowSeq.value = 0;
+  });
+};
 </script>

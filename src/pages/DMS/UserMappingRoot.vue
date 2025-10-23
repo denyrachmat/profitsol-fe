@@ -188,7 +188,7 @@ const getUsers = async () => {
     loading.value = false;
     rows.value = data.data;
 
-    if (props.shared.length > 0) {
+    if (props.shared && props.shared.length > 0) {
       selected.value = props.shared;
       const checkSelectedTable = rows.value.filter((fil) =>
         props.shared.includes(fil.email)
@@ -225,6 +225,8 @@ const onChooseItem = async (val) => {
 
     console.log(checkSelectedTable);
     // onSelectData(data.data);
+    loading.value = false;
+  } else {
     loading.value = false;
   }
 };

@@ -54,18 +54,19 @@
                   label="Portal Account"
                   caption="Registered STXI Portal Account"
                 >
-                  <q-card>
+                  <q-card v-if="rows.length > 0">
                     <q-card-section>
                       <q-table
                         title="Registered Users"
                         :rows="rows"
                         :columns="cols"
-                        row-key="email"
+                        row-key="u_username"
                         :filter="filterData"
                         v-model:selected="selectedTable"
                         selection="multiple"
                         dense
                         @update:selected="onSelectData"
+                        :loading="loadingUsers"
                       >
                         <template v-slot:top-right>
                           <q-input
@@ -83,13 +84,17 @@
                       </q-table>
                     </q-card-section>
                   </q-card>
+                  <div v-else class="q-pa-md text-center">
+                    <q-spinner v-if="loadingUsers" size="2em" />
+                    <div v-else>No users available</div>
+                  </div>
                 </q-expansion-item>
                 <q-expansion-item
                   icon="group"
                   label="Portal Roles"
                   caption="Registered STXI Portal Roles"
                 >
-                  <q-card>
+                  <q-card v-if="rowsRoles.length > 0">
                     <q-card-section>
                       <q-table
                         title="Roles"
@@ -101,13 +106,14 @@
                         selection="multiple"
                         dense
                         @update:selected="onSelectDataRoles"
+                        :loading="loadingRoles"
                       >
                         <template v-slot:top-right>
                           <q-input
                             borderless
                             dense
                             debounce="300"
-                            v-model="filterData"
+                            v-model="filterDataRoles"
                             placeholder="Search"
                           >
                             <template v-slot:append>
@@ -118,6 +124,10 @@
                       </q-table>
                     </q-card-section>
                   </q-card>
+                  <div v-else class="q-pa-md text-center">
+                    <q-spinner v-if="loadingRoles" size="2em" />
+                    <div v-else>No roles available</div>
+                  </div>
                 </q-expansion-item>
               </div>
             </div>
@@ -138,11 +148,20 @@
                 >
                   <q-item-section avatar>
                     <q-avatar color="primary" text-color="white">
-                      {{ sel[0] }}
+                      {{ sel[0]?.toUpperCase() }}
                     </q-avatar>
                   </q-item-section>
 
                   <q-item-section>{{ sel }}</q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      icon="delete"
+                      flat
+                      round
+                      dense
+                      @click="removeEmail(idx)"
+                    />
+                  </q-item-section>
                 </q-item>
               </div>
             </div>
@@ -217,17 +236,21 @@
       </q-card-section>
 
       <q-card-actions align="right">
-        <q-btn flat label="OK" color="primary" @click="onOKClick()" />
+        <q-btn flat label="Cancel" color="negative" @click="onDialogCancel" />
+        <q-btn flat label="OK" color="primary" @click="onOKClick" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
+
 <script setup>
-import { ref, defineProps, onMounted, watch } from "vue";
-import { useQuasar, useDialogPluginComponent } from "quasar";
+import { ref, onMounted, watch } from "vue";
+import { useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
 const { postData } = apiRequest();
+const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
+  useDialogPluginComponent();
 
 const props = defineProps({
   id: String,
@@ -239,10 +262,28 @@ const props = defineProps({
   selectedTableRoles: Array,
 });
 
+// Form data
 const emailUser = ref("");
 const selected = ref([]);
+const shareToMainMenu = ref(false);
+const isUsingRoles = ref(false);
+const selectedSharedMenuS = ref("");
+const shareFormsMenuIconS = ref("");
+
+// Table data
 const filterData = ref("");
+const filterDataRoles = ref("");
 const rows = ref([]);
+const rowsRoles = ref([]);
+const sharedMenuList = ref([]);
+const loadingUsers = ref(false);
+const loadingRoles = ref(false);
+
+// Table selections
+const selectedTable = ref([]);
+const selectedTableRolesS = ref([]);
+
+// Columns definitions
 const cols = ref([
   {
     name: "username",
@@ -274,10 +315,6 @@ const cols = ref([
   },
 ]);
 
-const filterDataRoles = ref("");
-const selectedTableRolesS = ref([]);
-
-const rowsRoles = ref([]);
 const columnsRoles = ref([
   {
     name: "rm_role_name",
@@ -302,106 +339,135 @@ const columnsRoles = ref([
   },
 ]);
 
-const selectedTable = ref([]);
-const shareToMainMenu = ref(false);
-const isUsingRoles = ref(false);
-const selectedSharedMenuS = ref("");
-const shareFormsMenuIconS = ref("");
-
-const sharedMenuList = ref([]);
-
+// Methods
 const addRecord = (val) => {
-  selected.value.push(val);
-  emailUser.value = "";
+  if (val && !selected.value.includes(val)) {
+    selected.value.push(val);
+    emailUser.value = "";
+  }
+};
+
+const removeEmail = (index) => {
+  selected.value.splice(index, 1);
 };
 
 const onSelectData = (val) => {
-  isUsingRoles.value = 0;
-  const getEmailOnly = val.map((valMap) => valMap.email);
-  selected.value = getEmailOnly;
+  isUsingRoles.value = false;
+  selected.value = val.map((item) => item.email).filter(Boolean);
 };
 
 const onSelectDataRoles = (val) => {
   selected.value = [];
-  console.log(val);
-  val.map((valMap) => {
-    console.log(valMap);
-    if (valMap.users_map.length > 0) {
-      valMap.users_map.map((valUsers) => {
-        selected.value.push(valUsers.u_username);
-      });
-    }
+  val.forEach((role) => {
+    (role.users_map || []).forEach((user) => {
+      if (user.u_username) {
+        selected.value.push(user.u_username);
+      }
+    });
   });
-
-  isUsingRoles.value = 1;
+  isUsingRoles.value = true;
 };
 
-onMounted(async () => {
-  console.log(props);
-  getUsers();
-  getRoles();
+const openLinkIcon = () => {
+  window.open("https://fonts.google.com/icons", "_blank");
+};
 
-  shareToMainMenu.value = props.shareMainMenu;
-  isUsingRoles.value = props.shareIsroles;
-  selectedSharedMenuS.value = props.selectedSharedMenu;
-  shareFormsMenuIconS.value = props.shareFormsMenuIcon;
-  selectedTableRolesS.value = props.selectedTableRoles;
-});
+// Data fetching
+const getUsers = async () => {
+  try {
+    loadingUsers.value = true;
+    const data = await postData(
+      "get",
+      null,
+      "portal/users/ActiveOnly",
+      false,
+      false,
+      true
+    );
 
-const getRoles = async () => {
-  const data = await postData("get", null, "portal/roles", false, false, true);
-  if (data) {
-    rowsRoles.value = data.data;
+    if (data?.data) {
+      rows.value = data.data;
+
+      if (props.shared?.length) {
+        selectedTable.value = rows.value.filter((user) =>
+          props.shared.includes(user.email)
+        );
+        selected.value = [...props.shared];
+      }
+    }
+  } catch (error) {
+    console.error("Error loading users:", error);
+  } finally {
+    loadingUsers.value = false;
   }
 };
 
-const getUsers = async () => {
-  const data = await postData(
-    "get",
-    null,
-    "portal/users/ActiveOnly",
-    false,
-    false,
-    true
-  );
-  if (data) {
-    rows.value = data.data;
+const getRoles = async () => {
+  try {
+    loadingRoles.value = true;
+    const data = await postData(
+      "get",
+      null,
+      "portal/roles",
+      false,
+      false,
+      true
+    );
+    if (data?.data) {
+      rowsRoles.value = data.data;
 
-    console.log(props.shared);
-
-    if (props.shared && props.shared.length > 0) {
-      selected.value = props.shared;
-      const checkSelectedTable = rows.value.filter((fil) =>
-        props.shared.includes(fil.email)
-      );
-
-      selectedTable.value = checkSelectedTable;
-      selected.value = props.shared;
+      if (props.selectedTableRoles?.length) {
+        selectedTableRolesS.value = rowsRoles.value.filter((role) =>
+          props.selectedTableRoles.includes(role.id)
+        );
+      }
     }
+  } catch (error) {
+    console.error("Error loading roles:", error);
+  } finally {
+    loadingRoles.value = false;
   }
 };
 
 const getSharedMenu = async () => {
-  const data = await postData("get", null, "portal/apps/1", false, false, true);
-  if (data) {
-    sharedMenuList.value = data.data;
+  try {
+    const data = await postData(
+      "get",
+      null,
+      "portal/apps/1",
+      false,
+      false,
+      true
+    );
+    if (data?.data) {
+      sharedMenuList.value = data.data;
+    }
+  } catch (error) {
+    console.error("Error loading shared menu:", error);
   }
 };
 
-watch(
-  () => shareToMainMenu.value,
-  (val) => {
-    if (val) {
-      getSharedMenu();
-    }
+// Initialization
+onMounted(async () => {
+  shareToMainMenu.value = props.shareMainMenu ?? false;
+  isUsingRoles.value = props.shareIsroles ?? false;
+  selectedSharedMenuS.value = props.selectedSharedMenu ?? "";
+  shareFormsMenuIconS.value = props.shareFormsMenuIcon ?? "";
+
+  await Promise.all([getUsers(), getRoles()]);
+
+  if (shareToMainMenu.value) {
+    await getSharedMenu();
   }
-);
-const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
-  useDialogPluginComponent();
+});
+
+watch(shareToMainMenu, async (val) => {
+  if (val) {
+    await getSharedMenu();
+  }
+});
 
 function onOKClick() {
-  // on OK, it is REQUIRED to
-  // call onDialogOK (with optional payload)
   onDialogOK({
     emails: selected.value,
     isMainMenu: shareToMainMenu.value,
@@ -409,7 +475,5 @@ function onOKClick() {
     selectedSharedMenu: selectedSharedMenuS.value,
     shareFormsMenuIcon: shareFormsMenuIconS.value,
   });
-  // or with payload: onDialogOK({ ... })
-  // ...and it will also hide the dialog automatically
 }
 </script>

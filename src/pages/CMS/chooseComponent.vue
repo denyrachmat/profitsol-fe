@@ -98,7 +98,19 @@
                       icon="add"
                       @click="addDetail()"
                       color="green"
-                    />
+                    >
+                      <q-tooltip>Add Option</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      round
+                      dense
+                      flat
+                      icon="integration_instructions"
+                      color="orange"
+                      @click="addAPIComponent(componentChoosed.apiOpt ?? {})"
+                    >
+                      <q-tooltip>Add API Data</q-tooltip>
+                    </q-btn>
                   </template>
                 </q-select>
               </div>
@@ -123,6 +135,7 @@
                 :comp="componentChoosed.value.comp"
                 :label="label"
                 :detail="detailData"
+                :apiOpt="componentChoosed.apiOpt"
                 @onDeleted="onDeleteOpt"
                 mode="edit"
                 @paste="onPasteData"
@@ -146,6 +159,7 @@
 import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import inputType from "../../components/inputType.json";
+import addAPIComponentOptions from "./addAPIComponentOptions.vue";
 
 import componentViewVue from "./componentView.vue";
 
@@ -154,6 +168,7 @@ const $q = useQuasar();
 const props = defineProps({
   mode: String,
   currComponent: Object,
+  forms: Array,
 });
 
 const componentChoosed = ref(null);
@@ -192,6 +207,10 @@ const hasChild = (scope) => {
 };
 
 const addDetail = () => {
+  if (componentChoosed.value && componentChoosed.value.apiOpt) {
+    delete componentChoosed.value.apiOpt;
+  }
+
   detailData.value.push({
     col_det_id: "opt-" + (parseInt(detailData.value.length) + 1),
     col_det_label: "",
@@ -221,6 +240,32 @@ const onPasteData = (event) => {
     });
   }
   console.log(lines);
+};
+
+const addAPIComponent = (data) => {
+  if (!data || Object.keys(data).length === 0) {
+    componentChoosed.value.apiOpt = {
+      api_url: "",
+      api_method: "GET",
+      api_params: "",
+      api_headers: "",
+      api_response: "",
+    };
+  }
+
+  $q.dialog({
+    component: addAPIComponentOptions,
+    componentProps: {
+      detailData: componentChoosed.value.apiOpt,
+      forms: props.forms,
+    },
+  })
+    .onOk((val) => {
+      componentChoosed.value.apiOpt = val;
+    })
+    .onDismiss(() => {
+      console.log("Dialog dismissed");
+    });
 };
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =

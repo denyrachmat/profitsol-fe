@@ -192,10 +192,14 @@ const openUsersChoose = () => {
     listChoosedApprv.includes(fil.u_username)
   );
 
+  console.log(listChoosedApprv);
+  console.log(filteredChoosedApprv);
+  console.log(listAllUsers.value);
+
   $q.dialog({
     component: chooseUsers,
     componentProps: {
-      dataProps: filteredChoosedApprv,
+      dataProps: listChoosedApprv,
       formatOut: {
         amsmd_username: "u_username",
         amsmd_order: "idx+",

@@ -124,6 +124,7 @@ const formnya = ref({
 
 onMounted(() => {
   if (props.dataEdit) {
+    console.log(props.dataEdit);
     formnya.value = props.dataEdit;
   }
 });

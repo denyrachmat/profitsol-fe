@@ -100,6 +100,7 @@ import dataFilter from "./dataFilter.vue";
 import { useRoute } from "vue-router";
 import DomainManage from "./domainManage.vue";
 import apiRequest from "src/components/apiRequest";
+import { socket } from "src/boot/socket";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
@@ -131,6 +132,18 @@ const columns = ref([
 ]);
 const loading = ref(false);
 const filter = ref([]);
+
+socket.on("server-stxi", (data) => {
+  if (data.app == "domain") {
+    $q.notify({
+      type: data.type,
+      message: data.message,
+      position: "top",
+      timeout: 3000,
+    });
+    getData();
+  }
+});
 
 onMounted(() => {
   getData();

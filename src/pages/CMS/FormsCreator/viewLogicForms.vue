@@ -161,7 +161,10 @@
                   />
                 </div>
 
-                <div class="col" v-if="item.cfld_opr_ctrl">
+                <div
+                  class="col"
+                  v-if="item.cfld_opr_ctrl && item.cfld_opr_ctrl !== 'null'"
+                >
                   <template v-if="item.cfld_opr_ctrl === 'value'">
                     <q-input
                       filled

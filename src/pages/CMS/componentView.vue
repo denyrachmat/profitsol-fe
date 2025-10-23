@@ -73,6 +73,8 @@
             </q-popup-proxy>
           </q-icon>
         </template>
+
+        <template v-if="props.typeInput === 'pdf'"> </template>
       </q-input>
       <q-file
         filled
@@ -149,6 +151,10 @@
                 emit-value
                 map-options
                 v-if="props.comp === 'q-select'"
+                :loading="loadingAPI"
+                @filter="checkAPIData"
+                use-input
+                dense
               />
 
               <template v-else-if="props.comp === 'q-checkbox'">
@@ -158,6 +164,7 @@
                     :options="detailData"
                     type="checkbox"
                     v-model="modelDataArr"
+                    :loading="loadingAPI"
                   />
                 </div>
               </template>
@@ -165,7 +172,11 @@
               <template v-else-if="props.comp === 'q-radio'">
                 <span v-html="props.label" />
                 <div class="q-gutter-sm">
-                  <q-option-group :options="detailData" v-model="modelData" />
+                  <q-option-group
+                    :options="detailData"
+                    v-model="modelData"
+                    :loading="loadingAPI"
+                  />
                 </div>
               </template>
             </div>
@@ -183,6 +194,11 @@
             map-options
             :readonly="props.mode == 'live-read'"
             v-if="props.comp === 'q-select'"
+            :loading="loadingAPI"
+            @filter="checkAPIData"
+            use-input
+            :input-debounce="1000"
+            dense
           />
 
           <template v-else-if="props.comp === 'q-checkbox'">
@@ -213,9 +229,16 @@
   </div>
 </template>
 <script setup>
+import { api } from "src/boot/axios";
 import { defineProps, onMounted, ref, watch } from "vue";
+import { useQuasar } from "quasar";
+import { useFormStore } from "stores/formStore";
+import apiRequest from "src/components/apiRequest";
 
 const emit = defineEmits(["onDeleted", "customChange"]);
+
+const $q = useQuasar();
+const { postData } = apiRequest();
 
 const modelData = ref("");
 const refreshDetail = ref(0);
@@ -230,8 +253,11 @@ const props = defineProps({
   ans: String,
   ansArr: Array,
   isRequired: Boolean,
+  apiOpt: Object,
 });
 
+const formStore = useFormStore();
+const loadingAPI = ref(false);
 const detailData = ref([]);
 
 const onDeleteData = (idx) => {
@@ -241,7 +267,11 @@ const onDeleteData = (idx) => {
 
 onMounted(() => {
   console.log("masuk awalan");
-  detailData.value = props.detail;
+  console.log(props);
+
+  // if (props.mode && props.mode.includes("live")) {
+  //   checkAPIData();
+  // }
 
   if (props.ans) {
     modelData.value = props.ans.toString();
@@ -252,6 +282,269 @@ onMounted(() => {
     modelDataArr.value = props.ansArr;
   }
 });
+
+const checkAPIData = async (val, update, abort) => {
+  if (val && detailData.value && detailData.value.length > 0) {
+    console.log(detailData.value);
+    if (typeof val === "string" || typeof val === "number") {
+      update(() => {
+        detailData.value = detailData.value.filter(
+          (opt) =>
+            (opt.label &&
+              opt.label.toLowerCase().includes(val.toString().toLowerCase())) ||
+            (opt.value &&
+              opt.value
+                .toString()
+                .toLowerCase()
+                .includes(val.toString().toLowerCase()))
+        );
+      });
+
+      return;
+    }
+  }
+
+  if (props.apiOpt) {
+    if (!props.apiOpt.api_url) {
+      loadingAPI.value = false;
+      return;
+    }
+
+    const fetchOptions = {
+      method: props.apiOpt.api_method || "GET",
+      headers: props.apiOpt.api_headers || {
+        "Content-Type": "application/json",
+      },
+    };
+
+    if (
+      fetchOptions.method !== "GET" &&
+      fetchOptions.method !== "HEAD" &&
+      props.apiOpt.api_params
+    ) {
+      fetchOptions.body = getParams(JSON.stringify(props.apiOpt.api_params));
+    }
+
+    if (!detailData.value || detailData.value.length === 0) {
+      loadingAPI.value = true;
+      const data = await postData(
+        props.apiOpt.api_method?.toLowerCase(),
+        fetchOptions.body,
+        "",
+        false,
+        false,
+        false,
+        props.apiOpt.api_url
+      );
+
+      if (data) {
+        console.log(data);
+        console.log("API request aborted");
+        loadingAPI.value = false;
+
+        // Navigate through the nested data structure
+        let currentData = props.apiOpt.selectedNode.reduce((acc, key) => {
+          if (acc === undefined || acc === null) {
+            console.error(`Key ${key} not found in response data`);
+            throw new Error(`Key ${key} not found`);
+          }
+
+          // Handle array case
+          if (Array.isArray(acc)) {
+            if (typeof key === "number") {
+              return props.apiOpt.isExactChoosedKeys ? acc[key] : [...acc];
+            }
+            return acc.map((item) => item[key]);
+          }
+
+          // Handle object case
+          return acc[key];
+        }, data);
+
+        // Transform the final data into the required format
+        const resultAPI = Array.isArray(currentData)
+          ? currentData.map((element, index) => ({
+              value:
+                element[props.apiOpt.selectedKeys.value] ??
+                element.value ??
+                index + 1,
+              label:
+                element[props.apiOpt.selectedKeys.label] ?? element.label ?? "",
+            }))
+          : [];
+
+        loadingAPI.value = false;
+
+        if (typeof update === "function") {
+          update(() => {
+            detailData.value = resultAPI;
+          });
+        } else {
+          detailData.value = resultAPI;
+        }
+        return;
+      } else {
+        console.error("API request failed");
+        loadingAPI.value = false;
+        $q.notify({
+          type: "negative",
+          message: "Failed to fetch data from API",
+        });
+        return;
+      }
+    } else {
+      update(() => {
+        detailData.value = props.detail;
+      });
+    }
+
+    // fetch(props.apiOpt.api_url, fetchOptions)
+    //   .then((response) => {
+    //     if (!response.ok) throw new Error("Network response was not ok");
+    //     return response.json();
+    //   })
+    //   .then((data) => {
+    //     // Navigate through the nested data structure
+    //     let currentData = props.apiOpt.selectedNode.reduce((acc, key) => {
+    //       if (acc === undefined || acc === null) {
+    //         console.error(`Key ${key} not found in response data`);
+    //         throw new Error(`Key ${key} not found`);
+    //       }
+
+    //       // Handle array case
+    //       if (Array.isArray(acc)) {
+    //         if (typeof key === "number") {
+    //           return props.apiOpt.isExactChoosedKeys ? acc[key] : [...acc];
+    //         }
+    //         return acc.map((item) => item[key]);
+    //       }
+
+    //       // Handle object case
+    //       return acc[key];
+    //     }, data);
+
+    //     // Transform the final data into the required format
+    //     const resultAPI = Array.isArray(currentData)
+    //       ? currentData.map((element, index) => ({
+    //           value:
+    //             element[props.apiOpt.selectedKeys.value] ??
+    //             element.value ??
+    //             index + 1,
+    //           label:
+    //             element[props.apiOpt.selectedKeys.label] ?? element.label ?? "",
+    //         }))
+    //       : [];
+
+    //     loadingAPI.value = false;
+
+    //     if (typeof update === "function") {
+    //       update(() => {
+    //         detailData.value = resultAPI;
+    //       });
+    //     } else {
+    //       detailData.value = resultAPI;
+    //     }
+    //   })
+    //   .catch((err) => {
+    //     console.error("API Error:", err);
+    //     $q.notify({
+    //       type: "negative",
+    //       message: "Failed to fetch data from API",
+    //     });
+    //     loadingAPI.value = false;
+    //   });
+  } else {
+    console.log("tidak ada apiOpt");
+    update(() => {
+      detailData.value = props.detail;
+    });
+  }
+};
+
+const onSelectData = (val) => {
+  const checkAPI = props.apiOpt && props.apiOpt.api_url;
+  if (checkAPI) {
+    console.log("onSelectData", val);
+    const selectedOption = detailData.value.find(
+      (option) => option.value === val
+    );
+
+    detailData.value = [selectedOption];
+    console.log("Selected option:", selectedOption);
+  } else {
+    // modelData.value = val;
+  }
+};
+
+const getParams = (params) => {
+  // console.log(params);
+  // Parse the api_params value if it's a valid JSON string
+  if (!params || (typeof params === "string" && params.trim() === ""))
+    return {};
+  try {
+    const parsed = JSON.parse(params);
+
+    if (Array.isArray(parsed)) {
+      const result = {};
+
+      parsed.forEach((item) => {
+        // Case 1: Simple parameter (no dots)
+        if (!item.param_name.includes(".")) {
+          const value = item.form_id ?? item.default_value;
+
+          // If the value is a string, split into array of characters
+          result[item.param_name] = value;
+          return;
+        }
+
+        // Case 2: Array-style parameter (filter.[0].cols)
+        const arrayMatch = item.param_name.match(/^([^.]+)\.\[(\d+)\]\.(\w+)/);
+        if (arrayMatch) {
+          const [_, rootKey, index, property] = arrayMatch;
+
+          if (!result[rootKey]) result[rootKey] = [];
+          if (!result[rootKey][index]) result[rootKey][index] = {};
+
+          const idForm = Object.values(formStore.getUsersAnswerForm).find(
+            (val) => val[item.form_id] !== undefined
+          )?.[item.form_id];
+
+          const value = idForm ?? item.default_value;
+          result[rootKey][index][property] = value;
+          return;
+        }
+
+        // Case 3: Object-style parameter (filter.cols)
+        const objectMatch = item.param_name.match(/^([^.]+)\.(\w+)$/);
+        if (objectMatch) {
+          const [_, rootKey, property] = objectMatch;
+
+          if (!result[rootKey]) result[rootKey] = {};
+
+          const value = item.form_id ?? item.default_value;
+          result[rootKey][property] = value;
+        }
+      });
+
+      // Convert array-style objects to proper arrays
+      Object.keys(result).forEach((key) => {
+        if (typeof result[key] === "object" && !Array.isArray(result[key])) {
+          const entries = Object.entries(result[key]);
+          if (entries.every(([k]) => !isNaN(k))) {
+            result[key] = Object.values(result[key]);
+          }
+        }
+      });
+
+      return result;
+    }
+
+    return parsed;
+  } catch (e) {
+    console.error("Error parsing api_params:", e);
+    return {};
+  }
+};
 
 watch(
   () => JSON.stringify(props.detail),
@@ -269,6 +562,8 @@ watch(
   () => JSON.stringify(detailData.value),
   (val) => {
     detailData.value = JSON.parse(val);
+
+    checkAPIData();
     emit("onDeleted", JSON.parse(val));
     refreshDetail.value = refreshDetail.value + 1;
   }
