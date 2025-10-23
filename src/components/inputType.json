@@ -1,0 +1,86 @@
+[
+  {
+    "label": "Normal Answer",
+    "category": "single",
+    "children": [
+      {
+        "label": "Single Answer",
+        "category": "normal",
+        "value": {
+          "type": "text",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Long Answer",
+        "category": "normal",
+        "value": {
+          "type": "textarea",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Date Picker",
+        "category": "normal",
+        "value": {
+          "type": "date",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Time Picker",
+        "category": "normal",
+        "value": {
+          "type": "time",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Datetime Picker",
+        "category": "normal",
+        "value": {
+          "type": "datetime",
+          "comp": "q-input"
+        }
+      },
+      {
+        "label": "Upload File",
+        "category": "normal",
+        "value": {
+          "type": "upload",
+          "comp": "q-file"
+        }
+      }
+    ]
+  },
+  {
+    "label": "Choose Answer",
+    "category": "multiple",
+    "children": [
+      {
+        "label": "Dropdown Select (Single choice only)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-select",
+          "comp": "q-select"
+        }
+      },
+      {
+        "label": "Multiple Checkbox (Multiple choice)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-checkbox",
+          "comp": "q-checkbox"
+        }
+      },
+      {
+        "label": "Multiple Choice (Single choice only)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-radio",
+          "comp": "q-radio"
+        }
+      }
+    ]
+  }
+]
