@@ -73,12 +73,19 @@ import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import listMenuRecurse from "./listMenuRecurse.vue";
 import FrontPageIndex from "../Frontpage/FrontPageIndex.vue";
+import { useAuthStore } from "stores/authStore";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
+const authStore = useAuthStore();
 
 onMounted(() => {
-  getMenuFP();
+  // getMenuFP();
+  if (authStore.authDet.is_fpconf) {
+    listMenu.value = authStore.authDet.is_fpconf;
+  } else {
+    getMenuFP();
+  }
 });
 
 // Mock store for demonstration; replace with your actual store import

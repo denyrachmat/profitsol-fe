@@ -18,8 +18,12 @@
                 ? 'bg-grey-4 text-black'
                 : ''
             "
+            :disable="props.isLoading"
           >
-            <listMenuRecurse :listMenu="item.children" />
+            <listMenuRecurse
+              :listMenu="item.children"
+              :is-loading="props.isLoading"
+            />
           </q-expansion-item>
           <!-- <q-item-section>{{ item.value }}</q-item-section> -->
         </template>
@@ -29,6 +33,7 @@
             @click="onClickMenu(item)"
             :active="formStore.getCMSPageChoosed.value === item.value"
             active-class="bg-grey-6 text-white"
+            :disable="props.isLoading"
           >
             <q-item-section avatar>
               <q-icon :name="item.icon" />
@@ -51,14 +56,22 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(["onLoadingChange"]);
 
 const formStore = useFormStore();
 
 const onClickMenu = (item) => {
   // Handle menu item click
   console.log("Menu item clicked:", item);
-  formStore.setCMSPageChoosed(item);
+  if (item.page && !item.page.includes("#")) {
+    formStore.setCMSPageChoosed(item);
+  }
 };
 const listMenu = ref(props.listMenu || []);
 </script>

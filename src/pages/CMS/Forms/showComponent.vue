@@ -320,7 +320,7 @@
                           </div>
                           <template v-if="col.content.layout === 'grid'">
                             <q-carousel
-                              v-model="slide"
+                              v-model="slide[idx][idx2]"
                               transition-prev="scale"
                               transition-next="scale"
                               swipeable
@@ -617,7 +617,7 @@ const props = defineProps({
   },
 });
 
-const slide = ref(0);
+const slide = ref([]);
 const forms = ref([]);
 const isMountedTriggered = ref(false);
 const connectedMRSVal = ref(null);
@@ -685,6 +685,13 @@ const getAllLogics = computed(() => {
 
 onMounted(() => {
   forms.value = props.data;
+
+  // Initialize slide array based on forms structure
+  slide.value = forms.value.map((row) =>
+    row.content ? row.content.map(() => 0) : [0]
+  );
+
+  console.log(slide.value);
 
   isFullHeight.value = props.fullHeight;
 
@@ -1181,11 +1188,12 @@ const getPostsData = async (rowsIdx, colIdx) => {
       tags: btoa(JSON.stringify(dataContent.content.tags || [])),
       orderBy: [{ [dataContent.content.orderBy]: dataContent.content.order }],
       limit: dataContent.content.maxShow || 3,
+      isPublisedOnly: 1,
     },
     "cms/formsDetail"
   );
   if (response) {
-    // console.log("Data fetched successfully:", response);
+    console.log("Data fetched successfully:", response);
     dataContent.postsList = response.filter((item) => item.is_published === 1);
     // Chunk posts based on dataContent.content.perSlide or default to 1
 

@@ -537,7 +537,7 @@ export default defineComponent({
         await authHelper.logout();
         // Setelah logoutRedirect, browser akan di-refresh,
         // jadi kode di bawah ini tidak akan dijalankan.
-        return;
+        // return;
       }
 
       // Jika tidak ada login MSAL, lanjutkan dengan alur logout reguler.

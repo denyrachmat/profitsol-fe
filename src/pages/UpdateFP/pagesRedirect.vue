@@ -43,7 +43,10 @@ import { useRoute } from "vue-router";
 import showComponent from "../CMS/Forms/showComponent.vue";
 import apiRequest from "src/components/apiRequest";
 
+import { useFormStore } from "src/stores/formStore";
+
 const { postData } = apiRequest();
+const formStore = useFormStore();
 
 // --- STATE MANAGEMENT ---
 const route = useRoute(); // Untuk mengakses parameter dari URL
@@ -52,6 +55,8 @@ const isLoading = ref(true); // Status loading
 const error = ref(null); // Untuk menyimpan pesan error
 
 const choosedPages = ref(null);
+
+defineEmits(["isLoadingChange"]);
 
 // --- FUNGSI UNTUK MENGAMBIL DATA ---
 const fetchPost = async () => {
@@ -110,6 +115,11 @@ watch(
     }
   }
 );
+
+watch(isLoading.value, (newVal) => {
+  // Emit perubahan status loading ke parent component
+  formStore.setLoadingArticle(newVal);
+});
 </script>
 
 <style scoped>

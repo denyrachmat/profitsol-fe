@@ -13,22 +13,47 @@
           title="User List"
           :filter="filterData"
           dense
+          v-model:selected="selectedUsers"
+          selection="multiple"
+          :loading="loading"
         >
           <template v-slot:top-right>
-            <q-input
-              borderless
-              dense
-              debounce="300"
-              v-model="filter"
-              placeholder="Search"
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+            <div class="row">
+              <div class="col">
+                <q-input
+                  borderless
+                  dense
+                  debounce="300"
+                  v-model="filter"
+                  placeholder="Search"
+                >
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+
+              <div class="col-2 text-right">
+                <q-btn
+                  dense
+                  outline
+                  color="primary"
+                  icon="add_task"
+                  @click="onManageFP"
+                >
+                  <q-tooltip>Manage Frontpage Users</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
           </template>
           <template v-slot:body="props">
             <q-tr :props="props">
+              <q-td>
+                <q-checkbox
+                  v-model="props.selected"
+                  @update:model-value="props.selected = $event"
+                />
+              </q-td>
               <q-td key="action" :props="props">
                 <q-toggle
                   v-model="props.row.pud_is_active"
@@ -55,6 +80,21 @@
                   "
                 />
               </q-td>
+              <q-td key="ms_login" :props="props">
+                <q-toggle
+                  v-model="props.row.is_ms_checking"
+                  checked-icon="check"
+                  color="red"
+                  unchecked-icon="clear"
+                  true-value="1"
+                  false-value="0"
+                  @update:model-value="
+                    (value) =>
+                      onChangeActive(props.row, 'is_ms_checking', value)
+                  "
+                />
+              </q-td>
+
               <q-td key="pud_photo" :props="props">
                 <q-avatar
                   size="30px"
@@ -95,7 +135,19 @@
                     dense
                     @click="updateUsersAction(props.row)"
                     :disable="props.row.username === store.authDet.username"
-                  />
+                  >
+                    <q-tooltip>Edit User Profile</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    color="orange"
+                    label="Update"
+                    icon="edit"
+                    dense
+                    @click="updateUsersAction(props.row)"
+                    :disable="props.row.username === store.authDet.username"
+                  >
+                    <q-tooltip>Manage Frontpage Users</q-tooltip>
+                  </q-btn>
                   <q-btn
                     color="red"
                     label="Delete"
@@ -109,6 +161,10 @@
               </q-td>
             </q-tr>
           </template>
+
+          <template v-slot:loading>
+            <q-inner-loading showing color="primary" />
+          </template>
         </q-table>
       </div>
     </div>
@@ -121,6 +177,7 @@ import { useQuasar, date } from "quasar";
 import { useAuthStore } from "stores/authStore";
 
 import updateUsers from "./updateUsers";
+import mappingUsersFPManage from "./mappingUsersFPManage.vue";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
@@ -137,6 +194,11 @@ const columns = ref([
     name: "mobile",
     align: "center",
     label: "Using Portal Mobile ?",
+  },
+  {
+    name: "ms_login",
+    align: "center",
+    label: "Force using MS Login ?",
   },
   {
     name: "pud_photo",
@@ -188,15 +250,29 @@ const columns = ref([
   },
 ]);
 const filterData = ref("");
+const selectedUsers = ref([]);
+const loading = ref(false);
 
 onMounted(async () => {
   getUsers();
 });
 
 const getUsers = async () => {
-  const data = await postData("get", null, "portal/users", false, false, true);
-  if (data) {
-    rows.value = data.data;
+  loading.value = true;
+  try {
+    const data = await postData(
+      "get",
+      null,
+      "portal/users",
+      false,
+      false,
+      true
+    );
+    if (data) {
+      rows.value = data.data;
+    }
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -285,5 +361,24 @@ const onChangeActive = async (datas, col = "pud_is_active", value) => {
   if (data) {
     getUsers();
   }
+};
+
+const onManageFP = () => {
+  $q.dialog({
+    component: mappingUsersFPManage,
+
+    // props forwarded to your custom component
+    componentProps: {
+      dataProps: [],
+      // ...more..props...
+    },
+    persistent: true,
+  })
+    .onOk(async (val) => {
+      console.log("Dialog confirmed with value:", val);
+    })
+    .onCancel(() => {
+      console.log("Dialog canceled");
+    });
 };
 </script>

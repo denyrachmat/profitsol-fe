@@ -22,7 +22,8 @@ export const useFormStore = defineStore("form", {
     },
     startFormDate: "",
     endFormDate: "",
-    CMSPageChoosed: ""
+    CMSPageChoosed: "",
+    isLoadingArticle: false
   }),
 
   getters: {
@@ -55,6 +56,9 @@ export const useFormStore = defineStore("form", {
     },
     getCMSPageChoosed(state) {
       return state.CMSPageChoosed;
+    },
+    getIsLoadingArticle(state) {
+      return parseInt(state.isLoadingArticle);
     }
   },
 
@@ -145,6 +149,9 @@ export const useFormStore = defineStore("form", {
     },
     setCMSPageChoosed(page) {
       this.CMSPageChoosed = page;
+    },
+    setLoadingArticle(stateVal) {
+      this.isLoadingArticle = stateVal;
     }
   },
 });

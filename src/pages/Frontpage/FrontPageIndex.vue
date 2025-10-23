@@ -162,7 +162,7 @@
         <span class="q-ml-sm">Loading menu...</span>
       </div>
       <q-scroll-area class="full-height" style="max-width: 300px" v-else>
-        <listMenuRecurse :list-menu="listPreviewMenu" />
+        <listMenuRecurse :list-menu="listPreviewMenu" :is-loading="loading" />
       </q-scroll-area>
     </q-drawer>
 
@@ -237,6 +237,7 @@ import apiRequest from "src/components/apiRequest";
 import listMenuRecurse from "../UpdateFP/listMenuRecurse.vue";
 
 import { useAuthStore } from "src/stores/authStore";
+import { route } from "quasar/wrappers";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
@@ -276,6 +277,10 @@ const props = defineProps({
 });
 
 onMounted(async () => {
+  if (!authStore.getStatusLog) {
+    router.push("/login");
+  }
+
   await getMainConf();
   await getDataNav();
 
@@ -560,7 +565,10 @@ watch(
 watch(
   () => router.currentRoute.value.path,
   (newPath) => {
-    console.log("Route changed to:", newPath);
+    if (!authStore.getStatusLog) {
+      router.push("/login");
+    }
+
     if (newPath === "/") {
       // Find the menu item where is_main == 1
       const flatMenu = flattenMenu(listPreviewMenu.value);

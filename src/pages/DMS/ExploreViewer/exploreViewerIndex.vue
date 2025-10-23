@@ -163,7 +163,9 @@
           <!-- Shared List -->
           <template v-slot:before>
             <div class="q-pa-md">
-              <span class="text-h5 text-bold">Shared</span>
+              <span class="text-h5 text-bold" v-if="!props.sharedOnly"
+                >Shared</span
+              >
               <div class="row">
                 <div class="col">
                   <q-input
@@ -994,13 +996,13 @@ const openShareView = (useList = false) => {
 
   console.log(dataSelected);
 
-  if (dataSelected.length === 0) {
-    $q.notify({
-      type: "warning",
-      message: "Please select at least one of your folder / files to share",
-    });
-    return;
-  }
+  // if (dataSelected.length === 0) {
+  //   $q.notify({
+  //     type: "warning",
+  //     message: "Please select at least one of your folder / files to share",
+  //   });
+  //   return;
+  // }
 
   $q.dialog({
     component: exploreShareView,
@@ -1027,21 +1029,21 @@ const openShareView = (useList = false) => {
 };
 
 const openExploreSendToFE = () => {
+  console.log(selectedData.value);
+  console.log(sharedList.value);
   let dataSelected = selectedData.value
     .map((item) => {
-      return sharedList.value.find(
-        (f) => f.id === item && f.sent_to_fp.length === 0
-      );
+      return sharedList.value.find((f) => f.id === item);
     })
     .filter((item) => item !== undefined);
 
-  if (dataSelected.length === 0) {
-    $q.notify({
-      type: "warning",
-      message: "Please select at least one shared folder / file to send",
-    });
-    return;
-  }
+  // if (dataSelected.length === 0) {
+  //   $q.notify({
+  //     type: "warning",
+  //     message: "Please select at least one shared folder / file to send",
+  //   });
+  //   return;
+  // }
 
   $q.dialog({
     component: exploreSendToFE,

@@ -122,7 +122,8 @@ const getRoleAppMap = computed(() => {
     if (
       !datanya.some(
         (item) => item.apps?.am_app_url === "UpdateFP/UpdateFPIndex"
-      )
+      ) &&
+      authStore.authDet.is_fpconf.length > 0
     ) {
       datanya.push({
         apps: {

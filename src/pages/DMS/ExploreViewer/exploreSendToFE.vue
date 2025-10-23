@@ -300,7 +300,20 @@ const getNavAssignedDms = async () => {
 };
 
 const getIcon = (filename) => {
+  // Ensure filename is a string
+  if (!filename || typeof filename !== "string") {
+    return { icon: "file" };
+  }
+
+  if (!filename.includes(".")) {
+    return { icon: "file" };
+  }
+
   const splitter = filename.split(".");
+  if (splitter.length === 1) {
+    return { icon: "file" }; // Default icon for files without extension
+  }
+
   const getfileIcon = extList.filter(
     (fil) => fil.ext === splitter[splitter.length - 1]
   );

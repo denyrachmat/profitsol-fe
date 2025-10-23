@@ -133,7 +133,7 @@ import { useFormStore } from "stores/formStore";
 const { postData } = apiRequest();
 const route = useRoute();
 const tags = ref(route.params.tag || "");
-const limit = ref(atob(route.params.limit) || 3);
+const limit = ref(atob(route.params.limit) || 5);
 const orderBy = ref(atob(route.params.orderBy) || "created_at");
 const order = ref(atob(route.params.order) || "desc");
 const store = useFormStore();
@@ -170,7 +170,7 @@ const getTags = async () => {
       id: "post",
       tags: tags.value,
       orderBy: [orderByObj],
-      limit: 5,
+      limit: pagination.value.rowsPerPage,
       isPaginated: true,
       page: pagination.value.page,
     },
