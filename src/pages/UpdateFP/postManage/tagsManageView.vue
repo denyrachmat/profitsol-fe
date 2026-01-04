@@ -98,18 +98,36 @@
                         flat
                         round
                         icon="edit"
-                        color="primary"
+                        :color="
+                          props.row.creator === authStore.authDet.username ||
+                          authStore.getChoosedRole.role.id === 1
+                            ? 'primary'
+                            : 'grey-6'
+                        "
                         @click="onClickAddTags(props.row)"
                         size="sm"
                         class="q-mr-xs"
+                        :disable="
+                          props.row.creator !== authStore.authDet.username &&
+                          authStore.getChoosedRole.role.id !== 1
+                        "
                       />
                       <q-btn
                         flat
                         round
                         icon="delete"
-                        color="negative"
+                        :color="
+                          props.row.creator === authStore.authDet.username ||
+                          authStore.getChoosedRole.role.id === 1
+                            ? 'red'
+                            : 'grey-6'
+                        "
                         @click="onClickDeleteTags(props.row.name)"
                         size="sm"
+                        :disable="
+                          props.row.creator !== authStore.authDet.username &&
+                          authStore.getChoosedRole.role.id !== 1
+                        "
                       />
                     </template>
                   </q-td>
@@ -129,6 +147,10 @@ import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+
+import { useAuthStore } from "src/stores/authStore";
+
+const authStore = useAuthStore();
 const $q = useQuasar();
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -144,6 +166,7 @@ const columns = ref([
   { name: "name", label: "Name", field: "name" },
   { name: "desc", label: "Description", field: "desc" },
   { name: "slug", label: "Slug", field: "slug" },
+  { name: "creator", label: "Creator", field: "creator" },
   { name: "action", label: "Action", field: "action" },
 ]);
 const loading = ref(false);
@@ -165,6 +188,7 @@ const getData = async () => {
           name: "pgm_value|string",
           slug: "pgm_value2|string",
           desc: "pgm_desc|string",
+          creator: "pgm_created_by|string",
         },
       },
       `portal/gencode/showDetail/FP_POST_TAGS`,

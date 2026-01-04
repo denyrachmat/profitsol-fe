@@ -251,14 +251,14 @@
                     dense
                     unelevated
                   />
-                  <q-btn
+                  <!-- <q-btn
                     flat
                     icon="schema"
                     label="Diagram"
                     @click="insertDiagram"
                     dense
                     unelevated
-                  />
+                  /> -->
                   <q-btn
                     flat
                     icon="draw"
@@ -401,6 +401,7 @@ import { DrawioNode } from "src/components/drawIOExtension";
 import apiRequest from "src/components/apiRequest";
 import { PdfEmbed } from "./PdfEmbedExtension.js"; // Sesuaikan path-nya
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+import uploadFiles from "src/components/uploadFiles/index.vue";
 
 const $q = useQuasar();
 
@@ -464,6 +465,9 @@ onMounted(async () => {
         Image.configure({
           inline: true,
           allowBase64: true,
+          HTMLAttributes: {
+            class: "resizable-image",
+          },
         }),
         TextAlign.configure({
           types: ["heading", "paragraph"],
@@ -505,7 +509,84 @@ onMounted(async () => {
         if (props.postsData && props.postsData.id) {
           await getDataForms();
         }
-        // Watch for hashtag detection in editor content
+
+        // Add image resize functionality with proper cleanup
+        const editorElement = document.querySelector(".ProseMirror");
+        let resizeObserver = null;
+
+        if (editorElement) {
+          const handleMouseDown = (e) => {
+            if (e.target.tagName === "IMG") {
+              e.preventDefault();
+              const img = e.target;
+              img.style.cursor = "nwse-resize";
+              const startX = e.clientX;
+              const startY = e.clientY;
+              const startWidth = img.width || img.naturalWidth;
+              const startHeight = img.height || img.naturalHeight;
+              const aspectRatio = startWidth / startHeight;
+
+              // Create resize guide overlay
+              const resizeGuide = document.createElement("div");
+              resizeGuide.style.position = "fixed";
+              resizeGuide.style.border = "3px solid #2196F3";
+              resizeGuide.style.pointerEvents = "none";
+              resizeGuide.style.zIndex = "99999";
+              resizeGuide.style.backgroundColor = "rgba(33, 150, 243, 0.2)";
+              resizeGuide.style.boxShadow = "0 0 10px rgba(33, 150, 243, 0.5)";
+
+              const updateGuide = () => {
+                const rect = img.getBoundingClientRect();
+                resizeGuide.style.left = rect.left + "px";
+                resizeGuide.style.top = rect.top + "px";
+                resizeGuide.style.width = rect.width + "px";
+                resizeGuide.style.height = rect.height + "px";
+              };
+
+              updateGuide();
+              document.body.appendChild(resizeGuide);
+
+              const onMouseMove = (moveEvent) => {
+                requestAnimationFrame(() => {
+                  const width = Math.max(
+                    50,
+                    startWidth + (moveEvent.clientX - startX)
+                  );
+                  img.width = width;
+                  img.height = width / aspectRatio;
+                  updateGuide();
+                });
+              };
+
+              const onMouseUp = () => {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+                img.style.cursor = "";
+                // Remove resize guide
+                if (resizeGuide && resizeGuide.parentNode) {
+                  resizeGuide.parentNode.removeChild(resizeGuide);
+                }
+              };
+
+              document.addEventListener("mousemove", onMouseMove);
+              document.addEventListener("mouseup", onMouseUp);
+            }
+          };
+
+          editorElement.addEventListener("mousedown", handleMouseDown);
+
+          // Store cleanup function
+          const cleanupResize = () => {
+            editorElement.removeEventListener("mousedown", handleMouseDown);
+            if (resizeObserver) {
+              resizeObserver = null;
+            }
+          };
+
+          // Store cleanup for onBeforeUnmount
+          if (!window.__editorCleanups) window.__editorCleanups = [];
+          window.__editorCleanups.push(cleanupResize);
+        }
       }
     });
   } catch (error) {
@@ -773,27 +854,69 @@ function insertDiagram() {
 async function addPdf() {
   if (!editor.value) return;
 
-  const url = await $q.dialog({
-    title: "Insert PDF",
-    message: "Masukkan URL PDF",
-    prompt: {
-      model: "",
-      type: "url",
-    },
-    cancel: true,
-    persistent: true,
-  });
+  try {
+    let url = "";
+    $q.dialog({
+      title: "Insert PDF",
+      message: "Choose how to insert PDF",
+      options: {
+        type: "radio",
+        model: "url",
+        items: [
+          { label: "Insert URL", value: "url" },
+          { label: "Upload File", value: "upload" },
+        ],
+      },
+      cancel: true,
+      persistent: true,
+    }).onOk(async (choice) => {
+      console.log(choice);
+      if (choice === "url") {
+        $q.dialog({
+          title: "Insert PDF",
+          message: "Masukkan URL PDF",
+          prompt: {
+            model: "",
+            type: "url",
+          },
+          cancel: true,
+          persistent: true,
+        }).onOk((inputUrl) => {
+          console.log("PDF URL entered:", inputUrl);
+          if (inputUrl && typeof inputUrl === "string" && inputUrl.trim()) {
+            url = inputUrl.trim();
+            // console.log("Inserting PDF with URL:", url);
+            editor.value.chain().focus().insertPdfEmbed(url).run();
+          }
+        });
+      } else if (choice === "upload") {
+        $q.dialog({
+          component: uploadFiles,
+          componentProps: {
+            accept: ".pdf",
+            maxFileSize: 10485760, // 10MB
+          },
+        }).onOk((uploadedFile) => {
+          console.log("Uploaded file:", uploadedFile);
 
-  if (url) {
-    editor.value.chain().focus().insertPdfEmbed(url).run();
+          if (uploadedFile && uploadedFile.result) {
+            url = uploadedFile.result;
+            // console.log("Inserting PDF with URL:", url);
+            editor.value.chain().focus().insertPdfEmbed(url).run();
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.log("PDF insertion cancelled");
   }
 }
 
 const onClickSave = () => {
-  if (!postTitle.value || !postDescription.value) {
+  if (!postTitle.value) {
     $q.notify({
       type: "negative",
-      message: "Please fill in all fields.",
+      message: "Please fill post title.",
     });
     return;
   }
@@ -882,6 +1005,7 @@ const onClickAddCategory = async () => {
       value: tag.name,
       desc: tag.desc,
       slug: tag.slug,
+      creator: tag.creator,
     }));
   }
 
@@ -913,39 +1037,6 @@ const onClickChooseTags = async () => {
   const getListTags = await getDataTags();
 
   console.log(getListTags);
-
-  // let tagsList = [];
-  // if (getListTags && getListTags.length > 0) {
-  //   tagsList = getListTags.map((tag) => ({
-  //     label: `${tag.name} (${tag.desc})`,
-  //     value: tag.name,
-  //     desc: tag.desc,
-  //     slug: tag.slug,
-  //   }));
-  // }
-
-  // $q.dialog({
-  //   component: multiplePromptDialog,
-  //   componentProps: {
-  //     title: "Choose Tags",
-  //     initialFields: [
-  //       {
-  //         name: "tagsName",
-  //         label: "Tags Name",
-  //         type: "select",
-  //         options: tagsList,
-  //         multiple: true,
-  //         default: tags.value || [],
-  //         rules: [(val) => !!val || "Field is required"],
-  //       },
-  //     ],
-  //     addable: true,
-  //     removable: true,
-  //   },
-  // }).onOk(async (payload) => {
-  //   tags.value = [...tags.value, payload.tagsName].flat();
-  //   console.log("Submitted:", payload);
-  // });
 };
 
 const getDataCategories = async () => {
@@ -959,6 +1050,7 @@ const getDataCategories = async () => {
           name: "pgm_value|string",
           slug: "pgm_value2|string",
           desc: "pgm_desc|string",
+          creator: "pgm_created_by|string",
         },
       },
       `portal/gencode/showDetail/FP_POST_TAGS`,
@@ -996,6 +1088,7 @@ const getDataTags = async () => {
           name: "pgm_value|string",
           slug: "pgm_value2|string",
           desc: "pgm_desc|string",
+          creator: "pgm_created_by|string",
         },
       },
       `portal/gencode/showDetail/FP_POST_HASHTAGS`,

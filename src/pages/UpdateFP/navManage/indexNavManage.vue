@@ -278,7 +278,7 @@ const onClickChangePosition = async (item, newPosition) => {
         type: "positive",
         message: "Navigation position updated successfully",
       });
-      getData(false); // Refresh the navigation list
+      getData(true); // Refresh the navigation list
     } else {
       $q.notify({
         type: "negative",

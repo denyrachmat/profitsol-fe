@@ -1,9 +1,11 @@
+// File: PdfEmbed.js
 import { Node } from '@tiptap/core';
+import { VueNodeViewRenderer } from '@tiptap/vue-3';
+import PdfEmbedView from './PdfEmbedView.vue'; // <-- Impor komponen Vue kamu
 
 export const PdfEmbed = Node.create({
-  name: 'pdfEmbed', // Nama unik untuk node Anda
-
-  group: 'block', // Ini adalah node level blok (seperti paragraf atau gambar)
+  name: 'pdfEmbed',
+  group: 'block',
 
   addAttributes() {
     return {
@@ -24,8 +26,15 @@ export const PdfEmbed = Node.create({
     ];
   },
 
+  // renderHTML tetap penting untuk menyimpan datanya
   renderHTML({ HTMLAttributes }) {
-    return ['div', { 'data-type': 'pdf-embed', 'data-src': HTMLAttributes.src }, 'PDF Embed'];
+    // Kita tetap simpan sebagai div, preview-nya hanya di editor
+    return ['div', { 'data-type': 'pdf-embed', 'data-src': HTMLAttributes.src }];
+  },
+
+  // INI BAGIAN PENTINGNYA
+  addNodeView() {
+    return VueNodeViewRenderer(PdfEmbedView);
   },
 
   addCommands() {

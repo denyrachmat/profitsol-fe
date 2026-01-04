@@ -14,6 +14,7 @@
           :filter="filterData"
           dense
           v-model:selected="selectedUsers"
+          @update:selected="onSelection"
           selection="multiple"
           :loading="loading"
         >
@@ -24,7 +25,7 @@
                   borderless
                   dense
                   debounce="300"
-                  v-model="filter"
+                  v-model="filterData"
                   placeholder="Search"
                 >
                   <template v-slot:append>
@@ -39,19 +40,30 @@
                   outline
                   color="primary"
                   icon="add_task"
-                  @click="onManageFP"
+                  @click="onManageFP()"
+                  :disable="selectedUsers.length === 0"
                 >
-                  <q-tooltip>Manage Frontpage Users</q-tooltip>
+                  <q-tooltip>{{
+                    selectedUsers.length === 0
+                      ? "Please select users first"
+                      : "Manage Frontpage Users"
+                  }}</q-tooltip>
                 </q-btn>
               </div>
             </div>
           </template>
           <template v-slot:body="props">
-            <q-tr :props="props">
+            <q-tr
+              :props="props"
+              :class="props.row.pud_is_active !== '1' ? 'bg-grey-5' : ''"
+            >
               <q-td>
                 <q-checkbox
-                  v-model="props.selected"
-                  @update:model-value="props.selected = $event"
+                  :model-value="
+                    props.selected && props.row.pud_is_active === '1'
+                  "
+                  @update:model-value="(val) => (props.selected = val)"
+                  :disable="props.row.pud_is_active !== '1'"
                 />
               </q-td>
               <q-td key="action" :props="props">
@@ -78,6 +90,7 @@
                   @update:model-value="
                     (value) => onChangeActive(props.row, 'is_mobileacc', value)
                   "
+                  :disable="props.row.pud_is_active !== '1'"
                 />
               </q-td>
               <q-td key="ms_login" :props="props">
@@ -92,6 +105,7 @@
                     (value) =>
                       onChangeActive(props.row, 'is_ms_checking', value)
                   "
+                  :disable="props.row.pud_is_active !== '1'"
                 />
               </q-td>
 
@@ -143,8 +157,8 @@
                     label="Update"
                     icon="edit"
                     dense
-                    @click="updateUsersAction(props.row)"
-                    :disable="props.row.username === store.authDet.username"
+                    @click="onManageFP(props.row)"
+                    :disable="props.row.is_fpconf.length === 0"
                   >
                     <q-tooltip>Manage Frontpage Users</q-tooltip>
                   </q-btn>
@@ -176,7 +190,7 @@ import apiRequest from "src/components/apiRequest";
 import { useQuasar, date } from "quasar";
 import { useAuthStore } from "stores/authStore";
 
-import updateUsers from "./updateUsers";
+import updateUsers from "./updateUsers.vue";
 import mappingUsersFPManage from "./mappingUsersFPManage.vue";
 
 const { postData } = apiRequest();
@@ -256,6 +270,14 @@ const loading = ref(false);
 onMounted(async () => {
   getUsers();
 });
+
+const onSelection = (rows) => {
+  // Only include active users in selection
+  const activeUsers = rows.filter((row) => row.pud_is_active === "1");
+  selectedUsers.value = activeUsers;
+
+  // Prevent default selection behavior to show correct count
+};
 
 const getUsers = async () => {
   loading.value = true;
@@ -363,22 +385,30 @@ const onChangeActive = async (datas, col = "pud_is_active", value) => {
   }
 };
 
-const onManageFP = () => {
+const onManageFP = (listFPMenu = []) => {
+  if (listFPMenu.username) {
+    selectedUsers.value = [listFPMenu];
+  }
+
+  console.log("Selected Users for FP:", [selectedUsers.value, listFPMenu]);
+
   $q.dialog({
     component: mappingUsersFPManage,
 
     // props forwarded to your custom component
     componentProps: {
-      dataProps: [],
+      selectedUsers: selectedUsers.value,
+      selectedFPMenu: listFPMenu.is_fpconf,
       // ...more..props...
     },
     persistent: true,
   })
     .onOk(async (val) => {
-      console.log("Dialog confirmed with value:", val);
+      getUsers();
+      // console.log("Dialog confirmed with value:", val);
     })
     .onCancel(() => {
-      console.log("Dialog canceled");
+      // console.log("Dialog canceled");
     });
 };
 </script>

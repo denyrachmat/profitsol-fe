@@ -16,7 +16,7 @@
                   clickable
                   v-close-popup
                   @click="onSaveQuestion"
-                  :disable="!title || valueSubmited.length !== forms.length"
+                  :disable="!title"
                 >
                   <q-item-section>Save Quiz</q-item-section>
                 </q-item>

@@ -495,13 +495,6 @@ export default defineComponent({
     this.getNotif();
     this.getListDomain();
   },
-  mounted() {
-    window.addEventListener("beforeunload", this.handleBeforeUnload);
-  },
-  beforeUnmount() {
-    // Clean up the event listener when component unmounts
-    window.removeEventListener("beforeunload", this.handleBeforeUnload);
-  },
   computed: {
     authDetail() {
       return this.store.getDetail;

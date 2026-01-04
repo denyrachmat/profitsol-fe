@@ -287,7 +287,7 @@ import exploreTilesView from "./exploreTilesView.vue";
 import exploreListsView from "./exploreListsView.vue";
 import { useAuthStore } from "src/stores/authStore";
 import openFiles from "src/components/files/openFiles.vue";
-import uploadPhoto from "src/components/uploadPhoto";
+import uploadPhoto from "src/components/uploadPhoto/index.vue";
 import exploreImportFromSharepoint from "./exploreImportFromSharepoint.vue";
 import { authHelper, sharePointService } from "@/components/msHelpers";
 import exploreShareView from "./exploreShareView.vue";

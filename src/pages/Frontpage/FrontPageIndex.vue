@@ -16,6 +16,7 @@
           class="q-mr-sm"
           v-if="mainConfData.headerSideBarBtn == 1"
           @click="drawerLeft = !drawerLeft"
+          id="btn-toggle-menu"
         />
         <div class="q-pa-sm">
           <q-avatar
@@ -55,6 +56,7 @@
           outline
           icon="account_circle"
           v-if="mainConfData.headerSideBarBtn == 1"
+          id="btn-settings"
         >
           <q-menu>
             <div class="row no-wrap q-pa-md" style="min-width: 25em">
@@ -70,6 +72,7 @@
                       :to="authStore.getDetail.user_det ? '/portal' : '/login'"
                       icon="login"
                       class="full-width"
+                      id="btn-portal"
                     />
                   </div>
                   <div class="row" v-if="authStore.getDetail.user_det">
@@ -79,6 +82,7 @@
                       :to="'/profiles'"
                       icon="edit"
                       class="full-width"
+                      id="btn-edit-profile"
                     />
                   </div>
                 </div>
@@ -130,11 +134,36 @@
                     authStore.getDetail &&
                     authStore.getDetail.user_det
                   "
+                  id="btn-logout"
                 />
               </div>
             </div>
           </q-menu>
         </q-btn>
+        <q-btn
+          flat
+          :icon="isSubscribed ? 'notifications' : 'notifications_off'"
+          @click="requestPermissionAndSubscribe"
+          :color="isSubscribed ? 'white' : 'red-7'"
+          id="btn-subscribe"
+        >
+          <q-tooltip>{{
+            isSubscribed
+              ? "Notifications On, Click to turn off"
+              : "Notifications Off, Click to turn on"
+          }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          icon="help"
+          @click="startTutorial"
+          color="white"
+          id="btn-help-tour"
+        >
+          <q-tooltip>Start Front Page Tutorial</q-tooltip>
+        </q-btn>
+
         <!-- <q-btn
           flat
           round
@@ -156,6 +185,7 @@
       bordered
       :class="'bg-grey-3'"
       :key="'drawer' + refreshKeys"
+      id="drawer-menu"
     >
       <div v-if="loadingDrawer" class="q-pa-md flex flex-center">
         <q-spinner color="primary" size="2em" />
@@ -233,11 +263,16 @@ import { useQuasar } from "quasar";
 import { useFormStore } from "src/stores/formStore";
 import showComponent from "../CMS/Forms/showComponent.vue";
 import { useRouter } from "vue-router";
+import { buildTourSteps } from "@/tours/useTourSteps";
+
 import apiRequest from "src/components/apiRequest";
 import listMenuRecurse from "../UpdateFP/listMenuRecurse.vue";
 
 import { useAuthStore } from "src/stores/authStore";
 import { route } from "quasar/wrappers";
+
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
@@ -246,6 +281,8 @@ const authStore = useAuthStore();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 
+let tour;
+
 const listPreviewMenu = ref([]);
 const loading = ref(false);
 const drawerLeft = ref(false);
@@ -253,11 +290,25 @@ const refreshKeys = ref(0);
 const refreshKeysContent = ref(0);
 const loadingDrawer = ref(false);
 const viewMode = ref("view");
+const isSubscribed = ref(false);
 
 let intervalId = null;
 
 const choosedPages = ref([]);
 const listMainConf = ref([]);
+
+const isChromiumLike = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  // edge, chrome, brave, opera, dll biasanya masuk ini
+  const isChrome = ua.includes("chrome") || ua.includes("chromium");
+  const isEdge = ua.includes("edg");
+  const isOpera = ua.includes("opr");
+  const isBrave =
+    navigator.brave && typeof navigator.brave.isBrave === "function";
+  const isFirefox = ua.includes("firefox");
+
+  return (isChrome || isEdge || isOpera || isBrave) && !isFirefox;
+};
 
 const mainConfData = computed(() => {
   // Convert the array to an object using the "keys" property as the key
@@ -276,12 +327,60 @@ const props = defineProps({
   },
 });
 
+const startTutorial = () => {
+  document.body.classList.remove("driver-active");
+  tour.drive();
+};
 onMounted(async () => {
+  // For tour guide Start
+  tour = driver({
+    showProgress: true,
+    overlayColor: "rgba(0, 0, 0, 0.5)",
+    nextBtnText: "Next",
+    prevBtnText: "Back",
+    doneBtnText: "Done",
+    closeBtnText: "Close",
+    allowClose: false,
+    onDestroyed: () => document.body.classList.remove("driver-active"),
+  });
+
+  tour.setSteps(buildTourSteps({ tour, formStore }));
+  // For tour guide End
+
+  // ====== NOTIF FLOW FIX ======
+  try {
+    const chromium = isChromiumLike();
+
+    // Kalau permission sudah granted, boleh auto subscribe di semua browser
+    if (Notification.permission === "granted") {
+      await executeSubscription(); // ini fungsi subscribe murni ya
+    } else {
+      if (chromium) {
+        // Chrome engine: JANGAN prompt di sini
+        // Tampilkan info + tombol enable (gesture user)
+        $q.notify({
+          type: "info",
+          message: "Turn on notifications by clicking the bell icon.",
+          timeout: 4000,
+        });
+      } else {
+        // Firefox: boleh tetap auto minta izin seperti behavior lama
+        await requestPermissionAndSubscribe(true);
+      }
+    }
+  } catch (e) {
+    console.warn("Notif init error:", e);
+  }
+
   if (!authStore.getStatusLog) {
     router.push("/login");
   }
 
   await getMainConf();
+
+  if (!formStore.getIsFrontPageTourDone) {
+    startTutorial();
+  }
   await getDataNav();
 
   // Find the menu item where is_main == 1
@@ -299,10 +398,24 @@ onMounted(async () => {
   }
 
   const flatMenu = flattenMenu(listPreviewMenu.value);
+
+  console.log("Flat Menu:", flatMenu);
   const mainMenuItem = flatMenu.find((item) => item.is_main == 1);
   if (mainMenuItem) {
-    console.log("Main menu item found:", mainMenuItem);
-    formStore.setCMSPageChoosed(mainMenuItem);
+    // Check if current URL matches the main menu item's route
+    const currentPath = router.currentRoute.value.path;
+    if (currentPath === "/") {
+      formStore.setCMSPageChoosed(mainMenuItem);
+    } else {
+      formStore.setCMSPageChoosed({
+        type: "posts",
+        tags:
+          currentPath.split("/pages/")[1]?.split("/")[0] || mainMenuItem.url,
+        url:
+          currentPath.split("/pages/")[1]?.split("/").slice(1).join("/") || "",
+      });
+    }
+    console.log("Current URL:", currentPath.split("/pages/")[1]?.split("/"));
     // You can perform additional logic here if needed
   }
   refreshKeys.value += 1;
@@ -407,7 +520,7 @@ const logout = async () => {
       // Jika tidak ada login MSAL, lanjutkan dengan alur logout reguler.
       authStore.logoutAction();
       // Use Vue Router's composition API
-      router.push("/");
+      router.push("/login");
       $q.notify({
         color: "positive",
         message: "Anda telah berhasil logout.",
@@ -465,7 +578,7 @@ const msalLogout = async () => {
         })
         .then(() => {
           authStore.logoutAction();
-          router.push("/");
+          router.push("/login");
           $q.notify({
             color: "positive",
             message: "Anda telah berhasil logout.",
@@ -515,10 +628,165 @@ const getForms = async (idForms) => {
   }
 };
 
+// Pastikan Helper ini ada di file kamu (di luar function subscribeToPush)
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// ====== subscribe murni TANPA requestPermission ======
+const executeSubscription = async () => {
+  console.log("--- [STEP 1] executeSubscription... ---");
+
+  const registration = await navigator.serviceWorker.ready;
+  console.log("--- [STEP 2] Service Worker Ready ---", registration);
+
+  const vapidPublicKey = process.env.VAPID_KEY || "";
+
+  // OPTIONAL: kalau sudah ada subscription, pakai itu aja
+  const existingSub = await registration.pushManager.getSubscription();
+  if (existingSub) {
+    isSubscribed.value = true;
+    console.log("--- Already subscribed ---", existingSub);
+    await sendSubscriptionToBackend(existingSub);
+    return;
+  }
+
+  console.log("--- [STEP 3] Subscribe ke Browser... ---");
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+  });
+
+  console.log("--- [STEP 4] Berhasil Subscribe Browser ---", subscription);
+  await sendSubscriptionToBackend(subscription);
+};
+
+const executeUnsubscribe = async () => {
+  console.log("--- [UNSUB] executeUnsubscribe... ---");
+
+  const registration = await navigator.serviceWorker.ready;
+  console.log("--- [UNSUB] Service Worker Ready ---", registration);
+
+  const existingSub = await registration.pushManager.getSubscription();
+  if (existingSub) {
+    console.log("--- [UNSUB] Found existing subscription ---", existingSub);
+    await existingSub.unsubscribe();
+    console.log("--- [UNSUB] Unsubscribed from browser ---");
+    await sendUnsubscribeToBackend(existingSub);
+    isSubscribed.value = false;
+  } else {
+    console.log("--- [UNSUB] No existing subscription found ---");
+    $q.notify({
+      type: "info",
+      message: "Tidak ada langganan notifikasi yang ditemukan.",
+    });
+  }
+};
+
+// ====== fungsi minta izin + lanjut subscribe ======
+const requestPermissionAndSubscribe = async (byPassQuestion = true) => {
+  console.log("--- [REQ] requestPermissionAndSubscribe ---");
+
+  const currentPermission = Notification.permission;
+  console.log("--- Status Izin Awal:", currentPermission);
+
+  if (byPassQuestion) {
+    $q.dialog({
+      title: `${isSubscribed.value ? "Disable" : "Enable"} Notifications`,
+      message: `Are you sure you want to ${
+        isSubscribed.value ? "disable" : "enable"
+      } notifications?`,
+      cancel: true,
+      persistent: true,
+    })
+      .onOk(async () => {
+        isSubscribed.value
+          ? await executeUnsubscribe()
+          : await executeSubscription();
+      })
+      .onCancel(() => {
+        return;
+      });
+  } else {
+    if (currentPermission === "granted") {
+      await executeSubscription();
+      return;
+    }
+
+    if (currentPermission === "denied") {
+      $q.notify({
+        type: "warning",
+        message:
+          "Notifikasi diblokir. Silakan reset izin di pengaturan browser.",
+      });
+      return;
+    }
+  }
+};
+
+// ====== kirim backend (dari kode kamu) ======
+const sendSubscriptionToBackend = async (subscription) => {
+  const subJson = subscription.toJSON();
+  const payload = {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth,
+    },
+  };
+
+  console.log("--- [STEP 5] postData payload ---", payload);
+
+  const response = await postData("post", payload, "fpmanager/subscribeAllow");
+
+  console.log("--- [STEP 6] backend response ---", response);
+
+  if (response) {
+    $q.notify({
+      color: "positive",
+      message: "Notifikasi berhasil diaktifkan!",
+      icon: "check_circle",
+    });
+  }
+};
+
+const sendUnsubscribeToBackend = async (subscription) => {
+  const subJson = subscription.toJSON();
+  const payload = {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth,
+    },
+  };
+
+  console.log("--- [UNSUB REQ] payload ---", payload);
+
+  const response = await postData("post", payload, "fpmanager/unsubscribe");
+
+  console.log("--- [UNSUB RES] backend response ---", response);
+
+  if (response) {
+    $q.notify({
+      color: "positive",
+      message: "Notifikasi berhasil dinonaktifkan!",
+      icon: "check_circle",
+    });
+  }
+};
+
 watch(
   () => formStore.getCMSPageChoosed,
   (newVal) => {
     if (newVal) {
+      console.log(newVal);
       if (newVal.type === "page" && newVal.url && newVal.is_main == 1) {
         choosedPages.value = newVal || [];
         getForms(choosedPages.value.page);
@@ -537,7 +805,11 @@ watch(
           router.push({
             name: "pages",
             params: {
-              slug: newVal.tags ? newVal.tags[0] : "undefined",
+              slug: newVal.tags
+                ? Array.isArray(newVal.tags)
+                  ? newVal.tags[0]
+                  : newVal.tags
+                : "undefined",
               url: newVal.url,
             },
           });
@@ -581,3 +853,15 @@ watch(
   }
 );
 </script>
+<style scoped>
+/* Saat driver aktif, blok klik ke halaman */
+body.driver-active {
+  pointer-events: none;
+}
+
+/* Tapi popover driver tetap bisa diklik */
+body.driver-active .driver-popover,
+body.driver-active .driver-popover * {
+  pointer-events: auto;
+}
+</style>

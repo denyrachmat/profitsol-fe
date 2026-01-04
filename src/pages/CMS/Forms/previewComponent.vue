@@ -19,6 +19,7 @@
           :id="props.id"
           :showFormOnly="isShowFormOnlyValue"
           :preventClear="props.preventClear"
+          :batchID="props.answersKey"
         />
         <showQuizComponentVue
           :id="props.id"
@@ -58,6 +59,10 @@ const props = defineProps({
   preventClear: {
     type: Boolean,
     default: false,
+  },
+  answersKey: {
+    type: String,
+    default: "",
   },
 });
 

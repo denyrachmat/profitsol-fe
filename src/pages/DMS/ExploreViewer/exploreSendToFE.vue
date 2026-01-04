@@ -217,7 +217,7 @@
           flat
           label="Send"
           color="primary"
-          :disable="selectedFP.length === 0 || forms.length === 0"
+          :disable="selectedFP.length === 0"
           @click="onClickSave(selectedFP, forms, options)"
         />
       </q-card-actions>

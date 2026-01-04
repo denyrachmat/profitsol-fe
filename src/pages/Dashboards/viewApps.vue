@@ -81,6 +81,18 @@ const { proxy } = getCurrentInstance();
 const changeParamURL = (urlNya) =>
   urlNya.replace("{{username}}", authStore.authDet.username);
 
+const viewModules = import.meta.glob("../**/*.vue"); // relative ke file ini
+const loadVue = (relativeNoExt) => {
+  // relativeNoExt contoh: '../UpdateFP/UpdateFPIndex'
+  const key = `${relativeNoExt}.vue`;
+  const importer = viewModules[key];
+  if (!importer) {
+    // fallback: coba normalisasi double slash, dll
+    throw new Error(`Component not found for key: ${key}`);
+  }
+  return importer();
+};
+
 onMounted(async () => {
   $q.notify({
     message: "Click x button on upper right or press ESC Key to close apps.",
@@ -97,7 +109,7 @@ onMounted(async () => {
     console.log("Loading dynamic component at:", cleanPath);
 
     content.value = defineAsyncComponent({
-      loader: () => import(`../${cleanPath}.vue`),
+      loader: () => loadVue(`../${cleanPath}`),
       errorComponent: error404,
     });
 
@@ -120,7 +132,7 @@ onMounted(async () => {
     console.log("Loading dynamic component at:", url.value);
     // Local component loader
     content.value = defineAsyncComponent({
-      loader: () => import(`../${url.value}.vue`),
+      loader: () => loadVue(`../${url.value}`),
       errorComponent: error404,
     });
   }

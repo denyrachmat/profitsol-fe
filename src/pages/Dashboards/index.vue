@@ -163,6 +163,8 @@ import informationList from "./informationList.vue";
 import viewApps from "./viewApps.vue";
 import { date, useQuasar } from "quasar";
 
+import { authHelper, sharePointService } from "@/components/msHelpers";
+
 import appListVue from "./appList.vue";
 // import {
 //   Providers,
@@ -235,22 +237,13 @@ const getMSUserDetail = async () => {
     return;
   }
 
-  const data = await postData(
-    "get",
-    null,
-    null,
-    false,
-    false,
-    true,
-    `${process.env.GRAPH_API}me/calendar/events?$orderby=start/dateTime desc`,
-    true
+  const data = await sharePointService.getCalendarEvents(
+    store.msTokenDet.accessToken
   );
 
-  // console.log(process.env.GRAPH_API + store.getMSLogDet.localAccountId);
-
   if (data) {
-    // console.log(data.value);
-    mainEvent.value = data.value;
+    // console.log(data);
+    mainEvent.value = data;
   }
 };
 

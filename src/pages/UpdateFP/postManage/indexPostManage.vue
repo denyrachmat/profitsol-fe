@@ -65,13 +65,6 @@
                       @click="onClickAddPage"
                       icon-right="add"
                     />
-                    <q-btn
-                      color="indigo"
-                      label="Manage Category"
-                      @click="onClickTagsManage"
-                      icon-right="sell"
-                      flat
-                    />
                   </div>
                 </div>
               </template>
@@ -218,6 +211,10 @@
           </div>
         </div>
       </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn label="Close" color="orange" @click="onDialogCancel" />
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
@@ -226,20 +223,26 @@ import { onMounted, ref } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import formDialog from "./formAddPost.vue";
+import newFormAddPost from "./newFormAddPost.vue";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 import tagsManageView from "./tagsManageView.vue";
+import { useAuthStore } from "src/stores/authStore";
 
+import { sharePointService } from "src/components/msHelpers";
+
+const authStore = useAuthStore();
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 const { postData } = apiRequest();
 
-onMounted(() => {
+onMounted(async () => {
   getData();
 });
 
 const props = defineProps({
   mode: Number,
+  menuItem: Object,
 });
 
 const modes = ref(props.mode || 1); // Default to mode 0 if not provided
@@ -275,6 +278,7 @@ const columns = ref([
     align: "left",
   },
 ]);
+
 const pagination = ref({
   page: 1,
   rowsPerPage: 10,
@@ -286,7 +290,7 @@ const loading = ref(false);
 
 const onClickAddPage = (item) => {
   $q.dialog({
-    component: formDialog,
+    component: newFormAddPost,
     componentProps: {
       postsData: item,
     },
@@ -298,9 +302,48 @@ const onClickAddPage = (item) => {
   });
 };
 
+const getPageConfig = async () => {
+  const response = await postData(
+    "post",
+    {
+      filter: {
+        pgm_value: authStore.authDet.username,
+        pgm_value2: props.menuItem.idx,
+      },
+      selectAs: {
+        idx: "pgm_value2|string",
+        email: "pgm_value|string",
+        view_option: "pgm_value3|string",
+      },
+      firstSelect: true,
+    },
+    "portal/gencode/showDetail/UPDATE_FP"
+  );
+
+  if (response) {
+    return response.data;
+  } else {
+    console.error("Error fetching page config");
+    return null;
+  }
+};
+
 const getData = async () => {
   loading.value = true;
-  const response = await postData("get", null, "cms/forms/post");
+  const getConfig = await getPageConfig();
+  console.log(getConfig);
+  const isOwn = getConfig.view_option === "own" ? true : false;
+
+  const response = await postData(
+    "post",
+    {
+      id: "post",
+      limit: 0,
+      orderBy: [{ created_at: "desc" }],
+      users: isOwn ? authStore.authDet.username : "",
+    },
+    "cms/formsDetail"
+  );
   if (response) {
     console.log("Data fetched successfully:", response);
     rows.value = response;
@@ -309,33 +352,6 @@ const getData = async () => {
     console.error("Error fetching data");
     loading.value = false;
   }
-};
-
-const onUpdateMainPage = (id, val) => {
-  $q.dialog({
-    title: "Update Main Page",
-    message: "Are you sure you set this as the main page?",
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
-    const response = await postData(
-      "put",
-      null,
-      `fpmanager/updateMainPage/${id}/${val}`
-    );
-    if (response) {
-      $q.notify({
-        type: "positive",
-        message: "Main page updated successfully",
-      });
-      getData();
-    } else {
-      $q.notify({
-        type: "negative",
-        message: "Failed to update main page",
-      });
-    }
-  });
 };
 
 const onClickDeleteForm = (id) => {
@@ -556,8 +572,18 @@ const onUpdatePublishPost = (id, state) => {
     loading.value = true;
     try {
       const response = await postData(
-        "get",
-        null,
+        "post",
+        {
+          graph: {
+            accessToken: authStore.getMSTokenDet.accessToken,
+            message: `The post has been ${
+              state ? "published" : "unpublished"
+            } by ${authStore.getDetail.user_det.pud_first_name} ${
+              authStore.getDetail.user_det.pud_last_name
+            }.`,
+            userID: authStore.authDet.username,
+          },
+        },
         `fpmanager/publishPost/${id}/${state ? 1 : 0}`
       );
       if (response) {
@@ -565,6 +591,14 @@ const onUpdatePublishPost = (id, state) => {
           type: "positive",
           message: `Post ${state ? "published" : "unpublished"} successfully`,
         });
+
+        sharePointService.sendTeamsMessage(
+          authStore.authDet.username,
+          `The post has been ${state ? "published" : "unpublished"} by ${
+            authStore.getDetail.user_det.pud_first_name
+          } ${authStore.getDetail.user_det.pud_last_name}.`
+        );
+
         getData();
       } else {
         $q.notify({
@@ -573,6 +607,7 @@ const onUpdatePublishPost = (id, state) => {
         });
       }
     } catch (error) {
+      console.log(error);
       $q.notify({
         type: "negative",
         message: `Failed to ${state ? "publish" : "unpublish"} post`,

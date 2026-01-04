@@ -140,7 +140,11 @@
                   color="primary"
                   label="Add API Destination"
                   class="q-mt-md"
-                />
+                >
+                  <q-badge color="red" floating>{{
+                    formsSetup.isAPI ? formsSetup.apiOpt.length : 0
+                  }}</q-badge>
+                </q-btn>
               </div>
             </div>
           </div>
@@ -404,13 +408,17 @@ onMounted(() => {
       formsSetup.value.historyTableList = listForms.value;
     }
 
-    if (localSetup.isAPI && localSetup.apiOpt) {
-      console.log("Fetching API data for setup");
-      formsSetup.value.isAPI = !!localSetup.isAPI ?? false;
-      formsSetup.value.apiOpt = localSetup.apiOpt || [];
+    // isAPI and apiOpt
+    if (typeof localSetup.isAPI === "number") {
+      localSetup.isAPI = !!localSetup.isAPI ?? false;
     } else {
-      formsSetup.value.isAPI = false; // Default to false if undefined
-      formsSetup.value.apiOpt = [];
+      localSetup.isAPI = false; // Default to false if undefined
+    }
+
+    if (localSetup.apiOpt && localSetup.apiOpt.length > 0) {
+      localSetup.apiOpt = localSetup.apiOpt || [];
+    } else {
+      localSetup.apiOpt = [];
     }
 
     formsSetup.value = localSetup;
@@ -734,7 +742,7 @@ const onClickListAPI = () => {
   $q.dialog({
     component: viewSetupAPIDest,
     componentProps: {
-      dataEdit: listForms.value,
+      dataEdit: formsSetup.value.apiOpt,
       forms: props.forms,
       setup: formsSetup.value,
     },

@@ -20,7 +20,7 @@
     <template v-else>
       <div
         v-if="getNowData.length > 0"
-        :style="`max-height: 100%; overflow: auto;`"
+        :style="`max-height: 70%; overflow: auto;`"
       >
         <q-scroll-area class="window-height">
           <div class="row" v-if="props.useHeader">
@@ -308,11 +308,13 @@
                             </div>
                             <div class="col text-right">
                               <q-chip
-                                class="q-mr-sm"
+                                class="q-mr-sm cursor-pointer"
                                 outline
                                 color="primary"
+                                clickable
                                 v-for="tag in col.content.tags"
                                 :key="tag.id"
+                                @click="() => onClickTag(tag)"
                               >
                                 {{ tag }}
                               </q-chip>
@@ -405,9 +407,28 @@
                               v-for="(post, postIdx) in col.postsList"
                               :key="postIdx"
                             >
+                              <div
+                                class="row"
+                                v-if="post.categories_users.length !== 0"
+                              >
+                                <div class="col">
+                                  <div
+                                    class="q-mb-sm"
+                                    style="height: 4px; border-radius: 2px"
+                                    :style="{
+                                      background: `linear-gradient(90deg, #4caf50, #66bb6a, #4caf50, #66bb6a)`,
+                                    }"
+                                  />
+                                </div>
+                              </div>
                               <q-item
                                 clickable
                                 v-ripple
+                                :class="{
+                                  'my-blink-animation':
+                                    post.categories_users &&
+                                    post.categories_users.length !== 0,
+                                }"
                                 @click="
                                   () => {
                                     store.setCMSPageChoosed({
@@ -417,32 +438,53 @@
                                   }
                                 "
                               >
-                                <q-item-section class="col-4">
-                                  <img
-                                    :src="
-                                      post.image ||
-                                      'https://cdn.quasar.dev/img/mountains.jpg'
-                                    "
+                                <q-item-section class="col-2">
+                                  <q-img
+                                    :src="post.image"
                                     style="
                                       width: 100%;
                                       height: 150px;
                                       object-fit: cover;
                                       border-radius: 12px;
                                     "
+                                    v-if="post.image"
+                                  />
+                                  <q-img
+                                    src="~assets/10167807.jpg"
+                                    style="
+                                      width: 100%;
+                                      height: 150px;
+                                      object-fit: cover;
+                                      border-radius: 12px;
+                                    "
+                                    v-else
                                   />
                                 </q-item-section>
 
                                 <q-item-section class="col-8">
+                                  <q-item-label
+                                    class="text-h4"
+                                    v-if="post.categories_users"
+                                  >
+                                    <div
+                                      v-html="post.categories_users.note"
+                                    ></div>
+                                  </q-item-label>
                                   <q-item-label class="text-h6">
                                     {{ post.cfmt_title }}
                                   </q-item-label>
                                   <q-item-label caption class="text-subtitle2">
                                     by
-                                    <q-chip class="text-caption">{{
-                                      post.p_u_username
-                                    }}</q-chip>
+                                    <q-chip
+                                      class="text-caption"
+                                      color="orange"
+                                      >{{ post.p_u_username }}</q-chip
+                                    >
                                     on
-                                    <q-chip class="text-caption">
+                                    <q-chip
+                                      class="text-caption text-white"
+                                      color="blue"
+                                    >
                                       {{
                                         new Date(
                                           post.created_at
@@ -469,7 +511,7 @@
                                     tags: col.content.tags,
                                     limit: col.content.limit
                                       ? col.content.limit
-                                      : 3,
+                                      : 5,
                                     orderBy:
                                       col.content.orderBy.length > 0
                                         ? col.content.orderBy
@@ -520,6 +562,182 @@
               </div>
             </template>
           </div>
+
+          <div
+            class="row q-col-gutter-md q-pt-sm"
+            v-if="props.useCommentSection"
+          >
+            <div class="col-12">
+              <q-card
+                :bordered="props.useCardSeparator"
+                :flat="!props.useCardSeparator"
+                style="width: 100%; height: 100%"
+              >
+                <q-card-section class="text-h6">
+                  Comments Section
+                </q-card-section>
+                <q-card-section>
+                  <div v-if="loadingComment" class="text-center">
+                    <q-spinner-dots color="primary" size="40px" />
+                    <p>Loading Comments, please wait...</p>
+                  </div>
+                  <div v-else class="bg-grey-2 q-pa-md rounded-borders">
+                    <div
+                      v-if="listComments.length === 0"
+                      class="text-center text-grey-6 q-pa-md"
+                    >
+                      <q-icon
+                        name="chat_bubble_outline"
+                        size="48px"
+                        class="q-mb-sm"
+                      />
+                      <div class="text-body1">No comments yet</div>
+                      <div class="text-caption">Be the first to comment!</div>
+                    </div>
+                    <q-tree
+                      :nodes="listComments"
+                      node-key="idx"
+                      default-expand-all
+                      children-key="children"
+                      v-else
+                    >
+                      <template v-slot:default-header="prop">
+                        <div class="row items-center">
+                          <q-avatar size="32px" class="q-mr-sm">
+                            <img
+                              :src="
+                                prop.node.user && prop.node.user.profile_picture
+                                  ? prop.node.user.profile_picture
+                                  : 'https://cdn.quasar.dev/img/mountains.jpg'
+                              "
+                            />
+                          </q-avatar>
+                          <div>
+                            <div class="text-weight-bold">
+                              {{ prop.node.email }}
+                            </div>
+                            <div class="text-caption text-italic">
+                              {{
+                                new Date(
+                                  prop.node.created_date
+                                ).toLocaleString()
+                              }}
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template v-slot:default-body="prop">
+                        <div class="q-mt-sm" style="color: #333">
+                          <div
+                            v-if="
+                              JSON.parse(prop.node.comment).attachments.length >
+                              0
+                            "
+                          >
+                            <div
+                              class="q-mb-sm"
+                              v-for="(att, attIdx) in JSON.parse(
+                                prop.node.comment
+                              ).attachments"
+                              :key="attIdx"
+                            >
+                              <q-chip
+                                outline
+                                color="primary"
+                                class="cursor-pointer"
+                                @click="onOpenAttachment(att)"
+                                clickable
+                              >
+                                <q-icon name="attachment" class="q-mr-sm" />
+                                {{ att.name }}
+                              </q-chip>
+                            </div>
+                          </div>
+                          <div
+                            v-html="JSON.parse(prop.node.comment).comment"
+                          ></div>
+                          <div class="q-pt-sm text-right">
+                            <q-btn
+                              outline
+                              dense
+                              icon="reply"
+                              label="Reply"
+                              @click="
+                                () => {
+                                  selectedReplyComment = prop.node.idx;
+                                }
+                              "
+                              color="primary"
+                            />
+                            <template
+                              v-if="
+                                prop.node.email &&
+                                authStore.isLoggedIn &&
+                                prop.node.email === authStore.authDet.username
+                              "
+                            >
+                              <q-btn
+                                outline
+                                dense
+                                icon="edit"
+                                color="primary"
+                                class="q-ml-sm"
+                                @click="
+                                  () => {
+                                    selectedReplyComment = prop.node.idx;
+                                    selectedReplyContent = JSON.parse(
+                                      prop.node.comment
+                                    ).comment;
+                                    selectedReplyAttachments = prop.node
+                                      .attachments
+                                      ? prop.node.attachments
+                                      : [];
+                                  }
+                                "
+                              />
+                              <q-btn
+                                outline
+                                dense
+                                icon="delete"
+                                color="negative"
+                                class="q-ml-sm"
+                                @click="() => onDeleteComment(prop.node.id)"
+                              />
+                            </template>
+                          </div>
+                          <q-separator class="q-my-sm" />
+
+                          <div
+                            v-if="selectedReplyComment === prop.node.idx"
+                            class="q-mt-sm"
+                          >
+                            <commentComponentVue
+                              @submit="
+                                (value) => onSubmitComment(value, prop.node)
+                              "
+                              @onCancel="
+                                () => {
+                                  selectedReplyComment = null;
+                                  selectedReplyContent = '';
+                                  selectedReplyAttachments = [];
+                                }
+                              "
+                              :modelValue="selectedReplyContent"
+                              :initial-attachments="selectedReplyAttachments"
+                            />
+                          </div>
+                        </div>
+                      </template>
+                    </q-tree>
+                  </div>
+                </q-card-section>
+                <q-card-section>
+                  <commentComponentVue @submit="onSubmitComment" />
+                </q-card-section>
+              </q-card>
+            </div>
+          </div>
         </q-scroll-area>
       </div>
       <template v-else>
@@ -558,7 +776,14 @@
   </div>
 </template>
 <script setup>
-import { ref, defineProps, onMounted, computed, onBeforeUnmount } from "vue";
+import {
+  ref,
+  defineProps,
+  onMounted,
+  computed,
+  onBeforeUnmount,
+  nextTick,
+} from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
@@ -566,15 +791,18 @@ import showQuizComponentVue from "./showQuizComponent.vue";
 
 import { useFormStore } from "stores/formStore";
 import { useAuthStore } from "src/stores/authStore";
+import { useRoute } from "vue-router";
 
 import tableReport from "../../MRS/Tables/indexTableReport.vue";
 import uploadDocument from "src/pages/DMS/uploadDocument.vue";
 import exploreViewerIndex from "src/pages/DMS/ExploreViewer/exploreViewerIndex.vue";
+import commentComponentVue from "src/pages/Frontpage/commentComponent.vue";
 
 const store = useFormStore();
 const authStore = useAuthStore();
 const $q = useQuasar();
 const { postData } = apiRequest();
+const route = useRoute();
 
 const nowSeq = ref(null);
 const refreshKeys = ref(0);
@@ -614,6 +842,14 @@ const props = defineProps({
   subscribeList: {
     type: Array,
     default: () => [],
+  },
+  useCommentSection: {
+    type: Boolean,
+    default: false,
+  },
+  batchID: {
+    type: String,
+    default: null,
   },
 });
 
@@ -683,15 +919,21 @@ const getAllLogics = computed(() => {
   );
 });
 
-onMounted(() => {
+// Comments Section Start
+const loadingComment = ref(false);
+const listComments = ref([]);
+const selectedReplyComment = ref(null);
+const selectedReplyContent = ref("");
+const selectedReplyAttachments = ref([]);
+// Comments Section End
+
+onMounted(async () => {
   forms.value = props.data;
 
   // Initialize slide array based on forms structure
   slide.value = forms.value.map((row) =>
     row.content ? row.content.map(() => 0) : [0]
   );
-
-  console.log(slide.value);
 
   isFullHeight.value = props.fullHeight;
 
@@ -747,14 +989,18 @@ onMounted(() => {
   }
 
   let dataPosts = checkForPostsType(forms.value);
-  // console.log("checkForPostsType", dataPosts);
   if (dataPosts.length > 0) {
     for (let index = 0; index < dataPosts.length; index++) {
       const element = dataPosts[index];
       getPostsData(element.rowIdx, element.colIdx);
     }
   }
-  // console.log(getUserAnswers.value);
+
+  if (props.useCommentSection) {
+    getComment();
+  }
+
+  console.log(forms.value);
 });
 
 onBeforeUnmount(() => {
@@ -764,6 +1010,7 @@ onBeforeUnmount(() => {
 const convertBase64 = (val) => {
   return btoa(val);
 };
+
 const processHtml = (html) => {
   // Process styles
   const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
@@ -1094,6 +1341,8 @@ const onSubmitData = () => {
     }
   }
 
+  console.log("connectedMRSVal", connectedMRSVal.value);
+
   $q.dialog({
     title: "Confirm",
     message: "Would you like to submit this form ?",
@@ -1105,6 +1354,7 @@ const onSubmitData = () => {
       {
         id: props.id,
         ans: getUserAnswers.value,
+        batch_id: props.batchID,
       },
       `cms/storeAnswers`,
       false,
@@ -1119,6 +1369,21 @@ const onSubmitData = () => {
         color: "green",
         icon: "check",
       });
+
+      console.log("valDownload", data.data);
+      if (data.data && data.data.length > 0) {
+        data.data.map((valDownload) => {
+          if (valDownload.opt && valDownload.opt.isDownload) {
+            const link = document.createElement("a");
+            link.href = valDownload.file_path;
+            link.download = valDownload.opt.filename || "download";
+            link.target = "_blank";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        });
+      }
     }
   });
 };
@@ -1342,6 +1607,169 @@ const checkSubscribed = (methods = "users", data) => {
 
   return isSubscribed;
 };
+
+const onClickTag = (tag) => {
+  store.setCMSPageChoosed({
+    type: "tags",
+    tags: [tag],
+    limit: 5,
+    orderBy: "created_at",
+    order: "desc",
+  });
+};
+
+const onSubmitComment = async (commentData, parentId = null) => {
+  const payload = {
+    data: {
+      pgm_code: "FP_COMMENT",
+      pgm_value: props.id,
+      pgm_value2: authStore.authDet.username,
+      pgm_value3: commentData,
+      pgm_desc: `Comment from ${authStore.authDet.username} on form ${props.id}`,
+      pgm_parent: parentId ? parentId.idx : null,
+    },
+    keys: {
+      pgm_code: "FP_COMMENT",
+      pgm_value: props.id,
+      pgm_value2: authStore.authDet.username,
+    },
+    notify: {
+      title: "You have a new comment",
+      message: `A new comment has been submitted by ${authStore.authDet.username}.`,
+      to: [props.headersComp.author, parentId ? parentId.email : null],
+      methods: ["email", "webpush"],
+      link: route.fullPath,
+    },
+  };
+
+  const response = await postData(
+    "post",
+    payload,
+    "portal/gencode/saveGencode"
+  );
+
+  $q.notify({
+    message: "Your comment has been submitted successfully.",
+    color: "green",
+    icon: "check",
+  });
+
+  // Clear reply state
+  selectedReplyComment.value = null;
+  selectedReplyContent.value = "";
+  selectedReplyAttachments.value = [];
+  getComment();
+};
+
+const getComment = async () => {
+  loadingComment.value = true;
+
+  try {
+    const { data } = await postData(
+      "post",
+      {
+        id: "FP_COMMENT",
+        selectAs: {
+          idx: "id",
+          form_id: "pgm_value|int",
+          email: "pgm_value2|string",
+          comment: "pgm_value3|array",
+          created_date: "created_at",
+          children: "children",
+        },
+        withParents: true,
+        filter: {
+          pgm_value: props.id,
+        },
+      },
+      `portal/gencode/showDetail/FP_COMMENT`,
+      false,
+      false,
+      true
+    );
+
+    if (data) {
+      console.log(data);
+
+      await Promise.all(
+        data.map(async (comment) => {
+          const userDetails = await getUsersDetail(comment.email);
+
+          // Recursively process children
+          const processChildren = async (children) => {
+            if (Array.isArray(children)) {
+              await Promise.all(
+                children.map(async (child) => {
+                  const childUserDetails = await getUsersDetail(child.email);
+                  if (childUserDetails) {
+                    child.user = {
+                      name:
+                        childUserDetails.det.pud_first_name +
+                        " " +
+                        childUserDetails.det.pud_last_name,
+                      email: childUserDetails.email,
+                      profile_picture: childUserDetails.det.pud_photo,
+                    };
+                  } else {
+                    child.user = null;
+                  }
+                  // Recursively process nested children
+                  if (child.children) {
+                    await processChildren(child.children);
+                  }
+                })
+              );
+            }
+          };
+
+          await processChildren(comment.children);
+          if (userDetails) {
+            comment.user = {
+              name:
+                userDetails.det.pud_first_name +
+                " " +
+                userDetails.det.pud_last_name,
+              email: userDetails.email,
+              profile_picture: userDetails.det.pud_photo,
+            };
+          } else {
+            comment.user = null;
+          }
+        })
+      );
+
+      console.log("Comments with user details:", data);
+
+      listComments.value = data;
+    }
+  } finally {
+    loadingComment.value = false;
+  }
+};
+
+const getUsersDetail = async (username) => {
+  const data = await postData(
+    "get",
+    null,
+    `portal/users/${username}`,
+    false,
+    true,
+    true
+  );
+  if (data) {
+    return data.data;
+  }
+  return null;
+};
+
+const onOpenAttachment = (attachment) => {
+  const link = document.createElement("a");
+  link.href = attachment.url;
+  link.download = attachment.name || "download";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 </script>
 
 <style scoped>
@@ -1371,5 +1799,19 @@ const checkSubscribed = (methods = "users", data) => {
 
 :deep(tr:hover) {
   background-color: #e3f2fd;
+}
+
+.my-blink-animation {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 </style>

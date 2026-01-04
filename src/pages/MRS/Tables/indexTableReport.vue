@@ -177,6 +177,7 @@ const idForms = ref(props.idForms || null);
 const formStore = useFormStore();
 
 onMounted(async () => {
+  console.log("props result", props);
   if (route.params.idReport) {
     idNya.value = route.params.idReport;
   } else {
@@ -358,7 +359,7 @@ const onExportExcel = async (bypass = false) => {
   }
 };
 
-const onOpenForms = async (isEdit = false) => {
+const onOpenForms = async (isEdit = false, keyValue = "") => {
   const checkDatanya = await checkFormsByID(idForms.value);
   if (checkDatanya) {
     console.log("checkDatanya", checkDatanya);
@@ -372,11 +373,16 @@ const onOpenForms = async (isEdit = false) => {
         setup: checkDatanya.value.setupTraining,
         showFormOnly: true,
         preventClear: isEdit,
+        answersKey: isEdit ? keyValue : "",
       },
-    }).onOk(async (val) => {
-      console.log(val);
-      tableRef.value.requestServerInteraction();
-    });
+    })
+      .onOk(async (val) => {
+        console.log(val);
+        tableRef.value.requestServerInteraction();
+      })
+      .onDismiss(() => {
+        tableRef.value.requestServerInteraction();
+      });
   } else {
     return;
   }
@@ -491,21 +497,15 @@ const onEditData = (row) => {
     if (idx.includes("CMS_REPORT_POS")) {
       // listForms.push()
       const idxParts = idx.split("_");
-      console.log(
-        "idxParts",
-        row[`CMS_REPORT_${idxParts[idxParts.length - 1]}`]
-      );
 
       const ans = row[`CMS_REPORT_VAL_${idxParts[idxParts.length - 1]}`];
       const ansPos = row[`CMS_REPORT_POS_${idxParts[idxParts.length - 1]}`];
 
-      console.log("ansPos", ansPos);
-      console.log("answers", [ansPos[0], idxParts[idxParts.length - 1], ans]);
       formStore.addAnswersForm(ansPos[0], idxParts[idxParts.length - 1], ans);
     }
   }
 
-  onOpenForms(true);
+  onOpenForms(true, row.batch_id);
 };
 
 const onDelete = (row) => {

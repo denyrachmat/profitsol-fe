@@ -47,10 +47,14 @@ const apiRequest = ($qParam) => {
     if (auth) {
       header = {
         responseType: blob ? "arraybuffer" : "json",
+        xsrfCookieName: 'XSRF-TOKEN',
+        xsrfHeaderName: 'X-XSRF-TOKEN',
+        withCredentials: true,
         headers: {
           authorization: `Bearer ${isMSToken ? store.msTokenDet.accessToken : store.authDet.token
             }`,
           username: store.authDet.username,
+          'X-Requested-With': 'XMLHttpRequest',
           ...(blob
             ? {
               "Content-Type":

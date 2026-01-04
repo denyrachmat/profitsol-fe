@@ -255,10 +255,9 @@ onMounted(() => {
           shuffledData = dataShuf[0].slice(0, props.setup.maxQuestionCount);
         }
         datanya.value = [...dataHtml, ...shuffledData];
-        console.log(datanya.value);
         listQuestShuff.value = dataShuf[1];
       } else {
-        datanya.value = props.data.filter((val) => val.type === "form");
+        datanya.value = props.data;
       }
 
       if (props.setup.skipNextButtonMedia) {

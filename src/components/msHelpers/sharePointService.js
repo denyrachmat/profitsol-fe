@@ -1,4 +1,7 @@
 import { authHelper } from './authHelper';
+import { useAuthStore } from 'src/stores/authStore';
+
+const store = useAuthStore();
 
 const graphConfig = {
   graphEndpoint: "https://graph.microsoft.com/v1.0",
@@ -748,6 +751,292 @@ export const sharePointService = {
 
     } catch (error) {
       console.error('Error uploading to temp location:', error);
+      throw error;
+    }
+  },
+
+  // Get calendar events with descending date order
+  async getCalendarEvents(accessToken) {
+    try {
+      const response = await fetch('https://graph.microsoft.com/v1.0/me/calendar/events?$orderby=start/dateTime desc', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 401) {
+        // await authHelper.logout();
+        await store.logoutAction();
+        window.location.href = '/login';
+        throw new Error('Authentication failed. User has been logged out.');
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.value;
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+      throw error;
+    }
+  },
+
+  // Send message via Teams
+  // Send message to specific person (one-on-one)
+  async sendTeamsMessage(userId, message) {
+    try {
+      const token = await authHelper.acquireTokenSilently(['Chat.ReadWrite']);
+
+      // Create a new chat
+      const createChatResponse = await fetch(
+        `${graphConfig.graphEndpoint}/chats`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            chatType: 'oneOnOne',
+            members: [
+              {
+                '@odata.type': '#microsoft.graph.aadUserConversationMember',
+                roles: ['owner'],
+                'user@odata.bind': `https://graph.microsoft.com/v1.0/users('${userId}')`
+              }
+            ]
+          })
+        }
+      );
+
+      if (!createChatResponse.ok) {
+        throw new Error(`Failed to create chat: ${createChatResponse.status}`);
+      }
+
+      const chat = await createChatResponse.json();
+
+      // Send message to the chat
+      const sendMessageResponse = await fetch(
+        `${graphConfig.graphEndpoint}/chats/${chat.id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            body: {
+              content: message
+            }
+          })
+        }
+      );
+
+      if (!sendMessageResponse.ok) {
+        throw new Error(`Failed to send message: ${sendMessageResponse.status}`);
+      }
+
+      return await sendMessageResponse.json();
+    } catch (error) {
+      console.error('Error sending Teams message:', error);
+      throw error;
+    }
+  },
+
+  // Send message to multiple people (group chat)
+  async sendTeamsGroupMessage(userIds, message) {
+    try {
+      const token = await authHelper.acquireTokenSilently(['Chat.ReadWrite']);
+
+      const members = userIds.map(userId => ({
+        '@odata.type': '#microsoft.graph.aadUserConversationMember',
+        roles: ['owner'],
+        'user@odata.bind': `https://graph.microsoft.com/v1.0/users('${userId}')`
+      }));
+
+      const createChatResponse = await fetch(
+        `${graphConfig.graphEndpoint}/chats`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            chatType: 'group',
+            members: members
+          })
+        }
+      );
+
+      if (!createChatResponse.ok) {
+        throw new Error(`Failed to create group chat: ${createChatResponse.status}`);
+      }
+
+      const chat = await createChatResponse.json();
+
+      const sendMessageResponse = await fetch(
+        `${graphConfig.graphEndpoint}/chats/${chat.id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            body: {
+              content: message
+            }
+          })
+        }
+      );
+
+      if (!sendMessageResponse.ok) {
+        throw new Error(`Failed to send message: ${sendMessageResponse.status}`);
+      }
+
+      return await sendMessageResponse.json();
+    } catch (error) {
+      console.error('Error sending Teams group message:', error);
+      throw error;
+    }
+  },
+
+  // Send message to a Teams channel
+  async sendTeamsChannelMessage(teamId, channelId, message) {
+    try {
+      const token = await authHelper.acquireTokenSilently(['ChannelMessage.Send']);
+
+      const response = await fetch(
+        `${graphConfig.graphEndpoint}/teams/${teamId}/channels/${channelId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            body: {
+              content: message
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to send channel message: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error sending Teams channel message:', error);
+      throw error;
+    }
+  },
+
+  // Send email
+  async sendEmail(toRecipients, subject, bodyContent, ccRecipients = [], attachments = []) {
+    try {
+      const token = await authHelper.acquireTokenSilently(['Mail.Send']);
+
+      const emailMessage = {
+        message: {
+          subject: subject,
+          body: {
+            contentType: 'HTML',
+            content: bodyContent
+          },
+          toRecipients: toRecipients.map(email => ({
+            emailAddress: {
+              address: email
+            }
+          })),
+          ccRecipients: ccRecipients.map(email => ({
+            emailAddress: {
+              address: email
+            }
+          })),
+          attachments: attachments
+        },
+        saveToSentItems: true
+      };
+
+      const response = await fetch(
+        `${graphConfig.graphEndpoint}/me/sendMail`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(emailMessage)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to send email: ${response.status}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
+    }
+  },
+
+  // Get Teams chats
+  async getTeamsChats() {
+    try {
+      const token = await authHelper.acquireTokenSilently(['Chat.Read']);
+
+      const response = await fetch(
+        `${graphConfig.graphEndpoint}/me/chats`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get chats: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.value || [];
+    } catch (error) {
+      console.error('Error getting Teams chats:', error);
+      throw error;
+    }
+  },
+
+  // Get chat messages
+  async getChatMessages(chatId) {
+    try {
+      const token = await authHelper.acquireTokenSilently(['Chat.Read']);
+
+      const response = await fetch(
+        `${graphConfig.graphEndpoint}/chats/${chatId}/messages`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get messages: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.value || [];
+    } catch (error) {
+      console.error('Error getting chat messages:', error);
       throw error;
     }
   }

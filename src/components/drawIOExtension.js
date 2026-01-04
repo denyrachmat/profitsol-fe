@@ -1,15 +1,16 @@
-import { Node } from '@tiptap/core';
+import { Node } from '@tiptap/core'
 
 export const DrawioNode = Node.create({
-  name: 'drawio', // Unique name for the node
-  group: 'block', // Belongs to the 'block' group
-  atom: true,    // Treated as a single unit (can't split/delete part of it)
+  name: 'drawio',
+  group: 'block',
+  atom: true,
+  selectable: true,   // biar bisa ke-select tapi isi di dalam tetap bebas
+  draggable: false,
 
-  // Default attributes
   addAttributes() {
     return {
       src: {
-        default: '', // Draw.io embed URL or saved diagram data
+        default: 'https://embed.diagrams.net/?embed=1&ui=atlas&proto=json',
       },
       width: {
         default: '100%',
@@ -17,42 +18,89 @@ export const DrawioNode = Node.create({
       height: {
         default: '500px',
       },
-    };
+    }
   },
 
-  // Parse HTML to Tiptap node
   parseHTML() {
-    return [{
-      tag: 'iframe[data-drawio]', // Match iframes with this attribute
-    }];
+    return [
+      {
+        tag: 'div[data-drawio-wrapper]',
+      },
+    ]
   },
 
-  // Render Tiptap node to HTML
   renderHTML({ HTMLAttributes }) {
-    return ['iframe', {
-      'data-drawio': '',
-      src: HTMLAttributes.src || 'https://embed.diagrams.net/?embed=1&ui=atlas',
-      width: HTMLAttributes.width,
-      height: HTMLAttributes.height,
-      frameborder: '0',
-      allowfullscreen: 'true',
-    }];
+    // ini cuma fallback kalau editor diserialisasi → HTML (bukan nodeView)
+    return [
+      'div',
+      {
+        'data-drawio-wrapper': '',
+        contenteditable: 'false',
+        style: 'position: relative;',
+      },
+      [
+        'iframe',
+        {
+          'data-drawio': '',
+          src: HTMLAttributes.src,
+          width: HTMLAttributes.width,
+          height: HTMLAttributes.height,
+          frameborder: '0',
+          allowfullscreen: 'true',
+          style: 'border: none;',
+        },
+      ],
+    ]
   },
 
-  // Add commands to insert/edit the node
+  // 🚨 KUNCI: NodeView custom, bukan hanya renderHTML
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement('div')
+      dom.setAttribute('data-drawio-wrapper', '')
+      dom.contentEditable = 'false'
+      dom.style.position = 'relative'
+      dom.style.width = node.attrs.width || '100%'
+
+      const iframe = document.createElement('iframe')
+      iframe.setAttribute('data-drawio', '')
+      iframe.src =
+        node.attrs.src ||
+        'https://embed.diagrams.net/?embed=1&ui=atlas&proto=json'
+      iframe.width = node.attrs.width || '100%'
+      iframe.height = node.attrs.height || '500px'
+      iframe.frameBorder = '0'
+      iframe.allowFullscreen = true
+      iframe.style.border = 'none'
+
+      dom.appendChild(iframe)
+
+      return {
+        dom,
+        // jangan pernah biarkan ProseMirror memproses event di dalam node ini
+        stopEvent: () => true,
+        ignoreMutation: () => true,
+      }
+    }
+  },
+
   addCommands() {
     return {
-      insertDrawio: () => ({ commands }) => {
-        return commands.insertContent({
-          type: this.name,
-          attrs: {
-            src: 'https://embed.diagrams.net/?embed=1&ui=atlas',
+      insertDrawio:
+        () =>
+          ({ commands }) => {
+            return commands.insertContent({
+              type: this.name,
+              attrs: {
+                src: 'https://embed.diagrams.net/?embed=1&ui=atlas&proto=json',
+              },
+            })
           },
-        });
-      },
-      updateDrawio: (attrs) => ({ commands }) => {
-        return commands.updateAttributes(this.name, attrs);
-      },
-    };
+      updateDrawio:
+        attrs =>
+          ({ commands }) => {
+            return commands.updateAttributes(this.name, attrs)
+          },
+    }
   },
-});
+})

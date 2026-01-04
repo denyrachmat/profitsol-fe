@@ -56,18 +56,28 @@
                       border-radius: 12px;
                     "
                   />
-                  <img
-                    :src="
-                      post.image || 'https://cdn.quasar.dev/img/mountains.jpg'
-                    "
-                    style="
-                      width: 100%;
-                      height: 150px;
-                      object-fit: cover;
-                      border-radius: 12px;
-                    "
-                    v-else
-                  />
+                  <template v-else>
+                    <img
+                      :src="post.image"
+                      style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                      "
+                      v-if="post.image"
+                    />
+                    <img
+                      src="~assets/10167807.jpg"
+                      style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                      "
+                      v-else
+                    />
+                  </template>
                 </q-item-section>
 
                 <q-item-section class="col-10">
@@ -173,6 +183,7 @@ const getTags = async () => {
       limit: pagination.value.rowsPerPage,
       isPaginated: true,
       page: pagination.value.page,
+      isPublisedOnly: true,
     },
     "cms/formsDetail"
   );

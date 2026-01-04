@@ -57,10 +57,10 @@
 
 <script>
 /* eslint-disable */
-import login from "./login";
-import register from "./register";
-import forgot from "./forgotpassword";
-import reset from "./resetPassword";
+import login from "./login.vue";
+import register from "./register.vue";
+import forgot from "./forgotpassword.vue";
+import reset from "./resetPassword.vue";
 import { HelpersComponent } from "../../components/HelpersComponent";
 import { useAuthStore } from "stores/authStore";
 import { useQuasar } from "quasar";

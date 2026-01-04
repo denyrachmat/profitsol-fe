@@ -23,7 +23,8 @@ export const useFormStore = defineStore("form", {
     startFormDate: "",
     endFormDate: "",
     CMSPageChoosed: "",
-    isLoadingArticle: false
+    isLoadingArticle: false,
+    isFrontPageTourDone: false
   }),
 
   getters: {
@@ -59,6 +60,9 @@ export const useFormStore = defineStore("form", {
     },
     getIsLoadingArticle(state) {
       return parseInt(state.isLoadingArticle);
+    },
+    getIsFrontPageTourDone(state) {
+      return state.isFrontPageTourDone;
     }
   },
 
@@ -152,6 +156,10 @@ export const useFormStore = defineStore("form", {
     },
     setLoadingArticle(stateVal) {
       this.isLoadingArticle = stateVal;
+    },
+    setFrontPageTourDone(stateVal) {
+      this.isFrontPageTourDone = stateVal;
     }
   },
+  persist: true
 });

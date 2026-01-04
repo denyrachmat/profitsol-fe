@@ -25,6 +25,7 @@
             date: choosedPages.created_at,
           }"
           :subscribe-list="choosedPages.subscription"
+          :use-comment-section="true"
         />
       </article>
       <div v-else class="error-message">
