@@ -154,6 +154,14 @@ const props = defineProps({
   idReport: String,
   TableTitle: String,
   idForms: String,
+  isAPIExport: {
+    type: Boolean,
+    default: false,
+  },
+  maxAPIOpt: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const TableTitle = ref(props.TableTitle);
@@ -279,9 +287,11 @@ const filterDatas = () => {
   $q.dialog({
     component: filterData,
     componentProps: {
+      idReport: idNya.value,
       colsData: columnFilter.value,
       filtered: filter.value,
       propsReports: propsReports.value,
+      isAPIOpt: props.isAPIExport,
     },
   }).onOk(async (val) => {
     filter.value = val.data;

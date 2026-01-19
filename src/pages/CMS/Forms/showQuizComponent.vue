@@ -2,18 +2,10 @@
   <div class="q-pa-md bg-grey">
     <div class="row" v-if="doneSubmiting">
       <div class="col window-height-60">
-        <!-- <span class="text-h3 text-bold">
-          You've already answers the question, tap "Esc" Button or click "x"
-          button on the upper right for close this dialog
-        </span>
-
-        <div class="q-pt-md">
-          <q-btn label="Show Result" color="green" @click="showResult()" />
-        </div> -->
         <showQuizResultVue
           :resShow="props.setup.showResult"
           :answerShow="props.setup.showRightKeysAnswer"
-          :dataQuiz="dataOri"
+          :dataQuiz="props.data"
           :idQuiz="props.id"
           :is-retry="true"
           class="full-width"
@@ -21,24 +13,44 @@
         />
       </div>
     </div>
+
     <div v-else>
+      <!-- Header: status -->
       <div class="row bg-grey">
-        <div class="col q-pa-sm bg-white" style="border-radius: 10px">
+        <!-- Status answers -->
+        <div
+          class="col q-pa-sm bg-white"
+          style="border-radius: 10px"
+          v-if="getFormsOnly"
+        >
           <div class="row">
             <div class="col-3 text-bold self-center">
-              Question {{ nowSeq + 1 }} of
-              {{ datanya.length }}
+              Question
+              {{
+                (getFormsOnly.findIndex(
+                  (form) => form.id === getNowQuestion?.id
+                ) ?? -1) + 1
+              }}
+              of
+              {{ getFormsOnly.length }}
             </div>
+
             <div class="col">
-              <div class="row">
+              <div class="row" v-if="getFormAnswers">
                 <div
                   :class="`col-1 q-px-sm`"
                   style="height: 20px; width: 20px"
-                  v-for="idx in datanya.length"
-                  :key="idx"
+                  v-for="(q, idx) in getFormsOnly"
+                  :key="q.id || idx"
                 >
                   <div
-                    :class="getUserAnswers[idx - 1] ? 'bg-green' : 'bg-red'"
+                    :class="
+                      getFormAnswers[
+                        getAllForms.findIndex((form) => form.id === q.id)
+                      ]
+                        ? 'bg-green'
+                        : 'bg-red'
+                    "
                     style="height: 15px; width: 15px"
                   ></div>
                 </div>
@@ -46,6 +58,8 @@
             </div>
           </div>
         </div>
+
+        <!-- Timer if enabled -->
         <div
           class="col q-pa-md bg-grey text-right"
           style="border-radius: 10px"
@@ -55,14 +69,16 @@
             store.timeData.seconds
           "
         >
-          <b v-if="getNowTimer"
-            >{{ String(getNowTimer.hours).padStart(2, "0") }} :
+          <b v-if="getNowTimer">
+            {{ String(getNowTimer.hours).padStart(2, "0") }} :
             {{ String(getNowTimer.minutes).padStart(2, "0") }} :
-            {{ String(getNowTimer.seconds).padStart(2, "0") }}</b
-          >
+            {{ String(getNowTimer.seconds).padStart(2, "0") }}
+          </b>
         </div>
       </div>
-      <div v-if="checkAnySameHTML.length > 0">
+
+      <!-- HTML Material -->
+      <div v-if="getNowHTML.length > 0">
         <div class="row q-py-sm">
           <div class="col bg-white text-bold q-pa-sm">
             Please read material below, or use option on the right to download
@@ -85,6 +101,7 @@
             </q-btn>
           </div>
         </div>
+
         <div
           style="border-radius: 10px; padding: 15px"
           class="bg-white q-pt-sm"
@@ -92,7 +109,7 @@
           <div style="overflow: auto; max-height: 45vh">
             <div
               class="row"
-              v-for="(htmlCont, idxhtm) in checkAnySameHTML"
+              v-for="(htmlCont, idxhtm) in getNowHTML"
               :key="idxhtm"
             >
               <div
@@ -108,6 +125,8 @@
           </div>
         </div>
       </div>
+
+      <!-- Question -->
       <div
         class="row q-pt-md"
         v-if="getNowQuestion"
@@ -126,14 +145,14 @@
             :detail="getNowQuestion.content.detail_data"
             :is-required="true"
             :ans="
-              !Array.isArray(getUserAnswers[nowSeq])
-                ? getUserAnswers[nowSeq]
+              !Array.isArray(getFormAnswers[nowFormIndex])
+                ? getFormAnswers[nowFormIndex]
                 : ''
             "
             :ansArr="
-              Array.isArray(getUserAnswers[nowSeq]) &&
-              getUserAnswers[nowSeq].length > 0
-                ? getUserAnswers[nowSeq]
+              Array.isArray(getFormAnswers[nowFormIndex]) &&
+              getFormAnswers[nowFormIndex]?.length > 0
+                ? getFormAnswers[nowFormIndex]
                 : []
             "
             @customChange="(val) => getAnswers(val)"
@@ -142,27 +161,36 @@
           />
         </div>
       </div>
+
+      <!-- Action buttons -->
       <div class="sticky-bottom q-pt-md">
         <div class="col bg-white q-pa-md" style="border-radius: 10px">
           <q-btn-group spread>
             <q-btn
               color="orange"
               label="Previous"
-              :disable="nowSeq === 0"
+              :disable="nowSeq === 0 && formsSeq === 0"
               @click="onClickPrev()"
               :loading="loading"
             />
+
             <q-btn
               color="green"
-              :label="nowSeq === datanya.length - 1 ? 'Submit' : 'Next'"
+              :label="
+                nowSeq === groupedFormsByPage.length - 1 &&
+                formsSeq === groupedFormsByPage[nowSeq].length - 1
+                  ? 'Submit'
+                  : 'Next'
+              "
               @click="
-                nowSeq === datanya.length - 1
+                nowSeq === groupedFormsByPage.length - 1 &&
+                formsSeq === groupedFormsByPage[nowSeq].length - 1
                   ? onClickSubmit(props.idDet)
                   : onClickNext()
               "
               :disable="
-                getNowQuestion &&
-                getNowQuestion.type === 'html' &&
+                getNowData &&
+                getNowData.type === 'html' &&
                 props.setup &&
                 props.setup.skipNextButtonMedia &&
                 !videoEnded
@@ -178,54 +206,138 @@
   </div>
 </template>
 <script setup>
-import { ref, defineProps, onMounted, computed, watch, nextTick } from "vue";
-import { useQuasar, useDialogPluginComponent } from "quasar";
-import apiRequest from "src/components/apiRequest";
+import { ref, reactive, computed, watch, onMounted } from "vue";
+import { useQuasar } from "quasar";
+import { useRouter } from "vue-router";
+
+// Stores
+import { useFormStore } from "stores/formStore";
+
+// Components
 import componentViewVue from "../componentView.vue";
 import showQuizResultVue from "./showQuizResult.vue";
 
-import { useFormStore } from "stores/formStore";
-import { useRouter, useRoute } from "vue-router";
-
-const route = useRouter();
+// Requests
+import apiRequest from "src/components/apiRequest";
 
 const store = useFormStore();
-
 const $q = useQuasar();
+const router = useRouter();
 const { postData } = apiRequest();
 
-const nowSeq = ref(0);
-const runningTimes = ref({});
-const datanya = ref([]);
-const dataOri = ref([]);
-const listQuestShuff = ref([]);
 const props = defineProps({
-  id: String,
-  data: Array,
-  setup: Object,
-  idDet: Array,
+  id: {
+    type: Number,
+    required: true,
+  },
+  data: {
+    type: Array,
+    required: true,
+  },
+  setup: {
+    type: Object,
+    required: true,
+  },
+  idDet: {
+    type: Number,
+    required: false,
+  },
 });
 
-const doneSubmiting = ref(0);
-const videoContainer = ref(null); // Reference to the container holding the video
+const nowSeq = ref(0);
+const formsSeq = ref(0);
+const groupedFormsByPage = ref([]);
+const groupedHTMLByPage = ref([]);
+const groupedBySeq = ref([]);
 const videoContainers = ref([]);
-const videoEnded = ref(false); // State to track if the video has ended
 const loading = ref(false);
+const doneSubmiting = ref(false);
+const videoEnded = ref(false);
 
-const setVideoContainerRef = (el, index) => {
-  if (el) {
-    videoContainers.value[index] = el; // Store the ref in the array
+onMounted(async () => {
+  await initializeQuiz();
+  await setTimerForQuiz();
+
+  if (props.setup) {
+    if (props.setup.randomizeQuestion) {
+      const formsOnly = getFormsOnly.value;
+      const [shuffledForms, shufIdx] = shuffle(formsOnly);
+      // Rebuild groupedFormsByPage with shuffled forms
+      let formIndex = 0;
+      groupedFormsByPage.value = groupedFormsByPage.value.map((page) => {
+        return page.map((form) => {
+          if (form.type === "form") {
+            return shuffledForms[formIndex++];
+          }
+          return form;
+        });
+      });
+    }
   }
+
+  console.log(groupedHTMLByPage.value);
+});
+
+const getFormsOnly = computed(() =>
+  props.data.filter((form) => form.type === "form")
+);
+
+const getFormAnswers = computed(() => store.getUsersAnswer || []);
+
+// For Iitialize Start
+const initializeQuiz = () => {
+  // Group forms by page
+  // console.log(props.data);
+  groupedBySeq.value = props.data.reduce((acc, form) => {
+    const page = form.seq_name || 1;
+    if (!acc[page - 1]) {
+      acc[page - 1] = [];
+    }
+    acc[page - 1].push(form);
+    return acc;
+  }, []);
+
+  groupedFormsByPage.value = props.data
+    .reduce((acc, form) => {
+      const page = form.seq_name || 1;
+      if (!acc[page - 1]) {
+        acc[page - 1] = [];
+      }
+
+      if (form.type === "form") acc[page - 1].push(form);
+      return acc;
+    }, [])
+    // .filter((page) => page.length > 0)
+    .sort((a, b) => {
+      const seqA = a[0]?.seq_name || 1;
+      const seqB = b[0]?.seq_name || 1;
+      return seqA - seqB;
+    });
+
+  groupedHTMLByPage.value = props.data
+    .reduce((acc, form) => {
+      const page = form.seq_name || 1;
+      if (!acc[page - 1]) {
+        acc[page - 1] = [];
+      }
+
+      if (form.type === "html") acc[page - 1].push(form);
+      return acc;
+    }, [])
+    .filter((page) => page.length > 0)
+    .sort((a, b) => {
+      const seqA = a[0]?.seq_name || 1;
+      const seqB = b[0]?.seq_name || 1;
+      return seqA - seqB;
+    });
+
+  nowSeq.value = 0;
+
+  console.log(JSON.stringify(groupedHTMLByPage.value));
 };
 
-onMounted(() => {
-  console.log(props);
-  // console.log(store.timeData);
-  if (
-    props.setup &&
-    props.setup.setUpTimer
-    // && (store.timeData.hours || store.timeData.minutes || store.timeData.seconds)
-  ) {
+const setTimerForQuiz = () => {
+  if (props.setup?.setUpTimer) {
     store.setSetUpTimer = true;
     store.timeData.hours =
       parseInt(props.setup.hourTimer) > 0 ? parseInt(props.setup.hourTimer) : 0;
@@ -235,201 +347,93 @@ onMounted(() => {
       parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
   }
 
-  if (!store.startTime) {
-    store.startCountDown();
-  }
-
-  if (props.data.length > 0) {
-    dataOri.value = props.data;
-
-    if (props.setup) {
-      if (props.setup.randomizeQuestion) {
-        const dataShuf = shuffle(
-          props.data.filter((val) => val.type === "form"),
-          true
-        );
-
-        const dataHtml = props.data.filter((val) => val.type === "html");
-        let shuffledData = [];
-        if (props.setup.randomizeQuestion && props.setup.maxQuestionCount > 0) {
-          shuffledData = dataShuf[0].slice(0, props.setup.maxQuestionCount);
-        }
-        datanya.value = [...dataHtml, ...shuffledData];
-        listQuestShuff.value = dataShuf[1];
-      } else {
-        datanya.value = props.data;
-      }
-
-      if (props.setup.skipNextButtonMedia) {
-        triggerFindVideo();
-      }
-    } else {
-      datanya.value = props.data.filter((val) => val.type === "form");
-    }
-  }
-});
-
-const triggerFindVideo = () => {
-  setTimeout(() => {
-    console.log(videoContainers.value);
-    videoContainers.value.forEach((container, index) => {
-      console.log(container);
-      if (container) {
-        const videoElement = container.querySelector("video");
-        console.log(videoElement);
-        if (videoElement) {
-          // Attach the "ended" event listener
-          videoElement.addEventListener("ended", () => {
-            console.log(`Video ${index} done`);
-            videoEnded.value = true; // Update state when the video ends
-          });
-        } else {
-          console.error(`Video element not found in container ${index}.`);
-          videoEnded.value = true;
-        }
-      }
-    });
-  }, 3000);
+  if (!store.startTime) store.startCountDown();
 };
+// For Iitialize End
 
-const shuffle = (array, idxOnly = false) => {
-  let currentIndex = array.length,
-    randomIndex;
-
-  let shufIdx = [];
-  let realData = [];
-  // While there remain elements to shuffle.
-  while (currentIndex != 0) {
-    realData.push(array[currentIndex]);
-    // Pick a remaining element.
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-
-    // And swap it with the current element.
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex],
-      array[currentIndex],
-    ];
-
-    shufIdx.push(currentIndex);
-  }
-
-  if (idxOnly) {
-    return [array, shufIdx];
-  }
-  return array;
-};
-
+// Getters for current question and timer
 const getNowQuestion = computed(() => {
-  console.log(datanya.value);
-  console.log(nowSeq.value);
-  return datanya.value[nowSeq.value];
+  if (groupedFormsByPage.value.length === 0) return null;
+
+  const formsInPage = groupedFormsByPage.value[nowSeq.value] || [];
+
+  return (
+    formsInPage.filter((form) => form.type === "form")[formsSeq.value] || null
+  );
 });
 
-const getNowTimer = computed(() => {
-  return store.getRunningTimers;
+const getNowHTML = computed(() => {
+  if (groupedHTMLByPage.value.length === 0) return [];
+
+  const formsInPage = groupedHTMLByPage.value[nowSeq.value] || [];
+  return formsInPage.filter((form) => form && form.type === "html") || [];
 });
 
-const getStartTimeState = computed(() => {
-  return store.getStartTimeState;
+const nowFormIndex = computed(() => {
+  const formsInPage = groupedFormsByPage.value[nowSeq.value] || [];
+  return props.data
+    .filter((form) => form.type === "form")
+    .findIndex((form) => form.id === getNowQuestion.value?.id);
 });
 
-const getUserAnswers = computed(() => {
-  return store.getUsersAnswer;
+const getAllForms = computed(
+  () => props.data.filter((form) => form.type === "form") || []
+);
+
+const getNowData = computed(() => {
+  const formsInPage = props.data[nowSeq.value] || [];
+  return formsInPage[formsSeq.value] || null;
 });
 
-const getFinishQuizState = computed(() => {
-  return store.getFinishQuizState;
-});
-
-const checkAnySameHTML = computed(() => {
-  if (getNowQuestion.value) {
-    console.log(getNowQuestion.value.seq_name);
-    console.log(
-      Object.values(
-        props.data.filter(
-          (val) =>
-            val.type == "html" && val.seq_name == getNowQuestion.value.seq_name
-        )
-      )
-    );
-    return Object.values(
-      props.data.filter(
-        (val) =>
-          val.type == "html" && val.seq_name == getNowQuestion.value.seq_name
-      )
-    );
-  }
-
-  return false;
-});
-
-const onClickNext = async () => {
-  if (props.setup && props.setup.showRightKeysAnswerLocation === "end") {
-    if (datanya.value[nowSeq.value].type === "html") {
-      getAnswers("html");
-    }
-
-    const getAnsw = getUserAnswers.value[nowSeq.value];
-    if (!getAnsw) {
-      $q.dialog({
-        title: "Confirm",
-        message:
-          "You're not answering this question, make sure answers before submiting.",
-        cancel: true,
-        persistent: true,
-      }).onOk(async () => {
-        getAnswers(null);
-        nowSeq.value = nowSeq.value + 1;
-      });
-    } else {
-      nowSeq.value = nowSeq.value + 1;
-    }
-  } else {
-    console.log(props.idDet[nowSeq.value]);
-    const submiter = await onClickSubmit([props.idDet[nowSeq.value]]);
-    if (submiter) {
-      console.log(submiter);
-    }
-    // nowSeq.value = nowSeq.value + 1;
-  }
-
-  videoEnded.value = false;
-  triggerFindVideo();
+const setVideoContainerRef = (el, index) => {
+  if (el) videoContainers.value[index] = el;
 };
 
 const onClickPrev = () => {
-  nowSeq.value = nowSeq.value - 1;
+  if (groupedFormsByPage.value.length > 0) {
+    if (formsSeq.value === 0) {
+      nowSeq.value -= 1;
+      formsSeq.value = groupedFormsByPage.value[nowSeq.value].length - 1;
+    } else {
+      formsSeq.value -= 1;
+    }
+    videoEnded.value = false;
+    triggerFindVideo();
+  }
+};
+
+const onClickNext = () => {
+  console.log(groupedHTMLByPage.value);
+  if (groupedFormsByPage.value[nowSeq.value].length > 0) {
+    if (formsSeq.value === groupedFormsByPage.value[nowSeq.value].length - 1) {
+      formsSeq.value = 0;
+      nowSeq.value += 1;
+    } else {
+      formsSeq.value += 1;
+    }
+  } else {
+    nowSeq.value += 1;
+  }
+  videoEnded.value = false;
+  triggerFindVideo();
+
+  // console.log(groupedBySeq.value);
+  console.log(groupedHTMLByPage.value);
+  // console.log(groupedFormsByPage.value);
+  // console.log(getNowData.value);
 };
 
 const onClickSubmit = async (questId = [], passConfirm = false) => {
   let idList = [];
-  if (questId.length === listQuestShuff.value.length) {
-    console.log(listQuestShuff.value);
-    datanya.value
-      .filter((val) => val.type == "form")
-      .map((val) => {
-        idList.push(val.id);
-      });
-  } else {
-    datanya.value
-      .filter((val) => val.type == "form")
-      .map((val) => {
-        idList.push(val.id);
-      });
-    // idList = questId;
-  }
+  getAllForms.value.map((val) => {
+    idList.push(val.id);
+  });
 
-  // console.log({
-  //   id: props.id,
-  //   ans: getUserAnswers.value,
-  //   questId: idList,
-  // });
   if (passConfirm) {
     store.setFinishQuizState = true;
 
-    const dataAnswers = [...getUserAnswers.value];
-    console.log(dataAnswers);
+    const dataAnswers = [...getFormAnswers.value];
+
     loading.value = true;
     const data = await postData(
       "post",
@@ -452,17 +456,6 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
           color: "green",
         });
 
-        // $q.dialog({
-        //   component: showQuizResultVue,
-        //   componentProps: {
-        //     resShow: props.setup.showResult,
-        //     answerShow: props.setup.showRightKeysAnswer,
-        //     dataQuiz: dataOri.value,
-        //     idQuiz: props.id,
-        //   },
-        //   persistent: true,
-        // });
-
         doneSubmiting.value = 1;
       }
 
@@ -473,16 +466,17 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
       loading.value = false;
     }
   } else {
+    let dataAnswers = [...getFormAnswers.value];
+    console.log(dataAnswers);
     $q.dialog({
       title: "Confirm",
       message: "Are you sure want to submit this quiz ?",
       cancel: true,
       persistent: true,
     }).onOk(async () => {
-      console.log(dataOri.value);
+      // console.log(dataOri.value);
       loading.value = true;
 
-      let dataAnswers = [...getUserAnswers.value];
       dataAnswers = dataAnswers.filter((fil) => fil !== "html");
 
       const data = await postData(
@@ -512,7 +506,7 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
             componentProps: {
               resShow: props.setup.showResult,
               answerShow: props.setup.showRightKeysAnswer,
-              dataQuiz: dataOri.value,
+              dataQuiz: props.data,
               idQuiz: props.id,
             },
             persistent: true,
@@ -529,80 +523,49 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
   }
 };
 
-const showResult = () => {
-  $q.dialog({
-    component: showQuizResultVue,
-    componentProps: {
-      resShow: props.setup.showResult,
-      answerShow: props.setup.showRightKeysAnswer,
-      dataQuiz: dataOri.value,
-      idQuiz: props.id,
-    },
-    persistent: true,
-  });
+// ====== Video gating ======
+const triggerFindVideo = () => {
+  setTimeout(() => {
+    videoContainers.value.forEach((container, index) => {
+      if (!container) return;
+
+      const videoElement = container.querySelector("video");
+      if (videoElement) {
+        videoElement.addEventListener("ended", () => {
+          videoEnded.value = true;
+        });
+      } else {
+        // If no video, allow next
+        videoEnded.value = true;
+      }
+    });
+  }, 600);
+};
+
+// ====== Shuffle (fixed) ======
+const shuffle = (array) => {
+  let currentIndex = array.length;
+  let randomIndex;
+
+  const shufIdx = [];
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+    shufIdx.push(currentIndex);
+  }
+  return [array, shufIdx];
 };
 
 const getAnswers = (val) => {
-  store.addAnswers(nowSeq.value, val);
+  store.setUserAnswerAtIndex(nowFormIndex.value, val);
 };
 
-const onClickOpenNewTabHTML = (idQuiz, pageNumber) => {
-  const { href } = route.resolve({
-    path: "showHTMLTraining",
-    query: {
-      data: idQuiz,
-    },
-  });
-  window.open(href, "_blank");
-};
-
-const onClickDownloadMaterial = async (idQuiz) => {
-  const response = await postData(
-    "post",
-    null,
-    `cms/downloadHTMLMaterial/${idQuiz}`,
-    false,
-    false,
-    true
-  );
-
-  if (response) {
-    let pdfWindow = window.open("");
-    pdfWindow.document.write(
-      "<iframe width='100%' height='100%' src='data:application/pdf;base64, " +
-        encodeURI(response) +
-        "'></iframe>"
-    );
-  }
-};
-
-watch(getNowTimer, (time) => {
-  // console.log("watcherr", props.setup.setUpTimer);
-  if (props.setup.setUpTimer === true && !getFinishQuizState.value) {
-    console.log(props.setup.setUpTimer);
-    if (time.hours === 0 && time.minutes === 1 && time.seconds === 0) {
-      $q.notify({
-        message: "Your time to finish is 1 minute remaining !",
-        color: "orange",
-      });
-    }
-
-    if (time.hours === 0 && time.minutes === 0 && time.seconds === 30) {
-      $q.notify({
-        message: "Your time to finish is 30 seconds remaining, hurry up !!",
-        color: "orange",
-      });
-    }
-
-    if (time.hours === 0 && time.minutes === 0 && time.seconds === 0) {
-      console.log("abis boy waktunya");
-      onClickSubmit(props.idDet, true);
-      store.finishQuizImmediatelly();
-    }
-    console.log(time);
-  }
-});
-
+// Retry function
 const onRetryClick = () => {
   $q.dialog({
     title: "Confirm",
@@ -613,6 +576,7 @@ const onRetryClick = () => {
     doneSubmiting.value = 0;
     store.restoreDefault();
     nowSeq.value = 0;
+    formsSeq.value = 0;
   });
 };
 </script>

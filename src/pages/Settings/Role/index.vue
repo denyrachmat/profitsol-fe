@@ -87,7 +87,7 @@ import apiRequest from "src/components/apiRequest";
 import { useQuasar, date } from "quasar";
 import { useAuthStore } from "stores/authStore";
 
-import updateRoles from "./updateRoles";
+import updateRoles from "./updateRoles.vue";
 import assignUsers from "./assignUsers.vue";
 import assignMenus from "./assignMenus.vue";
 

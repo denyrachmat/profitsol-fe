@@ -46,164 +46,163 @@
                 label="Operation Method"
                 map-options
                 emit-value
-                @update:model-value="list.value.splice(1, 1)"
+                @update:model-value="
+                  list.value.splice(1, 1);
+                  list.value[0] = '';
+                "
                 :disable="props.propsReports === 'sp'"
               ></q-select>
             </div>
-            <div
-              class="col q-pl-md"
-              v-if="!(list.opr == '<cols>' || list.opr == '<cols>')"
-            >
-              <q-input
-                label="value"
-                v-model="list.value[0]"
-                filled
-                dense
-                :readonly="
-                  list.cols.type === 'date' || list.cols.type === 'datetime'
-                "
-              >
-                <template
-                  v-slot:prepend
-                  v-if="
+            <template v-if="!['isnull', 'isnotnull'].includes(list.opr)">
+              <div class="col q-pl-md" v-if="!list.opr.includes('cols')">
+                <q-input
+                  label="value"
+                  v-model="list.value[0]"
+                  filled
+                  dense
+                  :readonly="
                     list.cols.type === 'date' || list.cols.type === 'datetime'
                   "
                 >
-                  <q-icon name="event" class="cursor-pointer">
-                    <q-popup-proxy
-                      cover
-                      transition-show="scale"
-                      transition-hide="scale"
-                    >
-                      <q-date
-                        v-model="list.value[0]"
-                        :mask="
-                          list.cols.type == 'date'
-                            ? 'YYYY-MM-DD'
-                            : 'YYYY-MM-DD HH:mm'
-                        "
+                  <template
+                    v-slot:prepend
+                    v-if="
+                      list.cols.type === 'date' || list.cols.type === 'datetime'
+                    "
+                  >
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
                       >
-                        <div class="row items-center justify-end">
-                          <q-btn
-                            v-close-popup
-                            label="Close"
-                            color="primary"
-                            flat
-                          />
-                        </div>
-                      </q-date>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
+                        <q-date
+                          v-model="list.value[0]"
+                          :mask="
+                            list.cols.type == 'date'
+                              ? 'YYYY-MM-DD'
+                              : 'YYYY-MM-DD HH:mm'
+                          "
+                        >
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
 
-                <template v-slot:append v-if="list.cols.type === 'datetime'">
-                  <q-icon name="access_time" class="cursor-pointer">
-                    <q-popup-proxy
-                      cover
-                      transition-show="scale"
-                      transition-hide="scale"
-                    >
-                      <q-time
-                        v-model="list.value[0]"
-                        mask="YYYY-MM-DD HH:mm"
-                        format24h
+                  <template v-slot:append v-if="list.cols.type === 'datetime'">
+                    <q-icon name="access_time" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
                       >
-                        <div class="row items-center justify-end">
-                          <q-btn
-                            v-close-popup
-                            label="Close"
-                            color="primary"
-                            flat
-                          />
-                        </div>
-                      </q-time>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
-            <div
-              class="col q-pl-md"
-              v-if="list.opr == '<cols>' || list.opr == '<cols>'"
-            >
-              <q-select
-                filled
-                v-model="list.value[0]"
-                :options="optionCols"
-                dense
-                label="Columns need to filtered"
-                @update:model-value="list.value.splice(1, 1)"
-              ></q-select>
-            </div>
-            <div class="col q-pl-md" v-if="list.opr == 'between'">
-              <q-input
-                label="value"
-                v-model="list.value[1]"
-                filled
-                dense
-                :readonly="
-                  list.cols.type === 'date' || list.cols.type === 'datetime'
-                "
-              >
-                <template
-                  v-slot:prepend
-                  v-if="
+                        <q-time
+                          v-model="list.value[0]"
+                          mask="YYYY-MM-DD HH:mm"
+                          format24h
+                        >
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-time>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+              <div class="col q-pl-md" v-if="list.opr.includes('cols')">
+                <q-select
+                  filled
+                  v-model="list.value[0]"
+                  :options="optionCols"
+                  dense
+                  label="Columns need to filtered"
+                  @update:model-value="list.value.splice(1, 1)"
+                ></q-select>
+              </div>
+              <div class="col q-pl-md" v-if="list.opr == 'between'">
+                <q-input
+                  label="value"
+                  v-model="list.value[1]"
+                  filled
+                  dense
+                  :readonly="
                     list.cols.type === 'date' || list.cols.type === 'datetime'
                   "
                 >
-                  <q-icon name="event" class="cursor-pointer">
-                    <q-popup-proxy
-                      cover
-                      transition-show="scale"
-                      transition-hide="scale"
-                    >
-                      <q-date
-                        v-model="list.value[1]"
-                        :mask="
-                          list.cols.type == 'date'
-                            ? 'YYYY-MM-DD'
-                            : 'YYYY-MM-DD HH:mm'
-                        "
+                  <template
+                    v-slot:prepend
+                    v-if="
+                      list.cols.type === 'date' || list.cols.type === 'datetime'
+                    "
+                  >
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
                       >
-                        <div class="row items-center justify-end">
-                          <q-btn
-                            v-close-popup
-                            label="Close"
-                            color="primary"
-                            flat
-                          />
-                        </div>
-                      </q-date>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
+                        <q-date
+                          v-model="list.value[1]"
+                          :mask="
+                            list.cols.type == 'date'
+                              ? 'YYYY-MM-DD'
+                              : 'YYYY-MM-DD HH:mm'
+                          "
+                        >
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
 
-                <template v-slot:append v-if="list.cols.type === 'datetime'">
-                  <q-icon name="access_time" class="cursor-pointer">
-                    <q-popup-proxy
-                      cover
-                      transition-show="scale"
-                      transition-hide="scale"
-                    >
-                      <q-time
-                        v-model="list.value[1]"
-                        mask="YYYY-MM-DD HH:mm"
-                        format24h
+                  <template v-slot:append v-if="list.cols.type === 'datetime'">
+                    <q-icon name="access_time" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
                       >
-                        <div class="row items-center justify-end">
-                          <q-btn
-                            v-close-popup
-                            label="Close"
-                            color="primary"
-                            flat
-                          />
-                        </div>
-                      </q-time>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
+                        <q-time
+                          v-model="list.value[1]"
+                          mask="YYYY-MM-DD HH:mm"
+                          format24h
+                        >
+                          <div class="row items-center justify-end">
+                            <q-btn
+                              v-close-popup
+                              label="Close"
+                              color="primary"
+                              flat
+                            />
+                          </div>
+                        </q-time>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+            </template>
             <div class="col-1 q-pl-md">
               <q-btn
                 :icon="idx === 0 ? 'add' : 'delete'"
@@ -224,6 +223,14 @@
           icon="download"
           flat
         />
+        <q-btn
+          label="Generate API Option"
+          color="orange"
+          @click="onClickGenAPIOpt"
+          icon="refresh"
+          flat
+          v-if="props.isAPIOpt"
+        />
         <q-btn flat label="Cancel" color="red" @click="onDialogCancel" />
       </q-card-actions>
     </q-card>
@@ -234,10 +241,22 @@
 import { ref, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 
+import apiStoreSearch from "./apiStoreSearch.vue";
+const $q = useQuasar();
+
 const props = defineProps({
+  idReport: String,
   colsData: Array,
   filtered: Array,
   propsReports: String,
+  isAPIOpt: {
+    type: Boolean,
+    default: false,
+  },
+  maxAPIOpt: {
+    type: Number,
+    default: 0,
+  },
 });
 
 onMounted(() => {
@@ -306,6 +325,10 @@ const optMet = ref([
     value: "=",
   },
   {
+    label: "Exact value with other column",
+    value: "=cols",
+  },
+  {
     label: "Contain Value",
     value: "like",
   },
@@ -318,16 +341,32 @@ const optMet = ref([
     value: ">",
   },
   {
+    label: "More Than with other column",
+    value: ">cols",
+  },
+  {
     label: "More Than Equals",
     value: ">=",
+  },
+  {
+    label: "More Than Equals with other column",
+    value: ">=cols",
   },
   {
     label: "Less Than",
     value: "<",
   },
   {
+    label: "Less Than with other column",
+    value: "<cols",
+  },
+  {
     label: "Less Than Equals",
     value: "<=",
+  },
+  {
+    label: "Less Than Equals with other column",
+    value: "<=cols",
   },
   {
     label: "Not Equals",
@@ -338,8 +377,12 @@ const optMet = ref([
     value: "<cols>",
   },
   {
-    label: "Exact value with other column",
-    value: "=cols",
+    label: "Is Null",
+    value: "isnull",
+  },
+  {
+    label: "Is Not Null",
+    value: "isnotnull",
   },
 ]);
 
@@ -353,6 +396,21 @@ const optConMet = ref([
     value: "or",
   },
 ]);
+
+const onClickGenAPIOpt = () => {
+  const dialogApiStore = $q.dialog({
+    component: apiStoreSearch,
+    componentProps: {
+      idReport: props.idReport,
+      colsData: filterList.value,
+      maxAPIOpt: props.maxAPIOpt,
+    },
+  });
+
+  dialogApiStore.onOk((val) => {
+    console.log("API Option Generated:", val);
+  });
+};
 
 function onOKClick(typeOk = "ok") {
   onDialogOK({ data: filterList.value, type: typeOk });

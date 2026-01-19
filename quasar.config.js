@@ -32,13 +32,13 @@ export default configure((ctx) => {
       vueRouterMode: 'history',
 
       env: {
-        API: ctx.dev
+        API: !ctx.dev
           ? 'http://stx-api.test/api/'
           : 'https://api.sumitronics-indonesia.com/api/',
-        API_DOWNLOAD: ctx.dev
-          ? 'http://stx-api.test/api/'
+        API_DOWNLOAD: !ctx.dev
+          ? 'http://stx-api.test'
           : 'https://api.sumitronics-indonesia.com',
-        API_DMS: ctx.dev
+        API_DMS: !ctx.dev
           ? 'http://stx-api.test/api/dms/documentsRoots/getSharedFilesFolder'
           : 'https://api.sumitronics-indonesia.com/api/dms/documentsRoots/getSharedFilesFolder',
         MS_CLIENTID: 'fad753b2-465c-4663-b44b-50aabeb3a4ed',

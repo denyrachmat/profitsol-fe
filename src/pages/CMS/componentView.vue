@@ -266,8 +266,8 @@ const onDeleteData = (idx) => {
 };
 
 onMounted(() => {
-  console.log("masuk awalan");
-  console.log(props);
+  // console.log("masuk awalan");
+  // console.log(props);
 
   // if (props.mode && props.mode.includes("live")) {
   //   checkAPIData();
@@ -278,16 +278,31 @@ onMounted(() => {
   }
 
   if (props.ansArr && props.ansArr.length > 0) {
-    console.log(props.ansArr);
+    // console.log(props.ansArr);
     modelDataArr.value = props.ansArr;
   }
 });
 
 const checkAPIData = async (val, update, abort) => {
   if (val && detailData.value && detailData.value.length > 0) {
-    console.log(detailData.value);
+    // console.log(detailData.value);
     if (typeof val === "string" || typeof val === "number") {
-      update(() => {
+      if (typeof update === "function") {
+        update(() => {
+          detailData.value = detailData.value.filter(
+            (opt) =>
+              (opt.label &&
+                opt.label
+                  .toLowerCase()
+                  .includes(val.toString().toLowerCase())) ||
+              (opt.value &&
+                opt.value
+                  .toString()
+                  .toLowerCase()
+                  .includes(val.toString().toLowerCase()))
+          );
+        });
+      } else {
         detailData.value = detailData.value.filter(
           (opt) =>
             (opt.label &&
@@ -298,7 +313,7 @@ const checkAPIData = async (val, update, abort) => {
                 .toLowerCase()
                 .includes(val.toString().toLowerCase()))
         );
-      });
+      }
 
       return;
     }
@@ -338,8 +353,8 @@ const checkAPIData = async (val, update, abort) => {
       );
 
       if (data) {
-        console.log(data);
-        console.log("API request aborted");
+        // console.log(data);
+        // console.log("API request aborted");
         loadingAPI.value = false;
 
         // Navigate through the nested data structure
@@ -454,7 +469,7 @@ const checkAPIData = async (val, update, abort) => {
     //     loadingAPI.value = false;
     //   });
   } else {
-    console.log("tidak ada apiOpt");
+    // console.log("tidak ada apiOpt");
     update(() => {
       detailData.value = props.detail;
     });
@@ -464,13 +479,13 @@ const checkAPIData = async (val, update, abort) => {
 const onSelectData = (val) => {
   const checkAPI = props.apiOpt && props.apiOpt.api_url;
   if (checkAPI) {
-    console.log("onSelectData", val);
+    // console.log("onSelectData", val);
     const selectedOption = detailData.value.find(
       (option) => option.value === val
     );
 
     detailData.value = [selectedOption];
-    console.log("Selected option:", selectedOption);
+    // console.log("Selected option:", selectedOption);
   } else {
     // modelData.value = val;
   }
@@ -549,7 +564,7 @@ const getParams = (params) => {
 watch(
   () => JSON.stringify(props.detail),
   (val) => {
-    console.log(props);
+    // console.log(props);
     detailData.value = JSON.parse(val);
 
     modelDataArr.value = props.ansArr;
@@ -563,7 +578,6 @@ watch(
   (val) => {
     detailData.value = JSON.parse(val);
 
-    checkAPIData();
     emit("onDeleted", JSON.parse(val));
     refreshDetail.value = refreshDetail.value + 1;
   }
@@ -572,7 +586,7 @@ watch(
 watch(
   () => props.ans,
   (val) => {
-    console.log("masuk cek jawaban 1");
+    // console.log("masuk cek jawaban 1");
     modelData.value = val;
   }
 );
@@ -581,8 +595,8 @@ watch(
   () => JSON.stringify(props.ansArr),
   (val) => {
     if (JSON.parse(val).length > 0) {
-      console.log("masuk cek jawaban Array");
-      console.log(JSON.parse(val));
+      // console.log("masuk cek jawaban Array");
+      // console.log(JSON.parse(val));
       modelDataArr.value = JSON.parse(val);
     }
   }
@@ -606,8 +620,8 @@ watch(
   () => modelData.value,
   (val) => {
     if (modelData.value) {
-      console.log(props.mode);
-      console.log(val);
+      // console.log(props.mode);
+      // console.log(val);
       if (props.mode == "live-ans") {
         emit("customAnschange", val);
       } else {

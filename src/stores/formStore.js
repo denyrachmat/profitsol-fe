@@ -159,6 +159,9 @@ export const useFormStore = defineStore("form", {
     },
     setFrontPageTourDone(stateVal) {
       this.isFrontPageTourDone = stateVal;
+    },
+    setUserAnswerAtIndex(index, value) {
+      this.userAnswers[index] = value;
     }
   },
   persist: true

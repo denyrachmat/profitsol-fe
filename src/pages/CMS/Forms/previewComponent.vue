@@ -8,7 +8,9 @@
   >
     <q-card class="q-dialog-plugin bg-white q-pa-md">
       <q-card-section>
-        <div class="text-h6">Preview Content</div>
+        <div class="text-h6">
+          {{ props.isPreview ? "Preview Content" : "Form Content" }}
+        </div>
       </q-card-section>
 
       <q-card-section class="q-pa-md" style="min-height: 40vh">
@@ -63,6 +65,10 @@ const props = defineProps({
   answersKey: {
     type: String,
     default: "",
+  },
+  isPreview: {
+    type: Boolean,
+    default: true,
   },
 });
 

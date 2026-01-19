@@ -1,46 +1,33 @@
 <template>
   <div>
-    <!-- =========================================================
-      1) HISTORY MODE (MRS report)
-      ========================================================= -->
-    <div class="row q-gutter-md" v-if="shouldShowHistoryReport">
+    <div
+      class="row q-gutter-md"
+      v-if="
+        props.setup &&
+        props.setup.isHistory == 1 &&
+        connectedMRSVal &&
+        !isShowFormOnly
+      "
+    >
       <div class="col">
         <tableReport
           :idReport="connectedMRSVal.id"
           :TableTitle="connectedMRSVal.mrm_name"
           :idForms="props.id"
-          :isAPIExport="props.setup?.allowAPISearchData || false"
-          :maxAPIOpt="props.setup?.APISearchQuota || 0"
         />
       </div>
     </div>
-
-    <!-- =========================================================
-      2) LIVE MODE (render form / html / posts / files / quiz)
-      ========================================================= -->
     <template v-else>
-      <div v-if="getNowData.length > 0" :style="contentWrapperStyle">
-        <!-- Batch upload button (optional) -->
+      <div
+        v-if="getNowData.length > 0"
+        :style="`max-height: 70%; overflow: auto;`"
+      >
         <div class="row" v-if="isBulkUpload">
           <div class="col text-right">
-            <q-btn
-              color="primary"
-              icon="file_upload"
-              label="Batch Upload"
-              @click="onClickBatchUpload"
-            />
-            <q-btn
-              color="secondary"
-              icon="file_download"
-              label="Download Template"
-              class="q-ml-sm"
-              @click="onClickDownloadTemplate"
-            />
+            <q-btn color="primary" icon="file_upload" label="Batch Upload" />
           </div>
         </div>
-
         <div style="height: 100%">
-          <!-- Header card (optional) -->
           <div class="row" v-if="props.useHeader">
             <div class="col">
               <q-card class="bg-white shadow-1 rounded-borders" bordered>
@@ -49,8 +36,6 @@
                   <div class="text-subtitle2">
                     {{ props.headersComp.description }}
                   </div>
-
-                  <!-- Author + Subscribe -->
                   <div class="text-caption text-italic">
                     By:
                     <q-chip
@@ -65,23 +50,62 @@
                         flat
                         dense
                         size="sm"
-                        :color="authorSubscribeColor"
+                        :color="
+                          !checkSubscribed('users', props.headersComp.author)
+                            ? 'primary'
+                            : 'grey'
+                        "
                         class="q-ml-sm"
                         @click="
                           () => onSubscribed('users', props.headersComp.author)
                         "
-                        :disable="isAuthorSubscribed"
+                        :disable="
+                          checkSubscribed('users', props.headersComp.author)
+                        "
                       >
-                        <q-tooltip v-if="isAuthorSubscribed">
-                          You already subscribed
-                        </q-tooltip>
+                        <q-tooltip
+                          v-if="
+                            checkSubscribed('users', props.headersComp.author)
+                          "
+                          >You already subscribed</q-tooltip
+                        >
                       </q-btn>
                     </q-chip>
                     -
-                    {{ timeAgo(props.headersComp.date) }}
-                  </div>
+                    {{
+                      (() => {
+                        const createdDate = new Date(props.headersComp.date);
+                        const now = new Date();
+                        const diffInMs = now - createdDate;
 
-                  <!-- Categories + tags + subscribe -->
+                        const diffInMinutes = Math.floor(
+                          diffInMs / (1000 * 60)
+                        );
+                        const diffInHours = Math.floor(
+                          diffInMs / (1000 * 60 * 60)
+                        );
+                        const diffInDays = Math.floor(
+                          diffInMs / (1000 * 60 * 60 * 24)
+                        );
+
+                        if (diffInDays > 0) {
+                          return `${diffInDays} day${
+                            diffInDays > 1 ? "s" : ""
+                          } ago`;
+                        } else if (diffInHours > 0) {
+                          return `${diffInHours} hour${
+                            diffInHours > 1 ? "s" : ""
+                          } ago`;
+                        } else if (diffInMinutes > 0) {
+                          return `${diffInMinutes} minute${
+                            diffInMinutes > 1 ? "s" : ""
+                          } ago`;
+                        } else {
+                          return "Just now";
+                        }
+                      })()
+                    }}
+                  </div>
                   <div class="text-caption text-italic">
                     Category:
                     <template v-if="props.tags && props.tags.length > 0">
@@ -90,7 +114,7 @@
                         outline
                         color="primary"
                         v-for="tag in props.tags"
-                        :key="tag.id ?? tag"
+                        :key="tag.id"
                       >
                         <div class="row">
                           <div class="col">
@@ -112,21 +136,18 @@
                             >
                               <q-tooltip
                                 v-if="checkSubscribed('categories', tag)"
+                                >You already subscribed</q-tooltip
                               >
-                                You already subscribed
-                              </q-tooltip>
                             </q-btn>
                           </div>
                         </div>
                       </q-chip>
                     </template>
-
                     <q-chip class="q-mr-sm" outline color="grey" v-else>
                       <div class="row">
                         <div class="col">Uncategorize</div>
                       </div>
                     </q-chip>
-
                     Tags:
                     <q-chip
                       class="q-mr-sm"
@@ -156,19 +177,23 @@
               </q-card>
             </div>
           </div>
-
-          <!-- =========================================================
-            2A) Render each "row" in current sequence
-            ========================================================= -->
           <div
             class="row q-col-gutter-md q-pt-md"
-            v-for="(row, rowIdx) in getNowData"
-            :key="rowIdx"
+            v-for="(row, idx) in getNowData"
+            :key="idx"
           >
-            <template v-for="(col, colIdx) in row.content" :key="colIdx">
+            <template v-for="(col, idx2) in row['content']">
               <div
+                :class="[
+                  'col-12',
+                  'text-wrap',
+                  'break-all',
+                  col.width && !isNaN(Number(col.width))
+                    ? `col-md-${col.width}`
+                    : `col-md-${Math.floor(12 / row['content'].length)}`,
+                ]"
+                :key="idx2"
                 v-if="!col.hidden"
-                :class="getColClass(row, col)"
                 style="word-wrap: break-word; overflow-wrap: break-word"
               >
                 <q-card
@@ -177,9 +202,7 @@
                   style="width: 100%; height: 100%"
                 >
                   <q-card-section>
-                    <!-- ========= FORM COMPONENT ========= -->
                     <componentViewVue
-                      v-if="col.type === 'form'"
                       :type="col.content.component.category"
                       :type-input="col.content.component.value.type"
                       :comp="col.content.component.value.comp"
@@ -192,29 +215,64 @@
                       :is-required="col.required"
                       mode="live"
                       @customChange="
-                        (val) => onAnswerChange(rowIdx, col.id, val)
+                        (val) => getAnswers(idx, idx2, val, col.id)
                       "
-                      :ans="getAnswer(rowIdx, col.id)"
-                      :ansArr="getAnswerArr(rowIdx, col.id)"
+                      :ans="
+                        getUserAnswers[idx] &&
+                        !Array.isArray(
+                          getUserAnswers[idx] && getUserAnswers[idx][col.id]
+                        )
+                          ? typeof getUserAnswers[idx][col.id] === 'string' &&
+                            getUserAnswers[idx][col.id].startsWith('data:')
+                            ? base64ToFile(
+                                getUserAnswers[idx][col.id],
+                                getFileNamefromBase64(
+                                  getUserAnswers[idx][col.id]
+                                )
+                              )
+                            : getUserAnswers[idx][col.id]
+                          : ''
+                      "
+                      :ansArr="
+                        Array.isArray(
+                          getUserAnswers[idx] && getUserAnswers[idx][col.id]
+                        )
+                          ? typeof getUserAnswers[idx][col.id] === 'string' &&
+                            getUserAnswers[idx][col.id].startsWith('data:')
+                            ? base64ToFile(
+                                getUserAnswers[idx][col.id],
+                                getFileNamefromBase64(
+                                  getUserAnswers[idx][col.id]
+                                )
+                              )
+                            : getUserAnswers[idx][col.id]
+                          : ''
+                      "
                       :apiOpt="col.content.component.apiOpt"
+                      v-if="col.type === 'form'"
                     />
-
-                    <!-- ========= HTML BLOCK ========= -->
+                    <!-- If Content is HTML -->
                     <div v-else-if="col.type === 'html'">
-                      <!-- WARNING: processHtml() injects styles + runs scripts (XSS risk).
-                           Use only for trusted HTML sources. -->
+                      <!-- Use a dynamic component to render HTML with script and style support -->
                       <div v-html="processHtml(col.content)"></div>
                     </div>
 
-                    <!-- ========= POSTS BLOCK ========= -->
+                    <!-- If Content is posts -->
                     <div v-else-if="col.type === 'posts'" :key="refreshedPosts">
                       <div class="text-center" v-if="col.loadingPosts">
                         <q-spinner-dots color="primary" size="lg" />
                       </div>
-
                       <template v-else>
-                        <!-- Render last/current post as embedded form (optional) -->
-                        <div class="row" v-if="shouldShowEmbeddedLastPost(col)">
+                        <div
+                          class="row"
+                          v-if="
+                            !props.preventLoops &&
+                            col.currentPost &&
+                            col.currentPost.forms.length > 0 &&
+                            (col.content.mode === 'last' ||
+                              col.content.mode === 'all')
+                          "
+                        >
                           <div class="col">
                             <showComponent
                               :data="col.currentPost.forms"
@@ -233,8 +291,6 @@
                             />
                           </div>
                         </div>
-
-                        <!-- List / All mode -->
                         <template
                           v-if="
                             col.content.mode === 'list' ||
@@ -243,23 +299,18 @@
                         >
                           <div class="row q-pb-md">
                             <div class="col text-h5 text-bold">
-                              <span class="text-h6">
-                                {{
-                                  col.content.title ??
-                                  `Posts with category: ${col.content.tags.join(
-                                    ", "
-                                  )}`
-                                }}
-                              </span>
+                              <span class="text-h6">{{
+                                col.content.title ??
+                                `Posts with category: ${col.content.tags.join(
+                                  ", "
+                                )}`
+                              }}</span>
                               <br />
-                              <span class="text-subtitle2">
-                                {{
-                                  col.content.desc ??
-                                  `All posts: ${col.content.tags.join(", ")}`
-                                }}
-                              </span>
+                              <span class="text-subtitle2">{{
+                                col.content.desc ??
+                                `All posts: ${col.content.tags.join(", ")}`
+                              }}</span>
                             </div>
-
                             <div class="col text-right">
                               <q-chip
                                 class="q-mr-sm cursor-pointer"
@@ -267,18 +318,16 @@
                                 color="primary"
                                 clickable
                                 v-for="tag in col.content.tags"
-                                :key="tag.id ?? tag"
+                                :key="tag.id"
                                 @click="() => onClickTag(tag)"
                               >
                                 {{ tag }}
                               </q-chip>
                             </div>
                           </div>
-
-                          <!-- Grid layout -->
                           <template v-if="col.content.layout === 'grid'">
                             <q-carousel
-                              v-model="slide[rowIdx][colIdx]"
+                              v-model="slide[idx][idx2]"
                               transition-prev="scale"
                               transition-next="scale"
                               swipeable
@@ -337,23 +386,26 @@
                                         <q-btn
                                           flat
                                           color="primary"
-                                          @click="() => openPost(post)"
+                                          @click="
+                                            () => {
+                                              store.setCMSPageChoosed({
+                                                ...post,
+                                                type: 'posts',
+                                              });
+                                            }
+                                          "
+                                          >Read More</q-btn
                                         >
-                                          Read More
-                                        </q-btn>
                                       </q-card-actions>
                                     </q-card>
                                   </div>
                                 </div>
                               </q-carousel-slide>
                             </q-carousel>
-
                             <div v-else class="col text-center">
                               No posts available.
                             </div>
                           </template>
-
-                          <!-- List layout -->
                           <template v-else>
                             <q-list
                               bordered
@@ -374,7 +426,6 @@
                                   />
                                 </div>
                               </div>
-
                               <q-item
                                 clickable
                                 v-ripple
@@ -383,7 +434,14 @@
                                     post.categories_users &&
                                     post.categories_users.length !== 0,
                                 }"
-                                @click="() => openPost(post)"
+                                @click="
+                                  () => {
+                                    store.setCMSPageChoosed({
+                                      ...post,
+                                      type: 'posts',
+                                    });
+                                  }
+                                "
                               >
                                 <q-item-section class="col-2">
                                   <q-img
@@ -417,16 +475,16 @@
                                       v-html="post.categories_users.note"
                                     ></div>
                                   </q-item-label>
-
                                   <q-item-label class="text-h6">
                                     {{ post.cfmt_title }}
                                   </q-item-label>
-
                                   <q-item-label caption class="text-subtitle2">
                                     by
-                                    <q-chip class="text-caption" color="orange">
-                                      {{ post.p_u_username }}
-                                    </q-chip>
+                                    <q-chip
+                                      class="text-caption"
+                                      color="orange"
+                                      >{{ post.p_u_username }}</q-chip
+                                    >
                                     on
                                     <q-chip
                                       class="text-caption text-white"
@@ -439,7 +497,6 @@
                                       }}
                                     </q-chip>
                                   </q-item-label>
-
                                   <q-item-label class="text-grey">
                                     {{ post.desc }}
                                   </q-item-label>
@@ -447,23 +504,38 @@
                               </q-item>
                             </q-list>
                           </template>
-
-                          <!-- View all -->
                           <div class="q-pt-md">
                             <q-btn
                               style="width: 100%"
                               color="primary"
                               outline
-                              @click="() => viewAllPosts(col)"
+                              @click="
+                                () => {
+                                  store.setCMSPageChoosed({
+                                    type: 'tags',
+                                    tags: col.content.tags,
+                                    limit: col.content.limit
+                                      ? col.content.limit
+                                      : 5,
+                                    orderBy:
+                                      col.content.orderBy.length > 0
+                                        ? col.content.orderBy
+                                        : 'created_at',
+                                    order:
+                                      col.content.order.length > 0
+                                        ? col.content.order
+                                        : 'desc',
+                                  });
+                                }
+                              "
+                              >View All Posts</q-btn
                             >
-                              View All Posts
-                            </q-btn>
                           </div>
                         </template>
                       </template>
                     </div>
 
-                    <!-- ========= FILES / VIEWER BLOCK ========= -->
+                    <!-- If Content is files -->
                     <div
                       v-else-if="
                         col.type === 'files' || col.type === 'files_viewer'
@@ -483,7 +555,6 @@
                       </template>
                     </div>
 
-                    <!-- ========= QUIZ/OTHER EMBEDDED FORM ========= -->
                     <div v-else>
                       <showQuizComponentVue
                         :data="col.content.forms"
@@ -497,9 +568,6 @@
             </template>
           </div>
 
-          <!-- =========================================================
-            2B) Comments section (optional)
-            ========================================================= -->
           <div
             class="row q-col-gutter-md q-pt-sm"
             v-if="props.useCommentSection"
@@ -513,13 +581,11 @@
                 <q-card-section class="text-h6">
                   Comments Section
                 </q-card-section>
-
                 <q-card-section>
                   <div v-if="loadingComment" class="text-center">
                     <q-spinner-dots color="primary" size="40px" />
                     <p>Loading Comments, please wait...</p>
                   </div>
-
                   <div v-else class="bg-grey-2 q-pa-md rounded-borders">
                     <div
                       v-if="listComments.length === 0"
@@ -533,21 +599,24 @@
                       <div class="text-body1">No comments yet</div>
                       <div class="text-caption">Be the first to comment!</div>
                     </div>
-
                     <q-tree
-                      v-else
                       :nodes="listComments"
                       node-key="idx"
                       default-expand-all
                       children-key="children"
+                      v-else
                     >
-                      <!-- Header node -->
                       <template v-slot:default-header="prop">
                         <div class="row items-center">
                           <q-avatar size="32px" class="q-mr-sm">
-                            <img :src="getUserAvatar(prop.node)" />
+                            <img
+                              :src="
+                                prop.node.user && prop.node.user.profile_picture
+                                  ? prop.node.user.profile_picture
+                                  : 'https://cdn.quasar.dev/img/mountains.jpg'
+                              "
+                            />
                           </q-avatar>
-
                           <div>
                             <div class="text-weight-bold">
                               {{ prop.node.email }}
@@ -563,17 +632,19 @@
                         </div>
                       </template>
 
-                      <!-- Body node -->
                       <template v-slot:default-body="prop">
                         <div class="q-mt-sm" style="color: #333">
                           <div
-                            v-if="getCommentAttachments(prop.node).length > 0"
+                            v-if="
+                              JSON.parse(prop.node.comment).attachments.length >
+                              0
+                            "
                           >
                             <div
                               class="q-mb-sm"
-                              v-for="(att, attIdx) in getCommentAttachments(
-                                prop.node
-                              )"
+                              v-for="(att, attIdx) in JSON.parse(
+                                prop.node.comment
+                              ).attachments"
                               :key="attIdx"
                             >
                               <q-chip
@@ -588,27 +659,47 @@
                               </q-chip>
                             </div>
                           </div>
-
-                          <div v-html="getCommentHtml(prop.node)"></div>
-
+                          <div
+                            v-html="JSON.parse(prop.node.comment).comment"
+                          ></div>
                           <div class="q-pt-sm text-right">
                             <q-btn
                               outline
                               dense
                               icon="reply"
                               label="Reply"
-                              @click="() => selectReply(prop.node)"
+                              @click="
+                                () => {
+                                  selectedReplyComment = prop.node.idx;
+                                }
+                              "
                               color="primary"
                             />
-
-                            <template v-if="canEditComment(prop.node)">
+                            <template
+                              v-if="
+                                prop.node.email &&
+                                authStore.isLoggedIn &&
+                                prop.node.email === authStore.authDet.username
+                              "
+                            >
                               <q-btn
                                 outline
                                 dense
                                 icon="edit"
                                 color="primary"
                                 class="q-ml-sm"
-                                @click="() => startEditComment(prop.node)"
+                                @click="
+                                  () => {
+                                    selectedReplyComment = prop.node.idx;
+                                    selectedReplyContent = JSON.parse(
+                                      prop.node.comment
+                                    ).comment;
+                                    selectedReplyAttachments = prop.node
+                                      .attachments
+                                      ? prop.node.attachments
+                                      : [];
+                                  }
+                                "
                               />
                               <q-btn
                                 outline
@@ -620,7 +711,6 @@
                               />
                             </template>
                           </div>
-
                           <q-separator class="q-my-sm" />
 
                           <div
@@ -631,7 +721,13 @@
                               @submit="
                                 (value) => onSubmitComment(value, prop.node)
                               "
-                              @onCancel="resetReplyState"
+                              @onCancel="
+                                () => {
+                                  selectedReplyComment = null;
+                                  selectedReplyContent = '';
+                                  selectedReplyAttachments = [];
+                                }
+                              "
                               :modelValue="selectedReplyContent"
                               :initial-attachments="selectedReplyAttachments"
                             />
@@ -641,8 +737,6 @@
                     </q-tree>
                   </div>
                 </q-card-section>
-
-                <!-- New comment form -->
                 <q-card-section>
                   <commentComponentVue @submit="onSubmitComment" />
                 </q-card-section>
@@ -651,17 +745,13 @@
           </div>
         </div>
       </div>
-
-      <!-- Empty state -->
       <template v-else>
         <div class="row">
           <div class="col">Nothing to show.</div>
         </div>
       </template>
 
-      <!-- =========================================================
-        3) Wizard navigation actions (optional)
-        ========================================================= -->
+      <!-- This is for action -->
       <div class="row q-pt-md" v-if="!removeButtons">
         <div class="col absolute-bottom">
           <q-btn-group spread>
@@ -690,44 +780,39 @@
     </template>
   </div>
 </template>
-
 <script setup>
-/**
- * =========================================================
- * Imports
- * =========================================================
- */
-import { ref, defineProps, onMounted, computed, onBeforeUnmount } from "vue";
-import { useQuasar } from "quasar";
+import {
+  ref,
+  defineProps,
+  onMounted,
+  computed,
+  onBeforeUnmount,
+  nextTick,
+} from "vue";
+import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
-import componentViewVue from "../componentView.vue";
-import showQuizComponentVue from "./showQuizComponent.vue";
+import componentViewVue from "../../componentView.vue";
+import showQuizComponentVue from "../showQuizComponent.vue";
 
 import { useFormStore } from "stores/formStore";
 import { useAuthStore } from "src/stores/authStore";
 import { useRoute } from "vue-router";
 
-import tableReport from "../../MRS/Tables/indexTableReport.vue";
+import tableReport from "../../../MRS/Tables/indexTableReport.vue";
+import uploadDocument from "src/pages/DMS/uploadDocument.vue";
 import exploreViewerIndex from "src/pages/DMS/ExploreViewer/exploreViewerIndex.vue";
 import commentComponentVue from "src/pages/Frontpage/commentComponent.vue";
-import uploadFilesIndex from "src/components/uploadFiles/index.vue";
 
-/**
- * =========================================================
- * Stores / Plugins
- * =========================================================
- */
 const store = useFormStore();
 const authStore = useAuthStore();
 const $q = useQuasar();
 const { postData } = apiRequest();
 const route = useRoute();
 
-/**
- * =========================================================
- * Props
- * =========================================================
- */
+const nowSeq = ref(null);
+const refreshKeys = ref(0);
+const removeButtons = ref(false);
+const isFullHeight = ref(false);
 const props = defineProps({
   id: String,
   data: Array,
@@ -773,65 +858,18 @@ const props = defineProps({
   },
 });
 
-/**
- * =========================================================
- * Local State (refs)
- * =========================================================
- */
-const nowSeq = ref(null);
-const forms = ref([]); // main data source rendered in template
-const slide = ref([]); // carousel state per [rowIdx][colIdx]
-const connectedMRSVal = ref(null);
-
+const slide = ref([]);
+const forms = ref([]);
 const isMountedTriggered = ref(false);
+const connectedMRSVal = ref(null);
+const isShowFormOnly = ref(props.showFormOnly || true);
 const preventClears = ref(false);
-const removeButtons = ref(false);
-const isFullHeight = ref(false);
+const loadingPosts = ref(false);
+const postsList = ref([]);
+const currentPost = ref(null);
+const refreshedPosts = ref(0);
 const isBulkUpload = ref(false);
 
-const refreshedPosts = ref(0);
-
-/**
- * Comments state
- */
-const loadingComment = ref(false);
-const listComments = ref([]);
-const selectedReplyComment = ref(null);
-const selectedReplyContent = ref("");
-const selectedReplyAttachments = ref([]);
-
-/**
- * =========================================================
- * Computed (derived state)
- * =========================================================
- */
-
-/**
- * Wrapper style: keep scrollable if there is content.
- */
-const contentWrapperStyle = computed(() => `max-height: 70%; overflow: auto;`);
-
-/**
- * Determine whether we should show MRS report in history mode.
- */
-const shouldShowHistoryReport = computed(() => {
-  return (
-    props.setup &&
-    props.setup.isHistory == 1 &&
-    connectedMRSVal.value &&
-    !isShowFormOnly.value
-  );
-});
-
-/**
- * NOTE: IMPORTANT FIX
- * Previously: ref(props.showFormOnly || true) => always true
- */
-const isShowFormOnly = ref(!!props.showFormOnly);
-
-/**
- * Current wizard index & data pages (rows filtered by seq_name)
- */
 const getNowIdx = computed(() =>
   forms.value.findIndex((x) => x.seq_name == nowSeq.value)
 );
@@ -844,257 +882,180 @@ const getNextData = computed(() =>
   forms.value.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
 );
 
-/**
- * Flatten form items (recursive): used by logic engine & validation
- */
+const getRequired = computed(() =>
+  getNowData.value.filter((x) => x.content.filter((y) => y.required).length > 0)
+);
+
+const isFormsExists = computed(() =>
+  forms.value.filter((x) =>
+    x.content.length > 0
+      ? x.content.filter((y) => y.type === "form").length > 0
+      : []
+  )
+);
+
 const formItems = computed(() => {
   const result = [];
 
-  const findForms = (items) => {
-    (items || []).forEach((item) => {
-      if (item?.type === "form") result.push(item);
-      if (Array.isArray(item?.content)) findForms(item.content);
+  // Recursive function to find all form items
+  function findForms(items) {
+    items.forEach((item) => {
+      if (item.type === "form") {
+        result.push(item);
+      }
+      if (item.content && Array.isArray(item.content)) {
+        findForms(item.content);
+      }
     });
-  };
+  }
 
+  // Start with the root data array
   findForms(forms.value);
+
   return result;
 });
 
-/**
- * User answers from store
- */
-const getUserAnswers = computed(() => store.getUsersAnswerForm);
+const getUserAnswers = computed(() => {
+  return store.getUsersAnswerForm;
+});
 
-/**
- * Collect all logic rules from all form items
- * and attach the item id to each rule set.
- */
 const getAllLogics = computed(() => {
   return formItems.value.flatMap((item) =>
     (item.logics || []).map((logic) => ({ ...logic, id: item.id }))
   );
 });
 
-/**
- * Determine if at least one form exists (used to show submit button)
- */
-const isFormsExists = computed(() =>
-  forms.value.filter((x) =>
-    x.content?.length > 0
-      ? x.content.filter((y) => y.type === "form").length > 0
-      : []
-  )
-);
+// Comments Section Start
+const loadingComment = ref(false);
+const listComments = ref([]);
+const selectedReplyComment = ref(null);
+const selectedReplyContent = ref("");
+const selectedReplyAttachments = ref([]);
+// Comments Section End
 
-/**
- * Author subscribe state (header)
- */
-const isAuthorSubscribed = computed(() =>
-  checkSubscribed("users", props.headersComp.author)
-);
-
-const authorSubscribeColor = computed(() =>
-  !isAuthorSubscribed.value ? "primary" : "grey"
-);
-
-/**
- * =========================================================
- * Lifecycle
- * =========================================================
- */
 onMounted(async () => {
-  // 1) init local forms from props
-  forms.value = props.data || [];
+  forms.value = props.data;
 
-  console.log(props.setup);
-
-  // 2) init slide matrix for carousels: each row has slide index per col
+  // Initialize slide array based on forms structure
   slide.value = forms.value.map((row) =>
-    Array.isArray(row.content) ? row.content.map(() => 0) : [0]
+    row.content ? row.content.map(() => 0) : [0]
   );
 
-  // 3) flags
   isFullHeight.value = props.fullHeight;
-  preventClears.value = props.preventClear === true;
-  isBulkUpload.value = !!(props.setup && props.setup.isBulkUpload);
-  removeButtons.value = props.removeButton || false;
 
-  // 4) wizard seq initialization
   if (props.setup && props.setup.isWizard) {
-    nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
+    nowSeq.value = forms.value[0].seq_name;
   } else {
-    // normalize seq_name if not wizard
     forms.value = updateRowSeqNames(forms.value, false);
-    nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
+    nowSeq.value = forms.value[0].seq_name;
   }
 
-  // 5) history mode: fetch connected MRS data
   if (props.setup && props.setup.isHistory == 1) {
-    isShowFormOnly.value = !!props.showFormOnly;
-    await getConnectedMRS(props.id);
+    // console.log("showFormOnly", props.showFormOnly);
+    isShowFormOnly.value = props.showFormOnly;
+    getConnectedMRS(props.id);
   } else {
     connectedMRSVal.value = null;
   }
 
-  // 6) restore default answers unless prevented
-  if (!preventClears.value) store.restoreDefault();
+  if (props.preventClear === true) {
+    preventClears.value = true;
+  } else {
+    preventClears.value = false;
+  }
 
-  // 7) run logic engine on mount
+  if (props.setup && props.setup.isBulkUpload) {
+    isBulkUpload.value = true;
+  }
+
+  if (preventClears.value === false) {
+    store.restoreDefault();
+  }
+
   logicsChecker("onMounted");
 
-  // 8) fetch posts blocks (if any)
-  const postsTargets = findPostsColumns(forms.value);
-  postsTargets.forEach(({ rowIdx, colIdx }) => getPostsData(rowIdx, colIdx));
+  removeButtons.value = props.removeButton || false;
 
-  // 9) comments
+  function checkForPostsType(items, rowsIdx, data = []) {
+    // if (!Array.isArray(items)) return false;
+
+    for (let index = 0; index < items.length; index++) {
+      const element = items[index];
+      if (element.type === "posts")
+        if (!data.some((d) => d.rowIdx === rowsIdx && d.colIdx === index)) {
+          // Only push if not already present (by rowIdx and colIdx)
+          data.push({
+            rowIdx: rowsIdx,
+            colIdx: index,
+          });
+        }
+
+      if (element.content && Array.isArray(element.content)) {
+        checkForPostsType(element.content, index, data);
+      }
+    }
+
+    return data;
+  }
+
+  let dataPosts = checkForPostsType(forms.value);
+  if (dataPosts.length > 0) {
+    for (let index = 0; index < dataPosts.length; index++) {
+      const element = dataPosts[index];
+      getPostsData(element.rowIdx, element.colIdx);
+    }
+  }
+
   if (props.useCommentSection) {
     getComment();
   }
+
+  console.log(forms.value);
 });
 
 onBeforeUnmount(() => {
   isMountedTriggered.value = false;
 });
 
-/**
- * =========================================================
- * UI helpers (template-friendly)
- * =========================================================
- */
-
-/**
- * Generate responsive column class.
- * - If col.width is numeric -> use it (col-md-x)
- * - Else -> divide equally based on row content length
- */
-const getColClass = (row, col) => {
-  const width =
-    col?.width && !isNaN(Number(col.width))
-      ? `col-md-${col.width}`
-      : `col-md-${Math.floor(12 / (row?.content?.length || 1))}`;
-
-  return ["col-12", "text-wrap", "break-all", width];
+const convertBase64 = (val) => {
+  return btoa(val);
 };
 
-/**
- * Time-ago label for header
- */
-const timeAgo = (dateInput) => {
-  const createdDate = new Date(dateInput);
-  const now = new Date();
-  const diffInMs = now - createdDate;
+const processHtml = (html) => {
+  // Process styles
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  const styles = [];
+  let match;
 
-  const minutes = Math.floor(diffInMs / (1000 * 60));
-  const hours = Math.floor(diffInMs / (1000 * 60 * 60));
-  const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  return "Just now";
-};
-
-/**
- * =========================================================
- * Answer helpers (simplify :ans and :ansArr bindings)
- * =========================================================
- */
-
-/**
- * Convert base64 data-url to File if needed (so file inputs can display correctly).
- */
-const normalizeAnswer = (val) => {
-  if (typeof val === "string" && val.startsWith("data:")) {
-    return base64ToFile(val, getFileNamefromBase64(val));
-  }
-  return val ?? "";
-};
-
-/** Get scalar answer (non-array) for a field */
-const getAnswer = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? "" : normalizeAnswer(val);
-};
-
-/** Get array answer for a field */
-const getAnswerArr = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? normalizeAnswer(val) : "";
-};
-
-/**
- * Handle changes from input components.
- * - Store answer
- * - If File -> store as base64 data-url with filename embedded
- * - Trigger logic engine onInput for this field
- */
-const onAnswerChange = (rowIdx, fieldId, value) => {
-  const prev = getUserAnswers.value?.[rowIdx]?.[fieldId];
-
-  // normalize previous comparison value
-  const prevComparable =
-    prev instanceof File
-      ? prev.name
-      : typeof prev === "string" && prev.startsWith("data:")
-      ? getFileNamefromBase64(prev)
-      : prev;
-
-  // normalize current comparison value
-  const currComparable = value instanceof File ? value.name : value;
-
-  // If no change, still trigger logic (match previous behavior)
-  if (prevComparable === currComparable) {
-    logicsChecker("onInput", fieldId);
-    return;
+  while ((match = styleRegex.exec(html))) {
+    styles.push(match[1]);
   }
 
-  // If File, convert to base64 and attach filename
-  if (value instanceof File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = String(e.target?.result || "");
-      const base64WithFilename = attachFilenameToDataUrl(base64, value.name);
+  styles.forEach((style) => {
+    const styleElement = document.createElement("style");
+    styleElement.textContent = style;
+    document.head.appendChild(styleElement);
+  });
 
-      store.addAnswersForm(rowIdx, fieldId, base64WithFilename);
-      logicsChecker("onInput", fieldId);
-    };
-    reader.readAsDataURL(value);
-    return;
+  // Process scripts
+  const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+  const scripts = [];
+
+  while ((match = scriptRegex.exec(html))) {
+    scripts.push(match[1]);
   }
 
-  // other types: store directly
-  store.addAnswersForm(rowIdx, fieldId, value);
-  logicsChecker("onInput", fieldId);
+  scripts.forEach((script) => {
+    try {
+      new Function(script)();
+    } catch (e) {
+      console.error("Script error:", e);
+    }
+  });
+
+  return html.replace(styleRegex, "").replace(scriptRegex, "");
 };
 
-/**
- * Embed filename inside data-url if not already present.
- */
-const attachFilenameToDataUrl = (dataUrl, filename = "file") => {
-  if (!dataUrl.startsWith("data:")) return dataUrl;
-  if (/filename=/.test(dataUrl)) return dataUrl;
-
-  return dataUrl.replace(
-    /^data:([^;]+);/,
-    `data:$1;filename=${encodeURIComponent(filename)};`
-  );
-};
-
-/**
- * Extract filename from data-url
- */
-const getFileNamefromBase64 = (base64) => {
-  const match = base64.match(/filename=([^;]+);?/);
-  if (match && match[1]) return decodeURIComponent(match[1]);
-  return "file";
-};
-
-/**
- * Convert base64 data-url to File
- */
 const base64ToFile = (base64, filename) => {
   const arr = base64.split(",");
   const mime = arr[0].match(/:(.*?);/)[1];
@@ -1102,22 +1063,110 @@ const base64ToFile = (base64, filename) => {
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
 
-  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+
   return new File([u8arr], filename, { type: mime });
 };
 
-/**
- * =========================================================
- * Wizard navigation & submit
- * =========================================================
- */
+const updateRowSeqNames = (data, add = false) => {
+  return data.map((row, index) => {
+    // Only modify if it's a row
+    if (row.type === "row") {
+      return {
+        ...row, // Spread all existing properties
+        seq_name: add ? (index + 1).toString() : "1", // Update seq_name based on index
+      };
+    }
+    return row; // Return unchanged if not a row
+  });
+};
 
-/**
- * Collect quiz blocks from an array of rows.
- * (Kept from original behavior)
- */
+const logicsChecker = (valLogics, id = "") => {
+  // console.log(getAllLogics.value);
+  const getLogicsList = id
+    ? getAllLogics.value.filter((val) => val.id == id)
+    : getAllLogics.value.filter(
+        (val) =>
+          val.data.filter((x) => x.cfld_opr_ctrl === valLogics).length > 0
+      );
+
+  getLogicsList.map((val, idx) => {
+    // console.log("val", val);
+    let logicResult = false;
+    let lastOperation = "||";
+    val.data.some((valLogic, idx) => {
+      if (
+        valLogic.cfld_actions === "trigger" &&
+        valLogic.cfld_opr_ctrl === "onMounted" &&
+        valLogics === "onMounted"
+        // isMountedTriggered.value === false &&
+        // getLogicsList.length === idx + 1
+      ) {
+        logicResult = true;
+        isMountedTriggered.value = true;
+      }
+
+      if (valLogic.cfld_opr_ctrl !== valLogics) {
+        if (valLogic.cfld_actions === "logic") {
+          const compare = new Function("a", "b", `return a ${lastOperation} b`);
+
+          logicResult = compare(
+            logicResult,
+            logicsConditionalChecker(val.id, valLogic)
+          );
+
+          // console.log(
+          //   "logicResult 1",
+          //   logicResult,
+          //   valLogic.cfld_opr_ctrl,
+          //   valLogic.cfld_opr,
+          //   valLogic.cfld_val
+          // );
+        }
+
+        if (valLogic.cfld_actions === "logic_only") {
+          lastOperation = valLogic.cfld_opr;
+        }
+
+        if (logicResult === true && valLogic.cfld_actions === "result") {
+          // console.log(
+          //   "logicResult",
+          //   logicResult,
+          //   valLogic.cfld_opr_ctrl,
+          //   valLogic.cfld_opr,
+          //   valLogic.cfld_val
+          // );
+          modifyComponent(val.id, valLogic.cfld_res, valLogic.cfld_val);
+        }
+      }
+    });
+  });
+
+  // console.log(formItems.value);
+};
+
+const logicsConditionalChecker = (idComp, data) => {
+  const getAnswersofComp = Object.values(getUserAnswers.value).find(
+    (val) => val[idComp] !== undefined
+  )?.[idComp];
+
+  let valueComparation;
+  if (data.cfld_opr_ctrl === "value") {
+    valueComparation = data.cfld_val;
+  } else {
+    valueComparation = getUserAnswers.value.find(
+      (val) => val[data.cfld_val] !== undefined
+    );
+  }
+
+  const compare = new Function("a", "b", `return a ${data.cfld_opr} b`);
+  return compare(getAnswersofComp, valueComparation);
+};
+
 const getQuizData = (data, key = 0, hasil = []) => {
-  if (data?.[key]) {
+  if (data[key]) {
     if (data[key].type == "quiz") {
       hasil.push(data[key]);
     } else {
@@ -1128,21 +1177,24 @@ const getQuizData = (data, key = 0, hasil = []) => {
       }
     }
 
-    if (data[key + 1]) getQuizData(data, key + 1, hasil);
-    else return hasil;
+    if (data[key + 1]) {
+      getQuizData(data, key + 1, hasil);
+    } else {
+      return hasil;
+    }
   }
+
   return hasil;
 };
 
-/**
- * Get required form fields and their answers for current page.
- */
 const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
-  if (data?.[key]) {
+  if (data[key]) {
     if (data[key].type == "form" && data[key].required === true) {
       hasil.push({
         data: data[key],
-        answers: getUserAnswers.value?.[rows]?.[key] ?? "",
+        answers: getUserAnswers.value[rows]
+          ? getUserAnswers.value[rows][key]
+          : "",
       });
     } else {
       if (data[key].type === "row") {
@@ -1152,79 +1204,154 @@ const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
       }
     }
 
-    if (data[key + 1]) getRequiredForm(data, key + 1, rows, hasil);
+    // console.log(data[key + 1]);
+    if (data[key + 1]) {
+      getRequiredForm(data, key + 1, rows, hasil);
+    }
   }
+
   return hasil;
 };
 
-/**
- * Go to next wizard page:
- * - block if required fields empty
- * - if next page contains quiz -> show confirm dialog
- */
+const getAnswers = (row, col, val, idDiv) => {
+  // console.log([row, col, val, idDiv]);
+  const prevVal = getUserAnswers.value[row]
+    ? (() => {
+        const ans = getUserAnswers.value[row][idDiv];
+        if (typeof ans === "string" && ans.startsWith("data:")) {
+          return base64ToFile(ans, getFileNamefromBase64(ans)).name;
+        }
+        // If both are File, compare by filename
+        if (ans instanceof File) {
+          return ans.name;
+        }
+
+        return ans;
+      })()
+    : undefined;
+
+  const currVal = val instanceof File ? val.name : val;
+
+  // console.log("prevVal", prevVal, "currVal", currVal);
+
+  if (prevVal == currVal) {
+    logicsChecker("onInput", idDiv);
+    return;
+  }
+
+  if (val instanceof File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Get the original filename if available, otherwise fallback to val.name
+      let filename = val && val.name ? val.name : "file";
+      // If the base64 string contains a filename, extract it
+      const base64 = e.target.result;
+      const match = base64.match(/filename=([^;]+);?/);
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1]);
+      }
+      // Append filename to base64 string if not present
+      let base64WithFilename = base64;
+      if (!/filename=/.test(base64)) {
+        // Insert filename before the base64 data
+        base64WithFilename = base64.replace(
+          /^data:([^;]+);/,
+          `data:$1;filename=${encodeURIComponent(filename)};`
+        );
+      }
+
+      store.addAnswersForm(row, idDiv, base64WithFilename);
+      logicsChecker("onInput", idDiv);
+    };
+
+    reader.readAsDataURL(val);
+    return;
+  } else {
+    store.addAnswersForm(row, idDiv, val);
+    logicsChecker("onInput", idDiv);
+  }
+
+  // store.addAnswersForm(row, idDiv, val);
+  // logicsChecker("onInput", idDiv);
+};
+
+const getFileNamefromBase64 = (base64) => {
+  const match = base64.match(/filename=([^;]+);?/);
+  if (match && match[1]) {
+    return decodeURIComponent(match[1]);
+  }
+
+  return "file";
+};
+
 const nextPage = () => {
-  const empties = getRequiredForm(getNowData.value).filter(
-    (v) => v.answers === ""
-  );
-  if (empties.length > 0) {
-    empties.forEach((valMap) => {
+  if (
+    getRequiredForm(getNowData.value).filter((val) => val.answers === "")
+      .length > 0
+  ) {
+    getRequiredForm(getNowData.value).map((valMap) => {
+      // console.log(valMap);
       $q.notify({
         message: `<b>${valMap.data.content.label}</b> is still empty, please fill this field`,
         color: "red",
         html: true,
       });
     });
-    return;
-  }
-
-  if (getQuizData(getNextData.value).length > 0) {
-    $q.dialog({
-      title: "Quiz Start",
-      message:
-        "If you click ok, quiz will be started immediately, do you want to continue ?",
-      cancel: true,
-      persistent: true,
-    }).onOk(() => {
+  } else {
+    if (getQuizData(getNextData.value).length > 0) {
+      $q.dialog({
+        title: "Quiz Start",
+        message:
+          "If you click ok, quiz will be started immediately, do you want to continue ?",
+        cancel: true,
+        persistent: true,
+      }).onOk(async () => {
+        nowSeq.value = parseInt(nowSeq.value) + 1;
+      });
+    } else {
       nowSeq.value = parseInt(nowSeq.value) + 1;
-    });
-    return;
+    }
   }
-
-  nowSeq.value = parseInt(nowSeq.value) + 1;
 };
 
-const prevPage = () => {
-  nowSeq.value = parseInt(nowSeq.value) - 1;
-};
-
-/**
- * Validate required fields across the whole form and submit answers.
- */
 const onSubmitData = () => {
-  const requiredFields = formItems.value.filter(
+  const getRequiredFormData = formItems.value.filter(
     (val) => val.required === true && val.type === "form"
   );
 
-  // Flatten answers into a single object: { [fieldId]: answer }
-  const flattenedAnswers = Object.assign({}, ...(getUserAnswers.value || []));
-
-  // Detect missing required answers by field id existence
-  const missing = requiredFields.filter(
-    (field) => !(field.id in flattenedAnswers)
-  );
-
-  if (missing.length > 0) {
-    missing.forEach((f) => {
-      $q.notify({
-        message: `<b>${f.content.label}</b> is still empty, please fill this field`,
-        color: "red",
-        html: true,
-      });
+  // Check if any required form data is empty
+  // If so, show a notification for each empty field
+  // and return false to prevent submission
+  if (getRequiredFormData.length > 0) {
+    const flattenedAnswers = computed(() => {
+      return Object.assign({}, ...getUserAnswers.value);
     });
-    return false;
+
+    let resultReq = [];
+    getRequiredFormData.map((valMap) => {
+      const listIDAnswer = Object.keys(flattenedAnswers.value).map(Number);
+
+      if (!listIDAnswer.includes(valMap.id)) {
+        resultReq.push({
+          id: valMap.id,
+          ans: flattenedAnswers.value[valMap.id],
+        });
+
+        $q.notify({
+          message: `<b>${valMap.content.label}</b> is still empty, please fill this field`,
+          color: "red",
+          html: true,
+        });
+      }
+    });
+
+    // console.log(resultReq);
+    if (resultReq.length > 0) {
+      return false;
+    }
   }
 
-  console.log("Submitting answers", getUserAnswers.value);
+  console.log("connectedMRSVal", connectedMRSVal.value);
 
   $q.dialog({
     title: "Confirm",
@@ -1239,7 +1366,7 @@ const onSubmitData = () => {
         ans: getUserAnswers.value,
         batch_id: props.batchID,
       },
-      "cms/storeAnswers",
+      `cms/storeAnswers`,
       false,
       true,
       true
@@ -1247,11 +1374,15 @@ const onSubmitData = () => {
 
     if (data) {
       store.restoreDefault();
-      $q.notify({ message: data.message, color: "green", icon: "check" });
+      $q.notify({
+        message: data.message,
+        color: "green",
+        icon: "check",
+      });
 
-      // Optional download response
+      console.log("valDownload", data.data);
       if (data.data && data.data.length > 0) {
-        data.data.forEach((valDownload) => {
+        data.data.map((valDownload) => {
           if (valDownload.opt && valDownload.opt.isDownload) {
             const link = document.createElement("a");
             link.href = valDownload.file_path;
@@ -1267,144 +1398,46 @@ const onSubmitData = () => {
   });
 };
 
-/**
- * =========================================================
- * Seq normalization helper
- * =========================================================
- */
-const updateRowSeqNames = (data, add = false) => {
-  return (data || []).map((row, index) => {
-    // Only modify if it's a row
-    if (row.type === "row") {
-      return {
-        ...row,
-        seq_name: add ? (index + 1).toString() : "1",
-      };
-    }
-    return row;
-  });
+const prevPage = () => {
+  nowSeq.value = parseInt(nowSeq.value) - 1;
 };
 
-/**
- * =========================================================
- * Logic Engine (mini rule engine)
- * =========================================================
- *
- * - Each form item may contain "logics"
- * - logicsChecker(trigger, [id]) will evaluate rules:
- *   * "trigger" action: set initial state
- *   * "logic" action: compute conditions
- *   * "logic_only": changes boolean operator (|| / &&)
- *   * "result": if condition true -> modifyComponent(...)
- */
-const logicsChecker = (triggerName, id = "") => {
-  const list = id
-    ? getAllLogics.value.filter((val) => val.id == id)
-    : getAllLogics.value.filter((val) =>
-        val.data?.some((x) => x.cfld_opr_ctrl === triggerName)
-      );
-
-  list.forEach((ruleSet) => {
-    let logicResult = false;
-    let lastOperation = "||";
-
-    ruleSet.data?.some((valLogic) => {
-      // Trigger onMounted
-      if (
-        valLogic.cfld_actions === "trigger" &&
-        valLogic.cfld_opr_ctrl === "onMounted" &&
-        triggerName === "onMounted"
-      ) {
-        logicResult = true;
-        isMountedTriggered.value = true;
-      }
-
-      if (valLogic.cfld_opr_ctrl !== triggerName) {
-        if (valLogic.cfld_actions === "logic") {
-          // combine with previous result using lastOperation (|| / &&)
-          const combine = new Function("a", "b", `return a ${lastOperation} b`);
-          logicResult = combine(
-            logicResult,
-            logicsConditionalChecker(ruleSet.id, valLogic)
-          );
-        }
-
-        if (valLogic.cfld_actions === "logic_only") {
-          lastOperation = valLogic.cfld_opr;
-        }
-
-        if (logicResult === true && valLogic.cfld_actions === "result") {
-          modifyComponent(ruleSet.id, valLogic.cfld_res, valLogic.cfld_val);
-        }
-      }
-    });
-  });
-};
-
-/**
- * Evaluate a single conditional logic entry against current answers.
- */
-const logicsConditionalChecker = (idComp, data) => {
-  // current component answer
-  const getAnswersofComp = Object.values(getUserAnswers.value || {}).find(
-    (val) => val?.[idComp] !== undefined
-  )?.[idComp];
-
-  // value to compare with: either literal value OR other field's answer
-  let valueComparation;
-  if (data.cfld_opr_ctrl === "value") {
-    valueComparation = data.cfld_val;
-  } else {
-    valueComparation = getUserAnswers.value.find(
-      (val) => val?.[data.cfld_val] !== undefined
-    );
-  }
-
-  // compare using operator string, e.g. "==", "!=", ">", "<"
-  const compare = new Function("a", "b", `return a ${data.cfld_opr} b`);
-  return compare(getAnswersofComp, valueComparation);
-};
-
-/**
- * Apply modification to components:
- * - hide/show this component
- * - hide/show another component (targetModifID)
- *
- * Also updates forms.value so Vue reactivity can refresh UI.
- */
 const modifyComponent = (idComp, modifData, targetModifID = 0) => {
   const getCompByID = formItems.value.find((val) => val.id == idComp) || {};
   const getCompByTargetID =
     formItems.value.find((val) => val.id == targetModifID) || {};
+  if (modifData === "hide_this_comp") {
+    getCompByID.hidden = true;
+  } else if (modifData === "show_this_comp") {
+    getCompByID.hidden = false;
+  } else if (modifData === "hide_comp") {
+    getCompByTargetID.hidden = true;
+  } else if (modifData === "show_comp") {
+    getCompByTargetID.hidden = false;
+  }
 
-  if (modifData === "hide_this_comp") getCompByID.hidden = true;
-  else if (modifData === "show_this_comp") getCompByID.hidden = false;
-  else if (modifData === "hide_comp") getCompByTargetID.hidden = true;
-  else if (modifData === "show_comp") getCompByTargetID.hidden = false;
+  // refreshKeys.value = refreshKeys.value + 1;
 
-  // Update in forms array (so template sees changes)
   const index = forms.value.findIndex((row) =>
-    Array.isArray(row.content)
+    row.content && Array.isArray(row.content)
       ? row.content.some((item) => item.id === idComp)
       : false
   );
-
   if (index !== -1) {
     const row = forms.value[index];
     const updatedContent = row.content.map((item) => {
-      if (item.id === idComp) return { ...item, ...getCompByID };
-      if (item.id === targetModifID) return { ...item, ...getCompByTargetID };
+      if (item.id === idComp) {
+        return { ...item, ...getCompByID };
+      }
+      if (item.id === targetModifID) {
+        return { ...item, ...getCompByTargetID };
+      }
       return item;
     });
     forms.value[index] = { ...row, content: updatedContent };
   }
 };
 
-/**
- * =========================================================
- * History: Connected MRS
- * =========================================================
- */
 const getConnectedMRS = async (id) => {
   const data = await postData(
     "get",
@@ -1414,76 +1447,15 @@ const getConnectedMRS = async (id) => {
     true,
     true
   );
-  if (data) connectedMRSVal.value = data;
+  if (data) {
+    connectedMRSVal.value = data;
+  }
 };
 
-/**
- * =========================================================
- * Posts engine
- * =========================================================
- */
-
-/**
- * Scan top-level rows to find any column with type === 'posts'
- * Return list of targets: [{rowIdx, colIdx}, ...]
- */
-const findPostsColumns = (rows = []) => {
-  const result = [];
-  rows.forEach((row, rowIdx) => {
-    (row.content || []).forEach((col, colIdx) => {
-      if (col?.type === "posts") result.push({ rowIdx, colIdx });
-    });
-  });
-  return result;
-};
-
-/**
- * Template helper: show embedded "last post" form (when allowed)
- */
-const shouldShowEmbeddedLastPost = (col) => {
-  return (
-    !props.preventLoops &&
-    col.currentPost &&
-    col.currentPost.forms?.length > 0 &&
-    (col.content.mode === "last" || col.content.mode === "all")
-  );
-};
-
-/**
- * Open a post into store CMS page chooser
- */
-const openPost = (post) => {
-  store.setCMSPageChoosed({ ...post, type: "posts" });
-};
-
-/**
- * Navigate to "View All Posts" page
- */
-const viewAllPosts = (col) => {
-  store.setCMSPageChoosed({
-    type: "tags",
-    tags: col.content.tags,
-    limit: col.content.limit ? col.content.limit : 5,
-    orderBy:
-      col.content.orderBy?.length > 0 ? col.content.orderBy : "created_at",
-    order: col.content.order?.length > 0 ? col.content.order : "desc",
-  });
-};
-
-/**
- * Fetch and enrich posts data for a single posts column.
- * Flow:
- * 1) Fetch list of posts by tags + sorting.
- * 2) If mode=last/all -> fetch detail for first post and embed its forms.
- * 3) Else -> fetch each post detail to extract image + excerpt text.
- * 4) If layout=grid -> chunk posts by perSlide.
- */
-const getPostsData = async (rowIdx, colIdx) => {
-  const dataContent = forms.value?.[rowIdx]?.content?.[colIdx];
-  if (!dataContent) return;
-
-  forms.value[rowIdx].content[colIdx].loadingPosts = true;
-
+const getPostsData = async (rowsIdx, colIdx) => {
+  let dataContent = forms.value[rowsIdx].content[colIdx];
+  // console.log("dataContent", dataContent);
+  forms.value[rowsIdx].content[colIdx].loadingPosts = true;
   const response = await postData(
     "post",
     {
@@ -1495,96 +1467,109 @@ const getPostsData = async (rowIdx, colIdx) => {
     },
     "cms/formsDetail"
   );
+  if (response) {
+    console.log("Data fetched successfully:", response);
+    dataContent.postsList = response.filter((item) => item.is_published === 1);
+    // Chunk posts based on dataContent.content.perSlide or default to 1
 
-  if (!response) {
-    forms.value[rowIdx].content[colIdx].loadingPosts = false;
-    return;
-  }
+    console.log(
+      "Filtered posts:",
+      forms.value[rowsIdx].content[colIdx].postsList
+    );
+    let fetchedPostsList = dataContent.postsList;
 
-  dataContent.postsList = response.filter((item) => item.is_published === 1);
-  const fetchedPostsList = dataContent.postsList;
+    if (
+      dataContent.content.mode === "last" ||
+      dataContent.content.mode === "all"
+    ) {
+      if (fetchedPostsList.length > 0) {
+        const getForms = await postData(
+          "get",
+          null,
+          `cms/viewByID/${fetchedPostsList[0].id}`,
+          false,
+          false,
+          true
+        );
+        if (getForms && getForms.data.value) {
+          // console.log("getForms", getForms);
+          forms.value[rowsIdx].content[colIdx].currentPost =
+            getForms.data.value;
 
-  // Fetch last post detail
-  if (
-    dataContent.content.mode === "last" ||
-    dataContent.content.mode === "all"
-  ) {
-    if (fetchedPostsList.length > 0) {
-      const getForms = await postData(
-        "get",
-        null,
-        `cms/viewByID/${fetchedPostsList[0].id}`,
-        false,
-        false,
-        true
-      );
-
-      if (getForms?.data?.value) {
-        forms.value[rowIdx].content[colIdx].currentPost = getForms.data.value;
+          // console.log("result forms", forms.value[rowsIdx].content[colIdx]);
+          forms.value[rowsIdx].content[colIdx].loadingPosts = false;
+        }
       }
+    } else {
+      Promise.all(
+        fetchedPostsList.map(async (val, idx) => {
+          const getForms = await postData(
+            "get",
+            null,
+            `cms/viewByID/${val.id}`,
+            false,
+            false,
+            true
+          );
+          if (getForms && getForms.data.value) {
+            // console.log(
+            //   "check by col idx",
+            //   forms.value[rowsIdx].content[colIdx].postsList[idx]
+            // );
+
+            const imageRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
+            const matches = [
+              ...getForms.data.value.forms[0].content[0].content.matchAll(
+                imageRegex
+              ),
+            ];
+            // Decode HTML entities
+            const decodeHtmlEntities = (str) => {
+              const textarea = document.createElement("textarea");
+              textarea.innerHTML = str;
+              return textarea.value;
+            };
+
+            // Apply decoding to the matched image source
+            if (matches.length > 0) {
+              const imageSrc = decodeHtmlEntities(matches[0][1]);
+              forms.value[rowsIdx].content[colIdx].postsList[idx].image =
+                imageSrc;
+            } else {
+              forms.value[rowsIdx].content[colIdx].postsList[idx].image = null;
+            }
+
+            // Extract content text (first 50 characters)
+            const contentRegex = /<[^>]*>|&[^;]+;/g;
+            const cleanContent = getForms.data.value.forms[0].content[0].content
+              .replace(contentRegex, "")
+              .trim();
+            forms.value[rowsIdx].content[colIdx].postsList[idx].desc =
+              cleanContent.substring(0, 150) +
+              (cleanContent.length > 150 ? "..." : "");
+          }
+        })
+      ).then(() => {
+        // console.log("All posts processed");
+        forms.value[rowsIdx].content[colIdx].loadingPosts = false;
+        if (dataContent.content.layout === "grid") {
+          const perSlide = dataContent.content.perSlide || 1;
+          const chunkedPosts = [];
+          for (let i = 0; i < dataContent.postsList.length; i += perSlide) {
+            chunkedPosts.push(dataContent.postsList.slice(i, i + perSlide));
+          }
+          forms.value[rowsIdx].content[colIdx].postsList = chunkedPosts;
+        }
+      });
     }
-    forms.value[rowIdx].content[colIdx].loadingPosts = false;
-    refreshedPosts.value += 1;
-    return;
+
+    refreshedPosts.value += 1; // Trigger reactivity
+  } else {
+    console.error("Error fetching data");
+    forms.value[rowsIdx].content[colIdx].loadingPosts = false;
   }
-
-  // Otherwise, enrich each post with image + excerpt from detail HTML
-  await Promise.all(
-    fetchedPostsList.map(async (val, idx) => {
-      const getForms = await postData(
-        "get",
-        null,
-        `cms/viewByID/${val.id}`,
-        false,
-        false,
-        true
-      );
-
-      const html = getForms?.data?.value?.forms?.[0]?.content?.[0]?.content;
-      if (!html) return;
-
-      // Extract first image src
-      const imageRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
-      const matches = [...String(html).matchAll(imageRegex)];
-
-      const decodeHtmlEntities = (str) => {
-        const textarea = document.createElement("textarea");
-        textarea.innerHTML = str;
-        return textarea.value;
-      };
-
-      forms.value[rowIdx].content[colIdx].postsList[idx].image =
-        matches.length > 0 ? decodeHtmlEntities(matches[0][1]) : null;
-
-      // Extract plain text (simple)
-      const contentRegex = /<[^>]*>|&[^;]+;/g;
-      const cleanContent = String(html).replace(contentRegex, "").trim();
-
-      forms.value[rowIdx].content[colIdx].postsList[idx].desc =
-        cleanContent.substring(0, 150) +
-        (cleanContent.length > 150 ? "..." : "");
-    })
-  );
-
-  // If grid layout: chunk by perSlide
-  if (dataContent.content.layout === "grid") {
-    const perSlide = dataContent.content.perSlide || 1;
-    const chunked = [];
-    for (let i = 0; i < dataContent.postsList.length; i += perSlide) {
-      chunked.push(dataContent.postsList.slice(i, i + perSlide));
-    }
-    forms.value[rowIdx].content[colIdx].postsList = chunked;
-  }
-
-  forms.value[rowIdx].content[colIdx].loadingPosts = false;
-  refreshedPosts.value += 1;
 };
 
-/**
- * =========================================================
- * Subscription helpers (Header & Tags)
- * =========================================================
- */
 const onSubscribed = async (methods = "users", data) => {
   if (!authStore.isLoggedIn) {
     $q.notify({
@@ -1609,6 +1594,7 @@ const onSubscribed = async (methods = "users", data) => {
       true
     );
 
+    console.log(subscribeData);
     $q.notify({
       message: subscribeData.message,
       color: "positive",
@@ -1620,12 +1606,16 @@ const onSubscribed = async (methods = "users", data) => {
 };
 
 const checkSubscribed = (methods = "users", data) => {
-  if (!authStore.isLoggedIn) return false;
+  if (!authStore.isLoggedIn) {
+    return false;
+  }
 
-  return props.subscribeList.some(
+  const isSubscribed = props.subscribeList.some(
     (item) =>
       (item.type === methods && item.value === data) || item.type === "all"
   );
+
+  return isSubscribed;
 };
 
 const onClickTag = (tag) => {
@@ -1638,68 +1628,6 @@ const onClickTag = (tag) => {
   });
 };
 
-/**
- * =========================================================
- * Comments engine
- * =========================================================
- */
-
-/**
- * Safely parse comment JSON (avoid repeated JSON.parse in template).
- */
-const parseCommentJson = (node) => {
-  try {
-    return JSON.parse(node?.comment || "{}");
-  } catch {
-    return {};
-  }
-};
-
-const getCommentAttachments = (node) => {
-  const parsed = parseCommentJson(node);
-  return Array.isArray(parsed.attachments) ? parsed.attachments : [];
-};
-
-const getCommentHtml = (node) => {
-  const parsed = parseCommentJson(node);
-  return parsed.comment || "";
-};
-
-const getUserAvatar = (node) => {
-  return node?.user?.profile_picture
-    ? node.user.profile_picture
-    : "https://cdn.quasar.dev/img/mountains.jpg";
-};
-
-const canEditComment = (node) => {
-  return (
-    node?.email &&
-    authStore.isLoggedIn &&
-    node.email === authStore.authDet.username
-  );
-};
-
-const selectReply = (node) => {
-  selectedReplyComment.value = node.idx;
-  selectedReplyContent.value = "";
-  selectedReplyAttachments.value = [];
-};
-
-const startEditComment = (node) => {
-  selectedReplyComment.value = node.idx;
-  selectedReplyContent.value = getCommentHtml(node);
-  selectedReplyAttachments.value = node.attachments ? node.attachments : [];
-};
-
-const resetReplyState = () => {
-  selectedReplyComment.value = null;
-  selectedReplyContent.value = "";
-  selectedReplyAttachments.value = [];
-};
-
-/**
- * Submit comment/reply, then refresh list.
- */
 const onSubmitComment = async (commentData, parentId = null) => {
   const payload = {
     data: {
@@ -1724,7 +1652,11 @@ const onSubmitComment = async (commentData, parentId = null) => {
     },
   };
 
-  await postData("post", payload, "portal/gencode/saveGencode");
+  const response = await postData(
+    "post",
+    payload,
+    "portal/gencode/saveGencode"
+  );
 
   $q.notify({
     message: "Your comment has been submitted successfully.",
@@ -1732,13 +1664,13 @@ const onSubmitComment = async (commentData, parentId = null) => {
     icon: "check",
   });
 
-  resetReplyState();
+  // Clear reply state
+  selectedReplyComment.value = null;
+  selectedReplyContent.value = "";
+  selectedReplyAttachments.value = [];
   getComment();
 };
 
-/**
- * Load comments and enrich with user profile data.
- */
 const getComment = async () => {
   loadingComment.value = true;
 
@@ -1760,38 +1692,66 @@ const getComment = async () => {
           pgm_value: props.id,
         },
       },
-      "portal/gencode/showDetail/FP_COMMENT",
+      `portal/gencode/showDetail/FP_COMMENT`,
       false,
       false,
       true
     );
 
-    if (!data) {
-      listComments.value = [];
-      return;
-    }
+    if (data) {
+      console.log(data);
 
-    // recursively attach user info to tree nodes
-    const attachUserToNodeTree = async (node) => {
-      const userDetails = await getUsersDetail(node.email);
-      node.user = userDetails
-        ? {
-            name:
-              userDetails.det.pud_first_name +
-              " " +
-              userDetails.det.pud_last_name,
-            email: userDetails.email,
-            profile_picture: userDetails.det.pud_photo,
+      await Promise.all(
+        data.map(async (comment) => {
+          const userDetails = await getUsersDetail(comment.email);
+
+          // Recursively process children
+          const processChildren = async (children) => {
+            if (Array.isArray(children)) {
+              await Promise.all(
+                children.map(async (child) => {
+                  const childUserDetails = await getUsersDetail(child.email);
+                  if (childUserDetails) {
+                    child.user = {
+                      name:
+                        childUserDetails.det.pud_first_name +
+                        " " +
+                        childUserDetails.det.pud_last_name,
+                      email: childUserDetails.email,
+                      profile_picture: childUserDetails.det.pud_photo,
+                    };
+                  } else {
+                    child.user = null;
+                  }
+                  // Recursively process nested children
+                  if (child.children) {
+                    await processChildren(child.children);
+                  }
+                })
+              );
+            }
+          };
+
+          await processChildren(comment.children);
+          if (userDetails) {
+            comment.user = {
+              name:
+                userDetails.det.pud_first_name +
+                " " +
+                userDetails.det.pud_last_name,
+              email: userDetails.email,
+              profile_picture: userDetails.det.pud_photo,
+            };
+          } else {
+            comment.user = null;
           }
-        : null;
+        })
+      );
 
-      if (Array.isArray(node.children)) {
-        await Promise.all(node.children.map(attachUserToNodeTree));
-      }
-    };
+      console.log("Comments with user details:", data);
 
-    await Promise.all(data.map(attachUserToNodeTree));
-    listComments.value = data;
+      listComments.value = data;
+    }
   } finally {
     loadingComment.value = false;
   }
@@ -1806,12 +1766,12 @@ const getUsersDetail = async (username) => {
     true,
     true
   );
-  return data?.data ?? null;
+  if (data) {
+    return data.data;
+  }
+  return null;
 };
 
-/**
- * Download/open attachment by URL
- */
 const onOpenAttachment = (attachment) => {
   const link = document.createElement("a");
   link.href = attachment.url;
@@ -1819,119 +1779,6 @@ const onOpenAttachment = (attachment) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-};
-
-/**
- * OPTIONAL: if you still need delete comment functionality,
- * implement this function (your original code referenced it but didn't include it).
- */
-const onDeleteComment = async (id) => {
-  // TODO: implement based on your API endpoint.
-  // Keeping placeholder to avoid runtime errors if template calls it.
-  $q.notify({
-    message: "Delete comment is not implemented yet.",
-    color: "warning",
-    icon: "warning",
-  });
-};
-
-/**
- * =========================================================
- * HTML Processor (trusted HTML only)
- * =========================================================
- * WARNING: This runs scripts from HTML via new Function().
- * Use only for trusted content sources.
- */
-const processHtml = (html) => {
-  // Extract styles
-  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
-  const styles = [];
-  let match;
-
-  while ((match = styleRegex.exec(html))) styles.push(match[1]);
-
-  styles.forEach((style) => {
-    const styleElement = document.createElement("style");
-    styleElement.textContent = style;
-    document.head.appendChild(styleElement);
-  });
-
-  // Extract scripts
-  const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-  const scripts = [];
-
-  while ((match = scriptRegex.exec(html))) scripts.push(match[1]);
-
-  scripts.forEach((script) => {
-    try {
-      new Function(script)();
-    } catch (e) {
-      console.error("Script error:", e);
-    }
-  });
-
-  return html.replace(styleRegex, "").replace(scriptRegex, "");
-};
-
-/**
- * =========================================================
- * Batch Upload handler (placeholder)
- * =========================================================
- */
-const onClickBatchUpload = () => {
-  $q.dialog({
-    component: uploadFilesIndex,
-    componentProps: {
-      title: "Upload Bulk Data",
-      accept: ".xlsx,.xls",
-      multiple: false,
-    },
-  }).onOk(async (files) => {
-    const data = await postData(
-      "post",
-      {
-        id: props.id,
-        files: files.result,
-        filename: files.fileName,
-      },
-      "cms/storeBulkAnswers",
-      false,
-      true,
-      true
-    );
-
-    if (data) {
-      store.restoreDefault();
-      $q.notify({ message: data.message, color: "green", icon: "check" });
-    }
-  });
-};
-
-/**
- * =========================================================
- * Download Template handler (placeholder)
- * =========================================================
- */
-const onClickDownloadTemplate = async () => {
-  // downloadTemplateBulk
-
-  const data = await postData(
-    "get",
-    null,
-    `cms/downloadTemplateBulk/${props.id}`,
-    false,
-    true,
-    true
-  );
-
-  if (data && data.path) {
-    const link = document.createElement("a");
-    link.href = data.path;
-    link.download = data.path.split("/").pop();
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
 };
 </script>
 

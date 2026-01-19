@@ -96,6 +96,13 @@
                         label="Is Sortable ?"
                       />
                     </q-item-section>
+                    <q-item-section side v-if="element.value !== 'action'">
+                      <q-toggle
+                        v-model="element.isExportable"
+                        color="primary"
+                        label="Is Exportable ?"
+                      />
+                    </q-item-section>
                     <q-item-section side v-if="element.value === 'action'">
                       <q-toggle
                         v-model="element.isEditable"
@@ -171,6 +178,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: true,
             },
           ]
         : []),
@@ -186,6 +194,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),
@@ -201,6 +210,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),
@@ -215,6 +225,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),

@@ -285,6 +285,86 @@
 
           <div class="row" v-if="formsSetup.isHistory">
             <div class="col">
+              <div class="text-bold">
+                Bulk Upload ? (It will allow bulk upload of forms)
+              </div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.isBulkUpload"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="formsSetup.isBulkUpload"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+            <div
+              class="col"
+              v-if="formsSetup.isHistory && formsSetup.isBulkUpload"
+            >
+              <div class="text-bold">Set keys for Bulk Upload Template</div>
+              <div class="text-italic">
+                (If you set it then same keys data will be replaced, if not then
+                data could be duplicated)
+              </div>
+              <q-btn
+                @click="onClickSetBulkKeys"
+                icon="key"
+                color="primary"
+                label="Set keys"
+                class="q-mt-md"
+                :disable="!formsSetup.isBulkUpload"
+              >
+                <q-badge color="red" floating>{{
+                  formsSetup.isBulkUpload && formsSetup.bulkKeys
+                    ? formsSetup.bulkKeys.length
+                    : 0
+                }}</q-badge>
+              </q-btn>
+            </div>
+          </div>
+
+          <div class="row q-pt-sm" v-if="formsSetup.isHistory">
+            <div class="col">
+              <div class="text-bold">
+                Allow API Search Data when viewing form ? (It will allow API to
+                search data when viewing form)
+              </div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.allowAPISearchData"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="formsSetup.allowAPISearchData"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+
+            <div class="col" v-if="formsSetup.allowAPISearchData">
+              <div class="text-bold">
+                API Search Quota per user (0 = unlimited)
+              </div>
+              <div class="q-gutter-sm">
+                <q-input
+                  v-model.number="formsSetup.APISearchQuota"
+                  type="number"
+                  label="API Search Quota"
+                  dense
+                  outlined
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="row" v-if="formsSetup.isHistory">
+            <div class="col">
               <q-btn
                 @click="onClickManageHistory"
                 icon="edit_note"
@@ -320,6 +400,7 @@ import { useAuthStore } from "stores/authStore";
 import addReportAction from "../../MRS/addReport.vue";
 import viewSetupHistTable from "./viewSetupHistTable.vue";
 import viewSetupAPIDest from "./viewSetupAPIDest.vue";
+import viewSetupKeysBulk from "./viewSetupKeysBulk.vue";
 
 const store = useAuthStore();
 
@@ -385,9 +466,33 @@ onMounted(() => {
       formsSetup.value.historyTableIsExport = false; // Default to false if undefined
     }
 
+    // Ensure isBulkUpload exists
+    if (typeof localSetup.isBulkUpload === "number") {
+      localSetup.isBulkUpload = !!localSetup.isBulkUpload ?? false;
+    }
+
+    if (typeof localSetup.allowAPISearchData === "number") {
+      localSetup.allowAPISearchData = !!localSetup.allowAPISearchData ?? false;
+    }
+
     // historyTableIsExport
     if (localSetup.historyTableList && localSetup.historyTableList.length > 0) {
-      listForms.value = localSetup.historyTableList;
+      // listForms.value = localSetup.historyTableList;
+
+      listForms.value = props.forms
+        .flatMap((form) => (form.type === "row" ? form.content : form))
+        .filter((form) => form.type === "form")
+        .map((form) => ({
+          value: form.id,
+          label: form.content.label,
+          name: `CMS_REPORT_${form.id}`,
+          align: "center",
+          field: `CMS_REPORT_${form.id}`,
+          isFiltered: true,
+          isSortable: true,
+          isVisible: true,
+          isExportable: true,
+        }));
     } else {
       if (props.forms)
         listForms.value = props.forms
@@ -443,7 +548,12 @@ const formsSetup = ref({
   isUsingFormsRPA: false, // Add isUsingFormsRPA default
   isAPI: false,
   apiOpt: [],
+  isBulkUpload: false,
+  bulkKeys: [],
+  allowAPISearchData: false,
+  APISearchQuota: 0,
 });
+
 const splitterModel = ref(50);
 const optionsUsers = ref([]);
 const optionsApproval = ref([]);
@@ -592,6 +702,7 @@ const onSubmit = () => {
 };
 
 const onClickManageHistory = () => {
+  console.log(listForms.value);
   $q.dialog({
     component: viewSetupHistTable,
     componentProps: {
@@ -749,6 +860,25 @@ const onClickListAPI = () => {
   })
     .onOk(async (val) => {
       formsSetup.value.apiOpt = val;
+      console.log(val);
+    })
+    .onDismiss(() => {
+      // getDataHistory();
+    });
+};
+
+const onClickSetBulkKeys = () => {
+  $q.dialog({
+    component: viewSetupKeysBulk,
+    componentProps: {
+      title: "Set Bulk Upload Template Keys",
+      dataEdit: formsSetup.value.bulkKeys,
+      forms: props.forms,
+    },
+    persistent: true,
+  })
+    .onOk(async (val) => {
+      formsSetup.value.bulkKeys = val;
       console.log(val);
     })
     .onDismiss(() => {
