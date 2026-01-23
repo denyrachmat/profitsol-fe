@@ -68,7 +68,7 @@ export const useFormStore = defineStore("form", {
 
   actions: {
     startCountDown() {
-      // console.log("masuk timer 1");
+      console.log("masuk timer 1");
       this.startTime = true;
       this.finishQuiz = false;
 
@@ -113,6 +113,8 @@ export const useFormStore = defineStore("form", {
     restoreDefault() {
       this.userAnswers = [];
       this.userAnswersForm = [];
+      this.startTime = false;
+      this.finishQuiz = false;
       this.timeData = {
         hours: 0,
         minutes: 0,

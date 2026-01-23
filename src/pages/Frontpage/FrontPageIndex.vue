@@ -332,21 +332,6 @@ const startTutorial = () => {
   tour.drive();
 };
 onMounted(async () => {
-  // For tour guide Start
-  tour = driver({
-    showProgress: true,
-    overlayColor: "rgba(0, 0, 0, 0.5)",
-    nextBtnText: "Next",
-    prevBtnText: "Back",
-    doneBtnText: "Done",
-    closeBtnText: "Close",
-    allowClose: false,
-    onDestroyed: () => document.body.classList.remove("driver-active"),
-  });
-
-  tour.setSteps(buildTourSteps({ tour, formStore }));
-  // For tour guide End
-
   // ====== NOTIF FLOW FIX ======
   try {
     const chromium = isChromiumLike();
@@ -376,9 +361,24 @@ onMounted(async () => {
     router.push("/login");
   }
 
+  // For tour guide Start
+  tour = driver({
+    showProgress: true,
+    overlayColor: "rgba(0, 0, 0, 0.5)",
+    nextBtnText: "Next",
+    prevBtnText: "Back",
+    doneBtnText: "Done",
+    closeBtnText: "Close",
+    allowClose: false,
+    onDestroyed: () => document.body.classList.remove("driver-active"),
+  });
+
+  tour.setSteps(buildTourSteps({ tour, formStore }));
+  // For tour guide End
+
   await getMainConf();
 
-  if (!formStore.getIsFrontPageTourDone) {
+  if (!formStore.getIsFrontPageTourDone && authStore.getStatusLog) {
     startTutorial();
   }
   await getDataNav();

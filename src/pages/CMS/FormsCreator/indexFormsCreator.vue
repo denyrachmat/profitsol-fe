@@ -678,10 +678,10 @@ import apiRequest from "src/components/apiRequest";
 import previewComponentVue from "../Forms/previewComponent.vue";
 import viewSetupForms from "./viewSetupForms.vue";
 import shareFormsVue from "../Forms/shareForms.vue";
-import indexPostManage from "src/pages/UpdateFP/postManage/indexPostManage.vue";
+// import indexPostManage from "src/pages/UpdateFP/components/postManage/indexPostManage.vue";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 
-import folderFilesChooser from "src/pages/UpdateFP/pageManage/folderFilesChooser.vue";
+import folderFilesChooser from "src/pages/UpdateFP/components/pageManage/folderFilesChooser.vue";
 
 import { useAuthStore } from "src/stores/authStore";
 

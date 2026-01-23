@@ -120,22 +120,27 @@ const getMenuFP = async () => {
   }
 };
 
+const dialogs = import.meta.glob("./components/**/*.vue");
+
 const onClickMenu = async (item) => {
   try {
-    const componentModule = await import(`./${item.value}.vue`);
+    const componentName = item.value;
+    // contoh item.value = "postManage/indexPostManage"
+
+    const path = `./components/${componentName}.vue`;
+
+    const loader = dialogs[path];
+    if (!loader) {
+      throw new Error(`Dialog component not found: ${path}`);
+    }
+
+    const componentModule = await loader();
+
     $q.dialog({
       component: componentModule.default,
-      componentProps: {
-        menuItem: item,
-      },
+      componentProps: { menuItem: item },
       persistent: true,
-    })
-      .onOk(() => {
-        console.log("Dialog confirmed");
-      })
-      .onCancel(() => {
-        console.log("Dialog canceled");
-      });
+    });
   } catch (error) {
     $q.notify({
       type: "negative",

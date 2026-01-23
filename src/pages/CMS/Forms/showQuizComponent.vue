@@ -16,7 +16,7 @@
 
     <div v-else>
       <!-- Header: status -->
-      <div class="row bg-grey">
+      <div class="row bg-grey q-gutter-sm">
         <!-- Status answers -->
         <div
           class="col q-pa-sm bg-white"
@@ -44,13 +44,14 @@
                   :key="q.id || idx"
                 >
                   <div
-                    :class="
+                    :class="[
                       getFormAnswers[
                         getAllForms.findIndex((form) => form.id === q.id)
                       ]
                         ? 'bg-green'
-                        : 'bg-red'
-                    "
+                        : 'bg-red',
+                      getNowQuestion?.id === q.id ? 'glow-effect' : '',
+                    ]"
                     style="height: 15px; width: 15px"
                   ></div>
                 </div>
@@ -61,7 +62,7 @@
 
         <!-- Timer if enabled -->
         <div
-          class="col q-pa-md bg-grey text-right"
+          class="col q-pa-md bg-white text-right"
           style="border-radius: 10px"
           v-if="
             store.timeData.hours ||
@@ -288,6 +289,8 @@ const getFormAnswers = computed(() => store.getUsersAnswer || []);
 const initializeQuiz = () => {
   // Group forms by page
   // console.log(props.data);
+  doneSubmiting.value = false;
+  store.restoreDefault();
   groupedBySeq.value = props.data.reduce((acc, form) => {
     const page = form.seq_name || 1;
     if (!acc[page - 1]) {
@@ -332,8 +335,6 @@ const initializeQuiz = () => {
     });
 
   nowSeq.value = 0;
-
-  console.log(JSON.stringify(groupedHTMLByPage.value));
 };
 
 const setTimerForQuiz = () => {
@@ -347,7 +348,9 @@ const setTimerForQuiz = () => {
       parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
   }
 
-  if (!store.startTime) store.startCountDown();
+  console.log(store.timeData);
+
+  if (!store.getStartTimeState) store.startCountDown();
 };
 // For Iitialize End
 
@@ -390,37 +393,59 @@ const setVideoContainerRef = (el, index) => {
 };
 
 const onClickPrev = () => {
-  if (groupedFormsByPage.value.length > 0) {
-    if (formsSeq.value === 0) {
+  if (formsSeq.value === 0) {
+    if (nowSeq.value > 0) {
       nowSeq.value -= 1;
-      formsSeq.value = groupedFormsByPage.value[nowSeq.value].length - 1;
+      formsSeq.value =
+        groupedFormsByPage.value[nowSeq.value].length > 0
+          ? groupedFormsByPage.value[nowSeq.value].length - 1
+          : 0;
+    }
+  } else {
+    formsSeq.value -= 1;
+  }
+  videoEnded.value = false;
+  triggerFindVideo();
+};
+
+const onClickNext = () => {
+  if (
+    groupedFormsByPage.value[nowSeq.value].length > 0 &&
+    !getFormAnswers.value[nowFormIndex.value]
+  ) {
+    $q.dialog({
+      title: "Warning",
+      message:
+        "You're not answered the question yet, are you sure want to proceed ? (You can always go back to answer it)",
+      ok: true,
+      cancel: true,
+      persistent: false,
+    }).onOk(() => {
+      toTheNext();
+    });
+
+    return;
+  } else {
+    toTheNext();
+  }
+
+  function toTheNext() {
+    if (groupedFormsByPage.value[nowSeq.value].length > 0) {
+      if (
+        formsSeq.value ===
+        groupedFormsByPage.value[nowSeq.value].length - 1
+      ) {
+        formsSeq.value = 0;
+        nowSeq.value += 1;
+      } else {
+        formsSeq.value += 1;
+      }
     } else {
-      formsSeq.value -= 1;
+      nowSeq.value += 1;
     }
     videoEnded.value = false;
     triggerFindVideo();
   }
-};
-
-const onClickNext = () => {
-  console.log(groupedHTMLByPage.value);
-  if (groupedFormsByPage.value[nowSeq.value].length > 0) {
-    if (formsSeq.value === groupedFormsByPage.value[nowSeq.value].length - 1) {
-      formsSeq.value = 0;
-      nowSeq.value += 1;
-    } else {
-      formsSeq.value += 1;
-    }
-  } else {
-    nowSeq.value += 1;
-  }
-  videoEnded.value = false;
-  triggerFindVideo();
-
-  // console.log(groupedBySeq.value);
-  console.log(groupedHTMLByPage.value);
-  // console.log(groupedFormsByPage.value);
-  // console.log(getNowData.value);
 };
 
 const onClickSubmit = async (questId = [], passConfirm = false) => {
@@ -456,7 +481,7 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
           color: "green",
         });
 
-        doneSubmiting.value = 1;
+        doneSubmiting.value = true;
       }
 
       if (props.setup.showRightKeysAnswerLocation === "question") {
@@ -512,7 +537,7 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
             persistent: true,
           });
 
-          doneSubmiting.value = 1;
+          doneSubmiting.value = true;
         }
 
         if (props.setup.showRightKeysAnswerLocation === "question") {
@@ -573,10 +598,60 @@ const onRetryClick = () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
-    doneSubmiting.value = 0;
+    doneSubmiting.value = false;
     store.restoreDefault();
     nowSeq.value = 0;
     formsSeq.value = 0;
   });
 };
+
+// ===== Timer Watcher ======
+const getNowTimer = computed(() => {
+  return store.getRunningTimers;
+});
+
+watch(getNowTimer, (time) => {
+  console.log("watcherr", props.setup.setUpTimer, store.getFinishQuizState);
+  if (props.setup.setUpTimer && !store.getFinishQuizState) {
+    // console.log(props.setup.setUpTimer);
+    if (time.hours === 0 && time.minutes === 1 && time.seconds === 0) {
+      $q.notify({
+        message: "Your time to finish is 1 minute remaining !",
+        color: "orange",
+      });
+    }
+
+    if (time.hours === 0 && time.minutes === 0 && time.seconds === 30) {
+      $q.notify({
+        message: "Your time to finish is 30 seconds remaining, hurry up !!",
+        color: "orange",
+      });
+    }
+
+    if (time.hours === 0 && time.minutes === 0 && time.seconds === 0) {
+      console.log("abis boy waktunya");
+      onClickSubmit(props.idDet, true);
+      store.finishQuizImmediatelly();
+    }
+    console.log(time);
+  }
+});
 </script>
+<style scoped>
+.glow-effect {
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% {
+    box-shadow: 0 0 10px 2px rgba(66, 165, 245, 1);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(66, 165, 245, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 10px 2px rgb(25, 128, 212);
+  }
+}
+</style>

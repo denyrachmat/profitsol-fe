@@ -222,8 +222,9 @@
 import { onMounted, ref } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
-import formDialog from "./formAddPost.vue";
+// import formDialog from "./formAddPost.vue";
 import newFormAddPost from "./newFormAddPost.vue";
+import formAddPost from "./formAddPost.vue";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 import tagsManageView from "./tagsManageView.vue";
 import { useAuthStore } from "src/stores/authStore";
@@ -290,7 +291,7 @@ const loading = ref(false);
 
 const onClickAddPage = (item) => {
   $q.dialog({
-    component: newFormAddPost,
+    component: formAddPost,
     componentProps: {
       postsData: item,
     },
