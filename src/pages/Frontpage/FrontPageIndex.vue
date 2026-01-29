@@ -798,7 +798,14 @@ watch(
           choosedPages.value = newVal || [];
           router.push({
             name: "pages",
-            params: { slug: newVal.url ? newVal.url : newVal.page },
+            params: {
+              slug: newVal.tags
+                ? Array.isArray(newVal.tags)
+                  ? newVal.tags[0]
+                  : newVal.tags
+                : "Uncategorize",
+              url: newVal.url ? newVal.url : newVal.page,
+            },
           });
         } else if (newVal.type === "posts") {
           choosedPages.value = newVal || [];
@@ -809,7 +816,7 @@ watch(
                 ? Array.isArray(newVal.tags)
                   ? newVal.tags[0]
                   : newVal.tags
-                : "undefined",
+                : "Uncategorize",
               url: newVal.url,
             },
           });
