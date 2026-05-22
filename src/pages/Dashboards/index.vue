@@ -205,7 +205,7 @@ onMounted(() => {
         keyInfo.value = keyInfo.value + 1;
         getMSUserDetail();
       }
-    }, 10000);
+    }, 60000);
   } else {
     clearInterval(timeoutRefresh.value);
   }
@@ -221,7 +221,7 @@ watch(
         if (store.getIsNotifDone) {
           keyInfo.value = keyInfo.value + 1;
         }
-      }, 10000);
+      }, 60000);
     } else {
       clearInterval(timeoutRefresh.value);
     }

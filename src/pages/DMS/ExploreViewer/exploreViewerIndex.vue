@@ -371,6 +371,14 @@ const listActionMenu = ref([
     },
     disable: false,
   },
+  {
+    icon: "delete",
+    label: "Delete",
+    onClick: () => {
+      deleteFilesFolders();
+    },
+    disable: false,
+  },
 ]);
 const splitterModel = ref(50);
 const searchShared = ref("");
@@ -527,7 +535,7 @@ const getFoldersFiles = async (root = "", id = "0", shared = false) => {
         (val) => val.shared && val.shared.length === 0
       );
       filesList.value = data.data.doc.filter(
-        (val) => val.shared && val.shared.length === 0
+        (val) => val.p_u_username === usernameRef.value
       );
       sharedList.value = [
         ...data.data.child_folders.filter(
@@ -853,7 +861,7 @@ const addFolder = () => {
   }).onOk(async (data) => {
     isLoading.value = true;
 
-    const getLatestFolder = selectedPath.value[selectedPath.value.length - 1];
+    // const getLatestFolder = selectedPath.value[selectedPath.value.length - 1];
     const datas = await postData(
       "post",
       {
@@ -872,11 +880,7 @@ const addFolder = () => {
     );
 
     if (datas) {
-      const getDatas = await getData();
-
-      if (getDatas) {
-        refreshCurrentPath();
-      }
+      refreshCurrentPath();
     }
   });
 };
@@ -1061,6 +1065,45 @@ const openExploreSendToFE = () => {
     .onCancel(() => {
       console.log("Import Cancel");
     });
+};
+
+const deleteFilesFolders = () => {
+  let dataSelected = selectedData.value.map((item) => {
+    return (
+      folderList.value.find((f) => f.id === item) ||
+      filesList.value.find((f) => f.id === item)
+    );
+  });
+
+  if (dataSelected.length === 0) {
+    $q.notify({
+      type: "warning",
+      message: "Please select a file or folder to delete",
+    });
+    return;
+  }
+
+  $q.dialog({
+    title: "Confirmation",
+    message: `Are you sure want to delete ${dataSelected.length} item(s) ?`,
+    cancel: true,
+  }).onOk(async () => {
+    // const ids = dataSelected.map(item => item.id).join(',');
+    for await (const item of dataSelected) {
+      const deleted = await postData(
+        "delete",
+        null,
+        `dms/${item.type === "folder" ? "folders" : "documents"}/${btoa(
+          item.id
+        )}`,
+        false,
+        false,
+        true
+      );
+    }
+
+    refreshCurrentPath();
+  });
 };
 // End Options Click
 </script>

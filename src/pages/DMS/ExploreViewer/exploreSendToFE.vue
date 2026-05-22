@@ -95,7 +95,12 @@
                 <q-icon :name="item.icon" color="blue" />
               </q-item-section>
               <q-item-section>
-                <div class="text-h6">{{ item.label }}</div>
+                <q-item-label
+                  ><div class="text-h6">{{ item.label }}</div></q-item-label
+                >
+                <q-item-label caption>{{
+                  item.parent ? item.parent.label : "Root"
+                }}</q-item-label>
               </q-item-section>
             </q-item>
           </template>

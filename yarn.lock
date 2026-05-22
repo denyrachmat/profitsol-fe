@@ -4547,17 +4547,51 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue-flow/core@npm:^1.20.2":
-  version: 1.30.1
-  resolution: "@vue-flow/core@npm:1.30.1"
+"@vue-flow/background@npm:^1.3.2":
+  version: 1.3.2
+  resolution: "@vue-flow/background@npm:1.3.2"
+  peerDependencies:
+    "@vue-flow/core": ^1.23.0
+    vue: ^3.3.0
+  checksum: 108e77f9af10cb4ad36cf158cf786e592619bdd07aac73a4114b18bbde8812af4ad8ad946dc2e6c23a3b90f5710fae831390e4ef0748c3017f159c5aa493d412
+  languageName: node
+  linkType: hard
+
+"@vue-flow/controls@npm:^1.1.3":
+  version: 1.1.3
+  resolution: "@vue-flow/controls@npm:1.1.3"
+  peerDependencies:
+    "@vue-flow/core": ^1.23.0
+    vue: ^3.3.0
+  checksum: a19c22fb6dfc7738ee0c6563b4f5fe35fb9088f4b11d24afe42520134b319dc71da66eee7abbbd062e7827afbffd9306512909a100379b0eb2d05fb131d61307
+  languageName: node
+  linkType: hard
+
+"@vue-flow/core@npm:^1.48.2":
+  version: 1.48.2
+  resolution: "@vue-flow/core@npm:1.48.2"
   dependencies:
     "@vueuse/core": ^10.5.0
     d3-drag: ^3.0.0
+    d3-interpolate: ^3.0.1
     d3-selection: ^3.0.0
     d3-zoom: ^3.0.0
   peerDependencies:
     vue: ^3.3.0
-  checksum: 87f6e1def3bb8609de105eb43a1c6e33ad65ddcf0768261a4734c67917546484551c3ec5c3775999e6d083c2229d13131eb89a0050bfee4f39c37b9eda0b9fe1
+  checksum: 032bea1029b5aad991b4dc5d99bf1fa99212e46a2ed60fbf63bcb7a69cf85017f5e19dd235520644b459dc062c4ac2c571d7f3cdf8ce8541928062e147083c30
+  languageName: node
+  linkType: hard
+
+"@vue-flow/minimap@npm:^1.5.4":
+  version: 1.5.4
+  resolution: "@vue-flow/minimap@npm:1.5.4"
+  dependencies:
+    d3-selection: ^3.0.0
+    d3-zoom: ^3.0.0
+  peerDependencies:
+    "@vue-flow/core": ^1.23.0
+    vue: ^3.3.0
+  checksum: 446e75937588e941158381da4df8f96e8887966a93b29da0ccee3f270e7da43721eb099b7e77a09f983963a3c2cfbba53eccb4cb8b86196ab8a1f085181a6362
   languageName: node
   linkType: hard
 
@@ -5429,9 +5463,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.30001580, caniuse-lite@npm:^1.0.30001669, caniuse-lite@npm:^1.0.30001702, caniuse-lite@npm:^1.0.30001716":
-  version: 1.0.30001735
-  resolution: "caniuse-lite@npm:1.0.30001735"
-  checksum: 41ee174f41b876a76d9f9a164d84a43a2d7d4cfba9076b459f165370fd5e0778327262ec3cd676c05f8e8cdeb4f6362d31714fecdcdc584034ae91e987b5bf84
+  version: 1.0.30001788
+  resolution: "caniuse-lite@npm:1.0.30001788"
+  checksum: 66c57cf49b0d823423146f1136fba2cf297a716c3e0b417a1963b2683fc70f4e4c95de21225ecd1482d4327acb9f375d7885120be25fc449c82bdc7f0c0c5d85
   languageName: node
   linkType: hard
 
@@ -5885,7 +5919,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-interpolate@npm:1 - 3":
+"d3-interpolate@npm:1 - 3, d3-interpolate@npm:^3.0.1":
   version: 3.0.1
   resolution: "d3-interpolate@npm:3.0.1"
   dependencies:
@@ -11991,7 +12025,10 @@ map-promisified@latest:
     "@tiptap/pm": ^3.0.7
     "@tiptap/starter-kit": ^3.0.7
     "@tiptap/vue-3": ^3.0.7
-    "@vue-flow/core": ^1.20.2
+    "@vue-flow/background": ^1.3.2
+    "@vue-flow/controls": ^1.1.3
+    "@vue-flow/core": ^1.48.2
+    "@vue-flow/minimap": ^1.5.4
     autoprefixer: ^10.4.21
     axios: ^0.21.1
     core-js: ^3.6.5

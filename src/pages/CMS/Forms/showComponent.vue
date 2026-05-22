@@ -1649,14 +1649,16 @@ const onClickTag = (tag) => {
  */
 const parseCommentJson = (node) => {
   try {
-    return JSON.parse(node?.comment || "{}");
+    return node?.comment || "{}";
   } catch {
     return {};
   }
 };
 
 const getCommentAttachments = (node) => {
+  // console.log("Parsing attachments for node", node.comment);
   const parsed = parseCommentJson(node);
+  // console.log("Parsed attachments for node", parsed);
   return Array.isArray(parsed.attachments) ? parsed.attachments : [];
 };
 

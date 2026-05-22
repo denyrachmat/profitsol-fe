@@ -144,16 +144,17 @@ const onOpenRPASetupDialog = (dataEdit) => {
     persistent: true,
     transitionShow: "slide-up",
     transitionHide: "slide-down",
-    onOk: (data) => {
+  })
+    .onOk(() => {
       // Handle OK action
-      console.log("Dialog OK clicked with data:", data);
-    },
-    onCancel: () => {
+      console.log("Dialog OK clicked");
+      fetchRPAData();
+    })
+    .onCancel(() => {
       // Handle Cancel action
       console.log("Dialog Cancel clicked");
       fetchRPAData();
-    },
-  });
+    });
 };
 
 const fetchRPAData = async () => {

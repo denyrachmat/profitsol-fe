@@ -215,7 +215,7 @@
                 viewMode == 'edit'
               "
               :setup="choosedPages.forms.setupTraining"
-              :id="choosedPages.forms.id"
+              :id="() => String(choosedPages.forms.id)"
               :showFormOnly="true"
               :preventClear="true"
               :removeButton="true"
@@ -786,10 +786,11 @@ watch(
   () => formStore.getCMSPageChoosed,
   (newVal) => {
     if (newVal) {
-      console.log(newVal);
+      console.log("checkChange", newVal);
       if (newVal.type === "page" && newVal.url && newVal.is_main == 1) {
         choosedPages.value = newVal || [];
         getForms(choosedPages.value.page);
+
         if (props.mode === "view") {
           router.push("/");
         }
@@ -807,6 +808,8 @@ watch(
               url: newVal.url ? newVal.url : newVal.page,
             },
           });
+
+          getForms(choosedPages.value.page);
         } else if (newVal.type === "posts") {
           choosedPages.value = newVal || [];
           router.push({

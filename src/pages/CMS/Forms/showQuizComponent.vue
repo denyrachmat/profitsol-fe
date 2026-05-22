@@ -1,7 +1,7 @@
 <template>
-  <div class="q-pa-md bg-grey">
-    <div class="row" v-if="doneSubmiting">
-      <div class="col window-height-60">
+  <div class="quiz-page q-pa-md bg-grey-5">
+    <div v-if="doneSubmiting" class="quiz-fill">
+      <div class="quiz-body">
         <showQuizResultVue
           :resShow="props.setup.showResult"
           :answerShow="props.setup.showRightKeysAnswer"
@@ -14,37 +14,31 @@
       </div>
     </div>
 
-    <div v-else>
-      <!-- Header: status -->
-      <div class="row bg-grey q-gutter-sm">
-        <!-- Status answers -->
-        <div
-          class="col q-pa-sm bg-white"
-          style="border-radius: 10px"
-          v-if="getFormsOnly"
-        >
-          <div class="row">
-            <div class="col-3 text-bold self-center">
+    <div v-else class="quiz-fill">
+      <!-- HEADER (fixed, no scroll) -->
+      <div class="quiz-header row q-gutter-sm">
+        <div class="col q-pa-sm bg-white quiz-card" v-if="getFormsOnly">
+          <div class="row items-center">
+            <div class="col-auto text-bold">
               Question
               {{
                 (getFormsOnly.findIndex(
                   (form) => form.id === getNowQuestion?.id
                 ) ?? -1) + 1
               }}
-              of
-              {{ getFormsOnly.length }}
+              of {{ getFormsOnly.length }}
             </div>
 
             <div class="col">
-              <div class="row" v-if="getFormAnswers">
+              <div class="row justify-end" v-if="getFormAnswers">
                 <div
-                  :class="`col-1 q-px-sm`"
-                  style="height: 20px; width: 20px"
                   v-for="(q, idx) in getFormsOnly"
                   :key="q.id || idx"
+                  class="q-mx-xs"
                 >
                   <div
                     :class="[
+                      'status-dot',
                       getFormAnswers[
                         getAllForms.findIndex((form) => form.id === q.id)
                       ]
@@ -52,18 +46,15 @@
                         : 'bg-red',
                       getNowQuestion?.id === q.id ? 'glow-effect' : '',
                     ]"
-                    style="height: 15px; width: 15px"
-                  ></div>
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Timer if enabled -->
         <div
-          class="col q-pa-md bg-white text-right"
-          style="border-radius: 10px"
+          class="col-auto q-pa-md bg-white text-right quiz-card"
           v-if="
             store.timeData.hours ||
             store.timeData.minutes ||
@@ -78,94 +69,81 @@
         </div>
       </div>
 
-      <!-- HTML Material -->
-      <div v-if="getNowHTML.length > 0">
-        <div class="row q-py-sm">
-          <div class="col bg-white text-bold q-pa-sm">
-            Please read material below, or use option on the right to download
-            or view material on the other tab.
+      <!-- BODY (the only scroll area) -->
+      <div class="quiz-body">
+        <!-- HTML Material -->
+        <div v-if="getNowHTML.length > 0" class="q-mt-sm">
+          <div class="row items-center bg-white quiz-card q-pa-sm">
+            <div class="col text-bold">
+              Please read material below, or use option on the right to download
+              or view material on the other tab.
+            </div>
+            <div class="col-auto">
+              <q-btn
+                icon="open_in_new"
+                flat
+                @click="onClickOpenNewTabHTML(props.id, nowSeq)"
+              >
+                <q-tooltip>Open in new tab</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="download"
+                flat
+                @click="onClickDownloadMaterial(props.id)"
+              >
+                <q-tooltip>Download and view as PDF</q-tooltip>
+              </q-btn>
+            </div>
           </div>
-          <div class="col text-right bg-white">
-            <q-btn
-              icon="open_in_new"
-              flat
-              @click="onClickOpenNewTabHTML(props.id, nowSeq)"
-            >
-              <q-tooltip>Open in new tab</q-tooltip>
-            </q-btn>
-            <q-btn
-              icon="download"
-              flat
-              @click="onClickDownloadMaterial(props.id)"
-            >
-              <q-tooltip>Download and view as PDF</q-tooltip>
-            </q-btn>
-          </div>
-        </div>
 
-        <div
-          style="border-radius: 10px; padding: 15px"
-          class="bg-white q-pt-sm"
-        >
-          <div style="overflow: auto; max-height: 45vh">
+          <div class="bg-white quiz-card q-pa-md q-mt-sm">
+            <!-- penting: jangan kasih max-height + overflow lagi di dalam sini -->
             <div
-              class="row"
               v-for="(htmlCont, idxhtm) in getNowHTML"
               :key="idxhtm"
+              class="q-mb-md"
             >
               <div
-                class="col bg-white"
-                style="border-radius: 10px; padding: 15px"
-              >
-                <div
-                  :ref="(el) => setVideoContainerRef(el, idxhtm)"
-                  v-html="htmlCont.content"
-                ></div>
-              </div>
+                :ref="(el) => setVideoContainerRef(el, idxhtm)"
+                v-html="htmlCont.content"
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Question -->
-      <div
-        class="row q-pt-md"
-        v-if="getNowQuestion"
-        style="overflow: auto; max-height: 80vh"
-      >
-        <div
-          class="col bg-white q-pa-md"
-          style="border-radius: 10px"
-          v-if="getNowQuestion.type === 'form'"
-        >
-          <componentViewVue
-            :type="getNowQuestion.content.component.category"
-            :type-input="getNowQuestion.content.component.value.type"
-            :comp="getNowQuestion.content.component.value.comp"
-            :label="getNowQuestion.content.label"
-            :detail="getNowQuestion.content.detail_data"
-            :is-required="true"
-            :ans="
-              !Array.isArray(getFormAnswers[nowFormIndex])
-                ? getFormAnswers[nowFormIndex]
-                : ''
-            "
-            :ansArr="
-              Array.isArray(getFormAnswers[nowFormIndex]) &&
-              getFormAnswers[nowFormIndex]?.length > 0
-                ? getFormAnswers[nowFormIndex]
-                : []
-            "
-            @customChange="(val) => getAnswers(val)"
-            mode="live"
-            :key="'liveView'"
-          />
+        <!-- Question -->
+        <div v-if="getNowQuestion" class="q-mt-md">
+          <div class="bg-white quiz-card q-pa-md">
+            <componentViewVue
+              v-if="getNowQuestion.type === 'form'"
+              :type="getNowQuestion.content.component.category"
+              :type-input="getNowQuestion.content.component.value.type"
+              :comp="getNowQuestion.content.component.value.comp"
+              :label="getNowQuestion.content.label"
+              :detail="getNowQuestion.content.detail_data"
+              :is-required="true"
+              :ans="
+                !Array.isArray(getFormAnswers[nowFormIndex])
+                  ? getFormAnswers[nowFormIndex]
+                  : ''
+              "
+              :ansArr="
+                Array.isArray(getFormAnswers[nowFormIndex]) &&
+                getFormAnswers[nowFormIndex]?.length > 0
+                  ? getFormAnswers[nowFormIndex]
+                  : []
+              "
+              @customChange="(val) => getAnswers(val)"
+              mode="live"
+              :key="'liveView'"
+            />
+          </div>
         </div>
       </div>
 
-      <!-- Action buttons -->
-      <div class="sticky-bottom q-pt-md">
-        <div class="col bg-white q-pa-md" style="border-radius: 10px">
+      <!-- FOOTER (sticky) -->
+      <div class="quiz-footer">
+        <div class="bg-white quiz-card q-pa-md">
           <q-btn-group spread>
             <q-btn
               color="orange"
@@ -174,7 +152,6 @@
               @click="onClickPrev()"
               :loading="loading"
             />
-
             <q-btn
               color="green"
               :label="
@@ -195,8 +172,6 @@
                 props.setup &&
                 props.setup.skipNextButtonMedia &&
                 !videoEnded
-                  ? true
-                  : false
               "
               :loading="loading"
             />
@@ -526,16 +501,16 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
             color: "green",
           });
 
-          $q.dialog({
-            component: showQuizResultVue,
-            componentProps: {
-              resShow: props.setup.showResult,
-              answerShow: props.setup.showRightKeysAnswer,
-              dataQuiz: props.data,
-              idQuiz: props.id,
-            },
-            persistent: true,
-          });
+          // $q.dialog({
+          //   component: showQuizResultVue,
+          //   componentProps: {
+          //     resShow: props.setup.showResult,
+          //     answerShow: props.setup.showRightKeysAnswer,
+          //     dataQuiz: props.data,
+          //     idQuiz: props.id,
+          //   },
+          //   persistent: true,
+          // });
 
           doneSubmiting.value = true;
         }
@@ -638,6 +613,52 @@ watch(getNowTimer, (time) => {
 });
 </script>
 <style scoped>
+.quiz-page {
+  /* pakai dynamic viewport biar aman di mobile */
+  height: 90dvh; /* kalau mau full layar: 100dvh */
+}
+
+.quiz-fill {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* header tidak scroll */
+.quiz-header {
+  flex: 0 0 auto;
+}
+
+/* BODY: satu-satunya scroll */
+.quiz-body {
+  flex: 1 1 auto;
+  min-height: 0; /* WAJIB untuk flex scroll yang bener */
+  overflow: auto;
+  padding-right: 2px; /* biar scrollbar gak “nabrak” konten */
+}
+
+/* footer sticky */
+.quiz-footer {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+/* card look */
+.quiz-card {
+  border-radius: 10px;
+}
+
+/* dot status seperti gambar */
+.status-dot {
+  height: 15px;
+  width: 15px;
+  border-radius: 2px;
+}
+
+/* animasi existing */
 .glow-effect {
   border-radius: 50%;
   animation: blink 1s infinite;
