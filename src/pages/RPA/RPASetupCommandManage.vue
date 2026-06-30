@@ -19,7 +19,7 @@
           <div class="col">
             <flow-index
               :list-nodes="parseNodesFromCommands"
-              :is-editable="false"
+              :is-editable="true"
               @node-click="handleNodeClick"
             />
           </div>
@@ -48,6 +48,11 @@
                 :key="idx"
                 class="q-pa-md"
               >
+                <div class="row">
+                  <div class="col text-left text-h6">
+                    ID: {{ command.id || "New Command" }}
+                  </div>
+                </div>
                 <div class="row bg-cyan q-pa-md">
                   <div class="col-10">
                     <q-input
@@ -89,7 +94,7 @@
             <q-btn
               color="red"
               label="Delete Commands"
-              @click="onDeleteCommands(commands[0].prcd_order)"
+              @click="onDeleteCommands(commands)"
               outline
               v-if="isEditing"
             />
@@ -167,21 +172,29 @@ onMounted(() => {
   addCommands();
 });
 
-const parseNodesFromCommands = computed(() =>
-  commandBulk.value.map((cmd) => ({
-    id: cmd.prcd_order.toString(),
-    type: "special",
-    position: {
-      x: 100 + cmd.prcd_order * 180,
-      y: 120 + (cmd.prcd_order % 2) * 80,
-    },
-    data: {
-      label: cmd.prcd_name,
-      children: cmd.prcd_children || [],
-      ...cmd,
-    },
-  }))
-);
+const parseNodesFromCommands = computed(() => {
+  const dataNodes = (lists) =>
+    lists.map((cmd) => ({
+      id: cmd.id || Date.now() + Math.random(), // Unique ID for each node
+      type: "square",
+      position: {
+        x: 100 + cmd.prcd_order * 180,
+        y: 120 + (cmd.prcd_order % 2) * 80,
+      },
+      data: {
+        label: cmd.prcd_name || cmd.prcd_action?.label || "Unnamed Command",
+        children:
+          cmd.prcd_children && cmd.prcd_children.length > 0
+            ? dataNodes(cmd.prcd_children)
+            : [],
+        ...cmd,
+      },
+    }));
+
+  console.log("Parsing commands into nodes:", dataNodes(commandBulk.value));
+
+  return dataNodes(commandBulk.value);
+});
 
 const addCommands = () => {
   commands.value.push({
@@ -211,16 +224,28 @@ const onClickInsert = () => {
       ? Math.max(...commandBulk.value.map((cmd) => cmd.prcd_order))
       : 0;
 
-  commandBulk.value.push(
-    ...commands.value.map((cmd, idx) => ({
+  commands.value.forEach((cmd, idx) => {
+    const newCommand = {
+      id: cmd.id ?? Date.now() + idx, // Unique ID for each command
       prcd_name: cmd.prcd_name,
       prcd_params: JSON.stringify(cmd.prcd_action?.children || []),
       prcd_isactive: cmd.prcd_isactive,
       prcd_order: latestOrder + idx + 1,
       prcd_action: cmd.prcd_action?.value || "",
       prcd_children: cmd.prcd_children || [],
-    }))
-  );
+    };
+
+    if (cmd.id) {
+      // Update existing command
+      const existingIdx = commandBulk.value.findIndex((c) => c.id === cmd.id);
+      if (existingIdx !== -1) {
+        commandBulk.value[existingIdx] = newCommand;
+      }
+    } else {
+      // Add new command
+      commandBulk.value.push(newCommand);
+    }
+  });
 
   console.log("Command bulk after insertion:", commandBulk.value);
 
@@ -234,6 +259,7 @@ const handleNodeClick = (nodeData) => {
   const dataSelected = nodeData.node.data;
   commands.value = [
     {
+      id: dataSelected.id,
       prcd_name: dataSelected.prcd_name,
       prcd_params: JSON.parse(dataSelected.prcd_params || "[]"),
       prcd_isactive: dataSelected.prcd_isactive,
@@ -259,9 +285,7 @@ const onDeleteCommands = (order) => {
       persistent: true,
     }).onOk(() => {
       console.log("Deleting command with order:", order);
-      commandBulk.value = commandBulk.value.filter(
-        (cmd) => cmd.prcd_order !== order
-      );
+      commandBulk.value = commandBulk.value.filter((cmd) => cmd.id !== order);
 
       console.log(commandBulk.value);
 

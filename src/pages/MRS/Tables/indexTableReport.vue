@@ -4,11 +4,13 @@
       :title="TableTitle"
       :rows="rows"
       :columns="columns"
-      row-key="mrm_name"
+      row-key="batch_id"
       v-model:pagination="pagination"
       @request="onRequest"
       :loading="loading"
       ref="tableRef"
+      selection="multiple"
+      v-model:selected="selectedRows"
       class="my-sticky-header-table"
     >
       <template v-slot:top-left>
@@ -32,6 +34,71 @@
           >
             <q-badge color="red" floating>{{ filter.length }}</q-badge>
           </q-btn>
+          <q-btn-dropdown color="cyan" label="Settings" no-caps>
+            <q-list>
+              <q-item
+                clickable
+                v-close-popup
+                @click="onPeriodClick()"
+                :disable="!props.isAddActivePeriod"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="orange"
+                    icon="date_range"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Setup Period</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list>
+              <q-item
+                clickable
+                v-close-popup
+                @click="onMultipleManageClick()"
+                :disable="!props.activateMultipleCreate"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="indigo"
+                    icon="playlist_add"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Multiple form management</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list v-if="props.isAPIExport && props.maxAPIOpt > 0">
+              <q-item clickable v-close-popup @click="onRefresh()">
+                <q-item-section avatar>
+                  <q-avatar color="indigo" icon="refresh" text-color="white" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Refresh Data</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item
+                v-for="opt in props.maxAPIOpt"
+                :key="opt"
+                clickable
+                v-close-popup
+                @click="onExportExcel(true)"
+              >
+                <q-item-section avatar>
+                  <q-avatar color="green" icon="archive" text-color="white" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Export API {{ opt }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
           <q-btn color="red" icon-right="delete" no-caps @click="clearFilter">
             <q-tooltip>Reset Filter</q-tooltip>
           </q-btn>
@@ -50,6 +117,14 @@
           >
             <q-tooltip>Add Data</q-tooltip>
           </q-btn>
+          <q-btn
+            v-if="selectedRows.length > 0"
+            color="orange"
+            icon="edit_note"
+            label="Bulk Edit Terpilih"
+            no-caps
+            @click="onBulkEditSelected"
+          />
         </q-btn-group>
       </template>
 
@@ -59,7 +134,15 @@
 
       <template v-slot:body="props">
         <q-tr :props="props">
-          <q-td v-for="col in props.cols" :key="col.name" :props="props">
+          <q-td auto-width class="text-center">
+            <q-checkbox v-model="props.selected" dense />
+          </q-td>
+          <q-td
+            v-for="col in props.cols"
+            :key="col.name"
+            :props="props"
+            style="word-break: break-word; white-space: normal"
+          >
             <div
               v-if="
                 col.name !== 'action' &&
@@ -102,25 +185,39 @@
                   v-if="propsReports.includes('approval')"
                 />
                 <q-btn
-                  color="orange"
+                  :color="
+                    (parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3) ||
+                    !props.canEdit
+                      ? 'grey'
+                      : 'orange'
+                  "
                   icon="edit"
                   no-caps
                   @click="onEditData(props.row)"
                   outline
                   :disabled="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3
+                    (parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3) ||
+                    !props.canEdit
                   "
                 />
                 <q-btn
-                  color="red"
+                  :color="
+                    (parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3) ||
+                    !props.canDelete
+                      ? 'grey'
+                      : 'red'
+                  "
                   icon="delete"
                   no-caps
                   @click="onDelete(props.row)"
                   outline
                   :disabled="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3
+                    (parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3) ||
+                    !props.canDelete
                   "
                 />
               </q-btn-group>
@@ -145,6 +242,8 @@ import { socket } from "src/boot/socket";
 import { useFormStore } from "stores/formStore";
 import { useAuthStore } from "stores/authStore";
 
+import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+
 const $q = useQuasar();
 const route = useRoute();
 const { postData } = apiRequest();
@@ -161,6 +260,22 @@ const props = defineProps({
   maxAPIOpt: {
     type: Number,
     default: 0,
+  },
+  isAddActivePeriod: {
+    type: Boolean,
+    default: false,
+  },
+  activateMultipleCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -183,6 +298,15 @@ const propsReports = ref("");
 const isFilterFirst = ref(false);
 const idForms = ref(props.idForms || null);
 const formStore = useFormStore();
+const formPeriod = ref({
+  from: null,
+  to: null,
+});
+const maxMultipleCreate = ref(0);
+const enableMultipleCreate = ref(false);
+const enableMultipleEditNewForm = ref(false);
+const enableMultipleDeleteNewForm = ref(false);
+const selectedRows = ref([]);
 
 onMounted(async () => {
   console.log("props result", props);
@@ -205,6 +329,11 @@ onMounted(async () => {
       }
     }
   }
+
+  console.log("propsReports", propsReports.value);
+
+  getPeriodData();
+  getMultipleManageData();
 });
 
 socket.on("server-stxi", (data) => {
@@ -370,9 +499,30 @@ const onExportExcel = async (bypass = false) => {
 };
 
 const onOpenForms = async (isEdit = false, keyValue = "") => {
+  if (formPeriod.value.from || formPeriod.value.to) {
+    const today = new Date();
+    const fromDate = new Date(formPeriod.value.from);
+    const toDate = new Date(formPeriod.value.to + " 23:59:59");
+
+    if (today < fromDate || today > toDate) {
+      $q.notify({
+        color: "negative",
+        message:
+          "The form is not active, it will available from " +
+          fromDate.toLocaleDateString() +
+          " to " +
+          toDate.toLocaleDateString(),
+        icon: "warning",
+      });
+      return;
+    }
+  }
+
+  if (enableMultipleCreate.value) {
+  }
+
   const checkDatanya = await checkFormsByID(idForms.value);
   if (checkDatanya) {
-    console.log("checkDatanya", checkDatanya);
     $q.dialog({
       component: previewComponent,
       componentProps: {
@@ -384,6 +534,7 @@ const onOpenForms = async (isEdit = false, keyValue = "") => {
         showFormOnly: true,
         preventClear: isEdit,
         answersKey: isEdit ? keyValue : "",
+        isPreview: false,
       },
     })
       .onOk(async (val) => {
@@ -499,22 +650,35 @@ const onSendApproval = (row) => {
 };
 
 const onEditData = (row) => {
-  console.log("onEdit", row);
-  const listForms = [];
+  console.log("Bulk Editing Batch Data:", row);
 
+  // 1. Kosongkan store jawaban terlebih dahulu untuk mencegah sisa data sebelumnya menempel
+  formStore.restoreDefault();
+
+  // 2. Loop semua properti kolom data yang dikembalikan oleh server mrs
   for (let index = 0; index < Object.keys(row).length; index++) {
     const idx = Object.keys(row)[index];
+
+    // Deteksi jika field mengandung informasi posisi/indeks baris pengisian
     if (idx.includes("CMS_REPORT_POS")) {
-      // listForms.push()
       const idxParts = idx.split("_");
+      const fieldId = idxParts[idxParts.length - 1]; // Mengambil ID field asli
 
-      const ans = row[`CMS_REPORT_VAL_${idxParts[idxParts.length - 1]}`];
-      const ansPos = row[`CMS_REPORT_POS_${idxParts[idxParts.length - 1]}`];
+      const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+      const ansPos = row[`CMS_REPORT_POS_${fieldId}`]; // Berisi array koordinat [rowIdx, colIdx]
 
-      formStore.addAnswersForm(ansPos[0], idxParts[idxParts.length - 1], ans);
+      // Ambil index baris (instance) dari database, gunakan fallback 0 jika kosong
+      const targetRowIdx =
+        ansPos && ansPos[0] !== undefined ? parseInt(ansPos[0]) : 0;
+
+      // 3. Masukkan kembali jawaban lama ke store Pinia sesuai koordinat barisnya!
+      if (ans !== undefined && ans !== null) {
+        formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+      }
     }
   }
 
+  // 4. Buka modal previewComponent dengan flag isEdit (preventClear = true)
   onOpenForms(true, row.batch_id);
 };
 
@@ -553,6 +717,282 @@ const onDelete = (row) => {
       });
     }
   });
+};
+
+const onPeriodClick = () => {
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "User Details",
+      initialFields: [
+        {
+          name: "rangePeriod",
+          label: "Select Period",
+          type: "datetime-range",
+          default: formPeriod.value.from
+            ? {
+                from: formPeriod.value.from,
+                to: formPeriod.value.to,
+              }
+            : null,
+          rules: [(val) => !!val || "Field is required"],
+        },
+      ],
+      addable: true,
+      removable: true,
+    },
+    persistent: true,
+    ok: true,
+    cancel: true,
+  }).onOk(async (datas) => {
+    if (datas.rangePeriod) {
+      const payload = {
+        data: {
+          pgm_code: "MRS_FORM_PERIOD",
+          pgm_value: props.idReport,
+          pgm_value2: store.authDet.username,
+          pgm_value3: JSON.stringify(datas.rangePeriod),
+          pgm_desc: `Period from ${datas.rangePeriod.from} to ${datas.rangePeriod.to}`,
+          pgm_parent: null,
+        },
+        keys: {
+          pgm_code: "MRS_FORM_PERIOD",
+          pgm_value: props.idReport,
+          pgm_value2: store.authDet.username,
+        },
+      };
+
+      await postGencodeData(payload);
+      await getPeriodData();
+      $q.notify({
+        message: "Period has been updated successfully.",
+        color: "green",
+        icon: "check_circle",
+      });
+
+      formPeriod.value.from = datas.rangePeriod.from;
+      formPeriod.value.to = datas.rangePeriod.to;
+    }
+  });
+};
+
+const getPeriodData = async () => {
+  const data = await getGencodeData(
+    "MRS_FORM_PERIOD",
+    {
+      reportOpt: "pgm_value",
+      userOpt: "pgm_value2",
+      periodOpt: "pgm_value3",
+    },
+    {
+      pgm_value: props.idReport,
+      pgm_value2: store.authDet.username,
+    },
+    true
+  );
+
+  const periodData = JSON.parse(data.periodOpt);
+  formPeriod.value.from = periodData.from;
+  formPeriod.value.to = periodData.to;
+
+  console.log("getPeriodData", data);
+};
+
+const onMultipleManageClick = () => {
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "User Details",
+      initialFields: [
+        {
+          name: "enableMultipleCreate",
+          label: "Enable Multiple Create for new form?",
+          type: "radio",
+          default: enableMultipleCreate.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "enableMultipleEditNewForm",
+          label: "Enable Multiple Edit?",
+          type: "radio",
+          default: enableMultipleEditNewForm.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "enableMultipleDeleteNewForm",
+          label: "Enable Multiple Delete?",
+          type: "radio",
+          default: enableMultipleDeleteNewForm.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "total",
+          label: "Max form to be created for new form (Leave 0 for unlimited)",
+          type: "number",
+          default: maxMultipleCreate.value,
+        },
+      ],
+    },
+    persistent: true,
+    ok: true,
+    cancel: true,
+  }).onOk(async (datas) => {
+    const payload = {
+      data: {
+        pgm_code: "MRS_MULTIPLE_CREATE_OPT",
+        pgm_value: {
+          value: [
+            "enableMultipleCreate",
+            "enableMultipleEditNewForm",
+            "enableMultipleDeleteNewForm",
+            "maxMultipleCreate",
+          ],
+          store_separately: true,
+        },
+        pgm_value2: {
+          value: [
+            datas.enableMultipleCreate,
+            datas.enableMultipleEditNewForm,
+            datas.enableMultipleDeleteNewForm,
+            datas.total,
+          ],
+          store_separately: true,
+        },
+        pgm_value3: props.idReport,
+        pgm_desc: `Multiple form management with max form to create ${datas.total}`,
+        pgm_parent: null,
+      },
+      keys: {
+        pgm_code: "MRS_MULTIPLE_CREATE_OPT",
+        pgm_value: {
+          value: [
+            "enableMultipleCreate",
+            "enableMultipleEditNewForm",
+            "enableMultipleDeleteNewForm",
+            "maxMultipleCreate",
+          ],
+          store_separately: true,
+        },
+        pgm_value2: {
+          value: [
+            datas.enableMultipleCreate,
+            datas.enableMultipleEditNewForm,
+            datas.enableMultipleDeleteNewForm,
+            datas.total,
+          ],
+          store_separately: true,
+        },
+        pgm_value3: props.idReport,
+      },
+    };
+
+    await postGencodeData(payload);
+    await getMultipleManageData();
+    $q.notify({
+      message:
+        "Multiple form management settings has been updated successfully.",
+      color: "green",
+      icon: "check_circle",
+    });
+  });
+};
+
+const getMultipleManageData = async () => {
+  const { data } = await postData(
+    "post",
+    {
+      id: "MRS_MULTIPLE_CREATE_OPT",
+      selectAs: {
+        typeOpt: "pgm_value",
+        valueOpt: "pgm_value2|int",
+      },
+      firstSelect: false,
+    },
+    `portal/gencode/showDetail/MRS_MULTIPLE_CREATE_OPT`,
+    false,
+    false,
+    false
+  );
+
+  data.map((item) => {
+    if (item.typeOpt === "enableMultipleCreate") {
+      enableMultipleCreate.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "enableMultipleEditNewForm") {
+      enableMultipleEditNewForm.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "enableMultipleDeleteNewForm") {
+      enableMultipleDeleteNewForm.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "maxMultipleCreate") {
+      maxMultipleCreate.value = parseInt(item.valueOpt) || 0;
+    }
+  });
+};
+
+const postGencodeData = async (payload) => {
+  return await postData("post", payload, "portal/gencode/saveGencode");
+};
+
+const getGencodeData = async (idCode, selectAs, filter, firstSelect) => {
+  const { data } = await postData(
+    "post",
+    {
+      id: idCode,
+      selectAs: selectAs,
+      filter: filter,
+      firstSelect: firstSelect,
+    },
+    `portal/gencode/showDetail/${idCode}`,
+    false,
+    false,
+    false
+  );
+
+  if (data) {
+    return data;
+  }
+};
+
+const onBulkEditSelected = () => {
+  console.log("Data yang dicentang user:", selectedRows.value);
+
+  // 1. Kosongkan store jawaban lama
+  formStore.restoreDefault();
+
+  // 2. Iterasi setiap baris data yang dicentang oleh user
+  selectedRows.value.forEach((row, targetRowIdx) => {
+    // Bedah field jawaban di dalam baris ini seperti pada fungsi edit single
+    for (let index = 0; index < Object.keys(row).length; index++) {
+      const idx = Object.keys(row)[index];
+
+      if (idx.includes("CMS_REPORT_POS")) {
+        const idxParts = idx.split("_");
+        const fieldId = idxParts[idxParts.length - 1];
+        const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+
+        // 3. Masukkan ke store berdasarkan urutan baris centangan (targetRowIdx)
+        if (ans !== undefined && ans !== null) {
+          formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+        }
+      }
+    }
+  });
+
+  // 4. Ambil batch_id dari baris pertama sebagai referensi token update ke backend
+  const referenceBatchId = selectedRows.value[0]?.batch_id || null;
+
+  // 5. Buka modal spreadsheet
+  onOpenForms(true, referenceBatchId);
+
+  // 6. Bersihkan kembali centangan setelah modal dibuka
+  selectedRows.value = [];
 };
 </script>
 <style lang="sass">

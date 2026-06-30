@@ -207,6 +207,7 @@ const onClickCreateCommandRPA = () => {
     },
     persistent: true,
   }).onOk((newCommandRPA) => {
+    // console.log("Received new Command RPA from dialog:", newCommandRPA);
     commandRPAList.value = newCommandRPA;
   });
 };

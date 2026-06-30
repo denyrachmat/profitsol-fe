@@ -32,7 +32,7 @@
         />
       </q-card-section>
 
-      <q-card-actions align="right">
+      <q-card-actions align="right" class="q-pt-md">
         <q-btn flat label="OK" color="primary" @click="onOKClick" />
       </q-card-actions>
     </q-card>
@@ -70,6 +70,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  formsList: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const isShowFormOnlyValue = ref(true);
@@ -91,8 +95,6 @@ onMounted(async () => {
   }
 
   isShowFormOnlyValue.value = props.showFormOnly;
-
-  console.log("isShowFormOnlyValue", isShowFormOnlyValue.value);
 });
 
 function onOKClick() {

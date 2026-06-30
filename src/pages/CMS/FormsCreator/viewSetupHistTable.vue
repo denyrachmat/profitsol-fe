@@ -56,7 +56,7 @@
                     <q-item-section
                       v-if="
                         element.forms &&
-                        element.forms.content.component.category === 'multiple'
+                        element.forms.content.component?.category === 'multiple'
                       "
                     >
                       <q-item-label>

@@ -11,17 +11,41 @@
           :idForms="props.id"
           :isAPIExport="props.setup?.allowAPISearchData || false"
           :maxAPIOpt="props.setup?.APISearchQuota || 0"
+          :is-add-active-period="periodStateChecker"
+          :activate-multiple-create="multipleFormSetup"
         />
       </div>
     </div>
 
+    <div
+      v-if="props.setup?.renderMode === 'multiple' && !shouldShowHistoryReport"
+      class="row q-gutter-md"
+    >
+      <div class="col">
+        <showComponentAsChecklistVue
+          :data="forms"
+          :is-multiple-mode="multipleFormSetup"
+          :enable-delete-instance="
+            convertToBoolean(props.setup?.enableMultipleDelete || true)
+          "
+          :max-instances="props.setup?.maxMultipleCreate || 10"
+          @answerChange="
+            (payload) =>
+              onAnswerChange(payload.rowIdx, payload.fieldId, payload.value)
+          "
+          @addNewInstance="onClickAddAnswer"
+          @removeInstance="onClickRemoveAnswerInstance"
+          @submitData="onSubmitData"
+        />
+      </div>
+    </div>
     <!-- =========================================================
       2) LIVE MODE (render form / html / posts / files / quiz)
       ========================================================= -->
-    <template v-else>
+    <template v-else-if="!shouldShowHistoryReport">
       <div v-if="getNowData.length > 0" :style="contentWrapperStyle">
         <!-- Batch upload button (optional) -->
-        <div class="row" v-if="isBulkUpload">
+        <div class="row" v-if="uploaderUsersList">
           <div class="col text-right">
             <q-btn
               color="primary"
@@ -35,6 +59,14 @@
               label="Download Template"
               class="q-ml-sm"
               @click="onClickDownloadTemplate"
+            />
+            <q-btn
+              color="accent"
+              icon="add"
+              label="Add new answer"
+              class="q-ml-sm"
+              @click="onClickAddAnswer"
+              :disable="preventClears || props.preventClear"
             />
           </div>
         </div>
@@ -161,17 +193,21 @@
             2A) Render each "row" in current sequence
             ========================================================= -->
           <div
-            class="row q-col-gutter-md q-pt-md"
+            class="row"
             v-for="(row, rowIdx) in getNowData"
-            :key="rowIdx"
+            :key="'row-' + rowIdx"
           >
-            <template v-for="(col, colIdx) in row.content" :key="colIdx">
+            <template
+              v-for="(col, colIdx) in row.content"
+              :key="'col-' + col.id"
+            >
               <div
                 v-if="!col.hidden"
                 :class="getColClass(row, col)"
                 style="word-wrap: break-word; overflow-wrap: break-word"
               >
                 <q-card
+                  class="bg-white shadow-1 rounded-borders"
                   :bordered="props.useCardSeparator"
                   :flat="!props.useCardSeparator"
                   style="width: 100%; height: 100%"
@@ -197,6 +233,7 @@
                       :ans="getAnswer(rowIdx, col.id)"
                       :ansArr="getAnswerArr(rowIdx, col.id)"
                       :apiOpt="col.content.component.apiOpt"
+                      :readonly="col.readonly"
                     />
 
                     <!-- ========= HTML BLOCK ========= -->
@@ -207,7 +244,10 @@
                     </div>
 
                     <!-- ========= POSTS BLOCK ========= -->
-                    <div v-else-if="col.type === 'posts'" :key="refreshedPosts">
+                    <div
+                      v-else-if="col.type === 'posts'"
+                      :key="'posts-' + refreshedPosts"
+                    >
                       <div class="text-center" v-if="col.loadingPosts">
                         <q-spinner-dots color="primary" size="lg" />
                       </div>
@@ -644,7 +684,18 @@
 
                 <!-- New comment form -->
                 <q-card-section>
-                  <commentComponentVue @submit="onSubmitComment" />
+                  <commentComponentVue
+                    @submit="onSubmitComment"
+                    v-if="authStore.isLoggedIn === true"
+                  />
+                  <div v-else class="text-center text-grey-6 q-pa-md">
+                    <q-icon
+                      name="chat_bubble_outline"
+                      size="48px"
+                      class="q-mb-sm"
+                    />
+                    <div class="text-body1">Please log in to comment</div>
+                  </div>
                 </q-card-section>
               </q-card>
             </div>
@@ -662,29 +713,42 @@
       <!-- =========================================================
         3) Wizard navigation actions (optional)
         ========================================================= -->
-      <div class="row q-pt-md" v-if="!removeButtons">
-        <div class="col absolute-bottom">
-          <q-btn-group spread>
-            <q-btn
-              color="accent"
-              icon="arrow_back"
-              :disable="getNowIdx === 0"
-              @click="prevPage"
+      <div class="absolute-bottom">
+        <div class="row q-pt-sm">
+          <div class="col flex flex-center">
+            <q-pagination
+              v-model="nowSeq"
+              color="purple"
+              :max="Object.values(getFormsBySeqName).length"
+              :max-pages="6"
+              boundary-numbers
             />
-            <q-btn
-              color="green"
-              icon="save"
-              :disable="getNextData && getNextData.length !== 0"
-              v-if="isFormsExists.length > 0"
-              @click="onSubmitData"
-            />
-            <q-btn
-              color="accent"
-              icon="arrow_forward"
-              @click="nextPage"
-              :disable="!getNextData || getNextData.length === 0"
-            />
-          </q-btn-group>
+          </div>
+        </div>
+        <div class="row" v-if="!removeButtons">
+          <div class="col">
+            <q-btn-group spread>
+              <q-btn
+                color="accent"
+                icon="arrow_back"
+                :disable="getNowIdx === 0"
+                @click="prevPage"
+              />
+              <q-btn
+                color="green"
+                icon="save"
+                :disable="getNextData && getNextData.length !== 0"
+                v-if="isFormsExists.length > 0"
+                @click="onSubmitData"
+              />
+              <q-btn
+                color="accent"
+                icon="arrow_forward"
+                @click="nextPage"
+                :disable="!getNextData || getNextData.length === 0"
+              />
+            </q-btn-group>
+          </div>
         </div>
       </div>
     </template>
@@ -697,7 +761,14 @@
  * Imports
  * =========================================================
  */
-import { ref, defineProps, onMounted, computed, onBeforeUnmount } from "vue";
+import {
+  ref,
+  defineProps,
+  onMounted,
+  computed,
+  onBeforeUnmount,
+  watch,
+} from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import componentViewVue from "../componentView.vue";
@@ -711,6 +782,8 @@ import tableReport from "../../MRS/Tables/indexTableReport.vue";
 import exploreViewerIndex from "src/pages/DMS/ExploreViewer/exploreViewerIndex.vue";
 import commentComponentVue from "src/pages/Frontpage/commentComponent.vue";
 import uploadFilesIndex from "src/components/uploadFiles/index.vue";
+
+import showComponentAsChecklistVue from "./showComponentAsChecklist.vue";
 
 /**
  * =========================================================
@@ -844,6 +917,15 @@ const getNextData = computed(() =>
   forms.value.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
 );
 
+const getFormsBySeqName = computed(() => {
+  const map = {};
+  forms.value.forEach((form) => {
+    if (!map[form.seq_name]) map[form.seq_name] = [];
+    map[form.seq_name].push(form);
+  });
+  return map;
+});
+
 /**
  * Flatten form items (recursive): used by logic engine & validation
  */
@@ -907,8 +989,6 @@ onMounted(async () => {
   // 1) init local forms from props
   forms.value = props.data || [];
 
-  console.log(props.setup);
-
   // 2) init slide matrix for carousels: each row has slide index per col
   slide.value = forms.value.map((row) =>
     Array.isArray(row.content) ? row.content.map(() => 0) : [0]
@@ -938,7 +1018,14 @@ onMounted(async () => {
   }
 
   // 6) restore default answers unless prevented
-  if (!preventClears.value) store.restoreDefault();
+  if (!preventClears.value) {
+    store.restoreDefault();
+  } else {
+    // 🟢 KHUSUS MODE EDIT: Paksa UI refreshedPosts berkedip agar watch di anak langsung membaca data store lama
+    setTimeout(() => {
+      refreshedPosts.value += 1;
+    }, 100);
+  }
 
   // 7) run logic engine on mount
   logicsChecker("onMounted");
@@ -951,6 +1038,8 @@ onMounted(async () => {
   if (props.useCommentSection) {
     getComment();
   }
+
+  // console.log(JSON.stringify(forms.value));
 });
 
 onBeforeUnmount(() => {
@@ -1162,10 +1251,12 @@ const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
  * - block if required fields empty
  * - if next page contains quiz -> show confirm dialog
  */
-const nextPage = () => {
+const nextPage = (nextSeq = 0) => {
+  console.log("masuk sini");
   const empties = getRequiredForm(getNowData.value).filter(
     (v) => v.answers === ""
   );
+
   if (empties.length > 0) {
     empties.forEach((valMap) => {
       $q.notify({
@@ -1174,7 +1265,7 @@ const nextPage = () => {
         html: true,
       });
     });
-    return;
+    return false;
   }
 
   if (getQuizData(getNextData.value).length > 0) {
@@ -1185,12 +1276,17 @@ const nextPage = () => {
       cancel: true,
       persistent: true,
     }).onOk(() => {
-      nowSeq.value = parseInt(nowSeq.value) + 1;
+      nowSeq.value =
+        parseInt(nextSeq) > 0 ? parseInt(nextSeq) : parseInt(nowSeq.value) + 1;
     });
-    return;
+
+    return false;
   }
 
-  nowSeq.value = parseInt(nowSeq.value) + 1;
+  nowSeq.value =
+    parseInt(nextSeq) > 0 ? parseInt(nextSeq) : parseInt(nowSeq.value) + 1;
+
+  console.log(nowSeq.value);
 };
 
 const prevPage = () => {
@@ -1285,6 +1381,19 @@ const updateRowSeqNames = (data, add = false) => {
   });
 };
 
+watch(
+  () => nowSeq.value,
+  (newData, oldData) => {
+    console.log(`Seq changed from ${oldData} to ${newData}`);
+    if (newData !== oldData && parseInt(newData) > 1) {
+      const check = nextPage(parseInt(newData));
+      if (!check) {
+        nowSeq.value = oldData; // revert if validation fails
+      }
+    }
+  }
+);
+
 /**
  * =========================================================
  * Logic Engine (mini rule engine)
@@ -1307,50 +1416,215 @@ const logicsChecker = (triggerName, id = "") => {
   list.forEach((ruleSet) => {
     let logicResult = false;
     let lastOperation = "||";
+    let pendingResultAction = null; // Penampung aksi result sementara
 
-    ruleSet.data?.some((valLogic) => {
-      // Trigger onMounted
+    ruleSet.data?.forEach((valLogic) => {
+      // 1. Amankan Pemicu Utama (Trigger)
       if (
         valLogic.cfld_actions === "trigger" &&
-        valLogic.cfld_opr_ctrl === "onMounted" &&
-        triggerName === "onMounted"
+        valLogic.cfld_opr_ctrl === triggerName
       ) {
         logicResult = true;
-        isMountedTriggered.value = true;
+        if (triggerName === "onMounted") {
+          isMountedTriggered.value = true;
+        }
       }
 
-      if (valLogic.cfld_opr_ctrl !== triggerName) {
-        if (valLogic.cfld_actions === "logic") {
-          // combine with previous result using lastOperation (|| / &&)
+      // 2. Evaluasi Kondisi Tambahan (Logic / User Check)
+      if (valLogic.cfld_actions === "logic") {
+        const isConditionMatch = logicsConditionalChecker(ruleSet.id, valLogic);
+
+        // Jika ini pengecekan user (whitelist), dia harus mendominasi hasil akhir
+        if (valLogic.cfld_opr_ctrl === "user") {
+          logicResult = isConditionMatch; // Override total berdasarkan hak akses user
+        } else {
           const combine = new Function("a", "b", `return a ${lastOperation} b`);
-          logicResult = combine(
-            logicResult,
-            logicsConditionalChecker(ruleSet.id, valLogic)
-          );
+          logicResult = combine(logicResult, isConditionMatch);
         }
+      }
 
-        if (valLogic.cfld_actions === "logic_only") {
-          lastOperation = valLogic.cfld_opr;
-        }
+      // 3. Simpan Operator Logika
+      if (valLogic.cfld_actions === "logic_only") {
+        lastOperation = valLogic.cfld_opr;
+      }
 
-        if (logicResult === true && valLogic.cfld_actions === "result") {
-          modifyComponent(ruleSet.id, valLogic.cfld_res, valLogic.cfld_val);
-        }
+      // 4. Tampung dulu aksinya, jangan langsung dieksekusi di tengah jalan
+      if (valLogic.cfld_actions === "result") {
+        pendingResultAction = valLogic;
       }
     });
+
+    // 5. EKSEKUSI AKHIR: Jalankan aksi hanya jika hasil akhir evaluasi bernilai TRUE
+    if (logicResult === true && pendingResultAction) {
+      modifyComponent(
+        ruleSet.id,
+        pendingResultAction.withAction || pendingResultAction.cfld_res, // fallback pengaman nama properti
+        pendingResultAction.cfld_val
+      );
+    }
   });
+};
+
+/**
+ * 1. FIX TOMBOL TAMBAH BARIS (Langsung Nambah pada Klik Pertama)
+ */
+const onClickAddAnswer = () => {
+  if (props.setup?.renderMode === "multiple") {
+    // 1. Hitung jumlah instance baris aktif di store saat ini
+    const currentAnswers = Object.assign({}, store.getUsersAnswerForm);
+    const currentInstances = Object.keys(currentAnswers).length;
+    const maxAllowed = props.setup?.maxMultipleCreate || 10;
+
+    if (currentInstances >= maxAllowed) {
+      $q.notify({
+        message: "Batas maksimal baris form telah tercapai!",
+        color: "red",
+        icon: "warning",
+      });
+      return;
+    }
+
+    const nextIndex = currentInstances; // Indeks baris baru (misal: 1)
+
+    // 2. Kumpulkan SEMUA field ID yang ada di skema halaman ini
+    const activeFieldIds = [];
+    if (props.data && props.data.length > 0) {
+      props.data.forEach((row) => {
+        if (Array.isArray(row.content)) {
+          row.content.forEach((col) => {
+            if (col.type === "form" && col.id) {
+              activeFieldIds.push(col.id);
+            }
+          });
+        }
+      });
+    }
+
+    // 3. JALUR UTAMA REAKTIVITAS: Daftarkan seluruh field ke store Pinia sekaligus
+    if (activeFieldIds.length > 0) {
+      activeFieldIds.forEach((fieldId) => {
+        // Suntikkan string kosong ke setiap field ID di baris indeks baru ini
+        store.addAnswersForm(nextIndex, fieldId, "");
+      });
+    } else {
+      // Fallback menggunakan jangkar komponen darurat jika skema kosong
+      let fallbackAnchorId = props.data?.[0]?.content?.[0]?.id;
+      if (fallbackAnchorId) {
+        store.addAnswersForm(nextIndex, fallbackAnchorId, "");
+      } else {
+        $q.notify({
+          message: "Gagal mendeteksi komponen kolom formulir.",
+          color: "red",
+          icon: "error",
+        });
+        return;
+      }
+    }
+
+    $q.notify({
+      message: "Baris form baru berhasil ditambahkan",
+      color: "green",
+      icon: "add",
+    });
+  } else {
+    // Jalur normal wizard bawaan kamu yang lama
+    let getLastSeqName = getNowData.value
+      .map((x) => x.seq_name)
+      .sort((a, b) => b - a)[0];
+
+    getNowData.value.forEach((row) => {
+      forms.value.push({
+        ...row,
+        seq_name: (parseInt(getLastSeqName) + 1).toString(),
+      });
+    });
+
+    $q.notify({
+      message: "New wizard page added",
+      color: "green",
+      icon: "check",
+    });
+  }
+
+  // 4. Paksa penyegaran state global
+  refreshedPosts.value += 1;
+};
+
+/**
+ * 2. FIX TOMBOL HAPUS BARIS (Bebas dari Error Proxy Handler False)
+ */
+const onClickRemoveAnswerInstance = (index) => {
+  // 1. Kloning data store ke dalam objek lokal biasa agar bebas dari proteksi Proxy Read-Only
+  const currentAnswers = Object.assign({}, store.getUsersAnswerForm);
+
+  if (currentAnswers[index] !== undefined) {
+    // 2. Hapus data pada objek lokal (Aman, tidak akan memicu error proxy handler)
+    delete currentAnswers[index];
+
+    // 3. Susun ulang urutan indeks agar tetap berurutan (0, 1, 2) tanpa melompat
+    const remainingAnswers = Object.values(currentAnswers);
+
+    // 4. Kosongkan dulu store jawaban lama melalui siklus restore/clear bawaan store kamu jika ada,
+    // atau kita timpa isinya satu per satu menggunakan loop mutator resmi
+    store.restoreDefault();
+
+    // 5. Masukkan kembali data yang tersisa ke dalam store lewat jalur resmi
+    remainingAnswers.forEach((rowAnswers, newRowIdx) => {
+      Object.keys(rowAnswers).forEach((fieldId) => {
+        store.addAnswersForm(newRowIdx, fieldId, rowAnswers[fieldId]);
+      });
+    });
+
+    $q.notify({
+      message: "Baris berhasil dihapus",
+      color: "orange",
+      icon: "delete",
+    });
+
+    // 6. Paksa render ulang UI agar baris di layar langsung berkurang seketika
+    refreshedPosts.value += 1;
+  }
 };
 
 /**
  * Evaluate a single conditional logic entry against current answers.
  */
 const logicsConditionalChecker = (idComp, data) => {
-  // current component answer
+  console.log(`Evaluating logic for comp ${idComp} with condition`, data);
+  /// 1. Jika tipenya pengecekan user login, langsung kembalikan boolean hasil include
+  if (data.cfld_opr_ctrl === "user") {
+    try {
+      // Ubah semua list email di DB menjadi lowercase
+      const allowedUsers = JSON.parse(data.cfld_val).map((x) =>
+        x.trim().toLowerCase()
+      );
+
+      // Ambil username login saat ini dan ubah ke lowercase
+      const currentUsername = (
+        authStore.getDetails?.username ||
+        authStore.authDet?.username ||
+        ""
+      ).toLowerCase();
+
+      console.log(
+        `[USER CHECK] Allowed:`,
+        allowedUsers,
+        `| Current:`,
+        currentUsername
+      );
+
+      return allowedUsers.includes(currentUsername);
+    } catch (e) {
+      console.error("Gagal parse json cfld_val untuk user:", e);
+      return false;
+    }
+  }
+
+  // --- Logika bawaan untuk tipe selain "user" ---
   const getAnswersofComp = Object.values(getUserAnswers.value || {}).find(
     (val) => val?.[idComp] !== undefined
   )?.[idComp];
 
-  // value to compare with: either literal value OR other field's answer
   let valueComparation;
   if (data.cfld_opr_ctrl === "value") {
     valueComparation = data.cfld_val;
@@ -1360,8 +1634,15 @@ const logicsConditionalChecker = (idComp, data) => {
     );
   }
 
-  // compare using operator string, e.g. "==", "!=", ">", "<"
+  // Bungkus perbandingan dengan pengaman string/tipe data jika diperlukan
   const compare = new Function("a", "b", `return a ${data.cfld_opr} b`);
+
+  console.log(
+    `Logic check for comp ${idComp}: compare ${getAnswersofComp} with ${valueComparation} using operator ${
+      data.cfld_opr
+    } result: ${compare(getAnswersofComp, valueComparation)}`
+  );
+
   return compare(getAnswersofComp, valueComparation);
 };
 
@@ -1373,31 +1654,65 @@ const logicsConditionalChecker = (idComp, data) => {
  * Also updates forms.value so Vue reactivity can refresh UI.
  */
 const modifyComponent = (idComp, modifData, targetModifID = 0) => {
-  const getCompByID = formItems.value.find((val) => val.id == idComp) || {};
-  const getCompByTargetID =
-    formItems.value.find((val) => val.id == targetModifID) || {};
+  // 1. Update state utama di formItems
+  formItems.value = formItems.value.map((item) => {
+    let updatedItem = { ...item };
 
-  if (modifData === "hide_this_comp") getCompByID.hidden = true;
-  else if (modifData === "show_this_comp") getCompByID.hidden = false;
-  else if (modifData === "hide_comp") getCompByTargetID.hidden = true;
-  else if (modifData === "show_comp") getCompByTargetID.hidden = false;
+    // JIKA AKSI BERLAKU UNTUK DIRI SENDIRI
+    if (item.id == idComp) {
+      if (modifData === "hide_this_comp") updatedItem.hidden = true;
+      if (modifData === "show_this_comp") updatedItem.hidden = false;
+      if (modifData === "readonly_comp") updatedItem.readonly = true; // Tambahan pengaman self-readonly
+      if (modifData === "readonly_comp_disabled") updatedItem.readonly = false;
+      if (modifData === "required_comp") updatedItem.required = true;
+      if (modifData === "required_comp_disabled") updatedItem.required = false;
+    }
 
-  // Update in forms array (so template sees changes)
-  const index = forms.value.findIndex((row) =>
-    Array.isArray(row.content)
-      ? row.content.some((item) => item.id === idComp)
-      : false
+    // JIKA AKSI BERLAKU UNTUK TARGET KOMPONEN LAIN
+    if (targetModifID && item.id == targetModifID) {
+      if (modifData === "hide_comp") updatedItem.hidden = true;
+      if (modifData === "show_comp") updatedItem.hidden = false;
+      if (modifData === "readonly_comp") updatedItem.readonly = true;
+      if (modifData === "readonly_comp_disabled") updatedItem.readonly = false;
+      if (modifData === "required_comp") updatedItem.required = true;
+      if (modifData === "required_comp_disabled") updatedItem.required = false;
+    }
+    return updatedItem;
+  });
+
+  // 2. Paksa update ke dalam forms.value agar getNowData (computed) terpicu secara reaktif di HTML
+  forms.value = forms.value.map((row) => {
+    if (Array.isArray(row.content)) {
+      return {
+        ...row,
+        content: row.content.map((col) => {
+          let updatedCol = { ...col };
+
+          // Aturan A: Pengaruh langsung ke diri sendiri (idComp)
+          if (col.id == idComp) {
+            if (modifData === "hide_this_comp") updatedCol.hidden = true;
+            if (modifData === "show_this_comp") updatedCol.hidden = false;
+            if (modifData === "readonly_comp") updatedCol.readonly = true; // Amankan jika default-nya self-readonly
+            if (modifData === "editable_comp") updatedCol.readonly = false;
+          }
+
+          // Aturan B: Pengaruh ke komponen target lain (targetModifID)
+          if (targetModifID && col.id == targetModifID) {
+            if (modifData === "hide_comp") updatedCol.hidden = true;
+            if (modifData === "show_comp") updatedCol.hidden = false;
+            if (modifData === "readonly_comp") updatedCol.readonly = true;
+            if (modifData === "editable_comp") updatedCol.readonly = false;
+          }
+          return updatedCol;
+        }),
+      };
+    }
+    return row;
+  });
+
+  console.log(
+    `[LOGIC ENGINE] Applied change: ${modifData} on Comp ID: ${idComp} (Target ID: ${targetModifID})`
   );
-
-  if (index !== -1) {
-    const row = forms.value[index];
-    const updatedContent = row.content.map((item) => {
-      if (item.id === idComp) return { ...item, ...getCompByID };
-      if (item.id === targetModifID) return { ...item, ...getCompByTargetID };
-      return item;
-    });
-    forms.value[index] = { ...row, content: updatedContent };
-  }
 };
 
 /**
@@ -1682,6 +1997,14 @@ const canEditComment = (node) => {
 };
 
 const selectReply = (node) => {
+  if (!authStore.isLoggedIn) {
+    $q.notify({
+      message: "You need to login first before reply",
+      color: "negative",
+      icon: "warning",
+    });
+    return;
+  }
   selectedReplyComment.value = node.idx;
   selectedReplyContent.value = "";
   selectedReplyAttachments.value = [];
@@ -1765,7 +2088,7 @@ const getComment = async () => {
       "portal/gencode/showDetail/FP_COMMENT",
       false,
       false,
-      true
+      false
     );
 
     if (!data) {
@@ -1805,7 +2128,7 @@ const getUsersDetail = async (username) => {
     null,
     `portal/users/${username}`,
     false,
-    true,
+    false,
     true
   );
   return data?.data ?? null;
@@ -1928,13 +2251,54 @@ const onClickDownloadTemplate = async () => {
 
   if (data && data.path) {
     const link = document.createElement("a");
-    link.href = data.path;
+    link.href = process.env.API_DOWNLOAD + data.path;
     link.download = data.path.split("/").pop();
+    link.target = "_blank";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 };
+
+const convertToBoolean = (value) => {
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+  return !!value;
+};
+
+const periodStateChecker = computed(() =>
+  convertToBoolean(props.setup?.addPeriod) &&
+  !convertToBoolean(props.setup?.specificUserSetPeriod)
+    ? true
+    : props.setup?.listSpecificUserSetPeriod?.some(
+        (item) => item == authStore.authDet.username
+      )
+);
+
+const uploaderUsersList = computed(() => {
+  if (convertToBoolean(props.setup?.isBulkUpload)) {
+    if (props.setup?.usersBulkUpload.length > 0) {
+      return props.setup?.usersBulkUpload?.some(
+        (item) => item == authStore.authDet.username
+      );
+    } else {
+      return true;
+    }
+  }
+
+  return false;
+});
+
+const multipleFormSetup = computed(() => {
+  return (
+    props.setup?.renderMode !== "disabled" &&
+    (props.setup?.listSpecificUserRenderMode.length === 0 ||
+      props.setup?.listSpecificUserRenderMode?.some(
+        (item) => item == authStore.authDet.username
+      ))
+  );
+});
 </script>
 
 <style scoped>

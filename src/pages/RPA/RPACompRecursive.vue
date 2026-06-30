@@ -30,7 +30,9 @@
             { label: 'Actions', value: 'action' },
             { label: 'Logics', value: 'logics' },
           ]"
-          @update:model-value="child.prcd_action = ''"
+          @update:model-value="
+            if (child.prcd_action) child.prcd_action.defaultValue = '';
+          "
         >
         </q-btn-toggle>
       </div>
@@ -192,6 +194,11 @@
           </div>
         </template>
       </template>
+      <template v-else>
+        <div class="col-12 q-pa-sm">
+          <i>No parameters needed for this action/logic</i>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -261,7 +268,11 @@ const handleActionChange = (idxChild, typeAction, newValue) => {
       : listLogics.value.find((logic) => logic.value === newValue);
 
   if (selectedAction) {
-    commands.value[idxChild].prcd_action = selectedAction;
+    console.log("Selected Action/Logic:", selectedAction);
+    // commands.value[idxChild].prcd_action = selectedAction;
+    commands.value[idxChild].prcd_action = JSON.parse(
+      JSON.stringify(selectedAction)
+    );
   }
 };
 

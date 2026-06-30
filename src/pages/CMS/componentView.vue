@@ -5,9 +5,10 @@
         v-model="modelData"
         :label="props.label"
         dense
-        filled
+        outlined
         :type="props.typeInput"
         v-if="props.comp === 'q-input'"
+        :readonly="isReadonlyLocal || false"
       >
         <template
           v-slot:prepend
@@ -77,7 +78,7 @@
         <template v-if="props.typeInput === 'pdf'"> </template>
       </q-input>
       <q-file
-        filled
+        outlined
         bottom-slots
         v-model="modelData"
         :label="props.label"
@@ -85,6 +86,7 @@
         max-files="12"
         v-if="props.comp === 'q-file'"
         dense
+        :readonly="isReadonlyLocal"
       >
         <template v-slot:before>
           <q-icon name="folder_open" />
@@ -107,7 +109,6 @@
                 v-model="opt.value"
                 outlined
                 dense
-                filled
               />
             </div>
             <div class="col-6 q-pl-md">
@@ -116,7 +117,6 @@
                 v-model="opt.label"
                 outlined
                 dense
-                filled
               />
             </div>
 
@@ -144,7 +144,7 @@
           <div class="row q-pa-md" :key="refreshDetail">
             <div class="col">
               <q-select
-                filled
+                outlined
                 v-model="modelData"
                 :options="detailData"
                 :label="props.label"
@@ -186,13 +186,13 @@
       <template v-else>
         <div>
           <q-select
-            filled
+            outlined
             v-model="modelData"
             :options="detailData"
             :label="props.label"
             emit-value
             map-options
-            :readonly="props.mode == 'live-read'"
+            :readonly="isReadonlyLocal || props.mode == 'live-read'"
             v-if="props.comp === 'q-select'"
             :loading="loadingAPI"
             @filter="checkAPIData"
@@ -208,7 +208,7 @@
                 :options="props.detail"
                 type="checkbox"
                 v-model="modelDataArr"
-                :disable="props.mode == 'live-read'"
+                :disable="isReadonlyLocal || props.mode == 'live-read'"
               />
             </div>
           </template>
@@ -219,7 +219,7 @@
               <q-option-group
                 :options="props.detail"
                 v-model="modelData"
-                :disable="props.mode == 'live-read'"
+                :disable="isReadonlyLocal || props.mode == 'live-read'"
               />
             </div>
           </template>
@@ -254,6 +254,7 @@ const props = defineProps({
   ansArr: Array,
   isRequired: Boolean,
   apiOpt: Object,
+  readonly: Boolean,
 });
 
 const formStore = useFormStore();
@@ -267,7 +268,6 @@ const onDeleteData = (idx) => {
 
 onMounted(() => {
   // console.log("masuk awalan");
-  // console.log(props);
 
   // if (props.mode && props.mode.includes("live")) {
   //   checkAPIData();
@@ -561,6 +561,18 @@ const getParams = (params) => {
   }
 };
 
+// Buat status readonly lokal yang reaktif
+const isReadonlyLocal = ref(props.readonly || false);
+
+// Pantau perubahan props.readonly dari komponen induk secara realtime
+watch(
+  () => props.readonly,
+  (newVal) => {
+    isReadonlyLocal.value = newVal;
+  },
+  { immediate: true } // <-- WAJIB TAMBAHKAN INI
+);
+
 watch(
   () => JSON.stringify(props.detail),
   (val) => {
@@ -602,10 +614,13 @@ watch(
   }
 );
 
-// Jawaban yang di pilih
+// JAWABAN YANG DIPILIH (ARRAY / CHECKBOX)
 watch(
   () => JSON.stringify(modelDataArr.value),
   (val) => {
+    // PENGAMAN: Jika dalam mode readonly, blokir pengiriman data ke parent
+    if (isReadonlyLocal.value) return;
+
     if (modelDataArr.value) {
       if (props.mode == "live-ans") {
         emit("customAnschange", JSON.parse(val));
@@ -616,12 +631,14 @@ watch(
   }
 );
 
+// JAWABAN YANG DIPILIH (SINGLE VALUE / INPUT / SELECT / RADIO)
 watch(
   () => modelData.value,
   (val) => {
+    // PENGAMAN: Jika dalam mode readonly, blokir pengiriman data ke parent
+    if (isReadonlyLocal.value) return;
+
     if (modelData.value) {
-      // console.log(props.mode);
-      // console.log(val);
       if (props.mode == "live-ans") {
         emit("customAnschange", val);
       } else {
@@ -630,4 +647,33 @@ watch(
     }
   }
 );
+
+// Jawaban yang di pilih
+// watch(
+//   () => JSON.stringify(modelDataArr.value),
+//   (val) => {
+//     if (modelDataArr.value) {
+//       if (props.mode == "live-ans") {
+//         emit("customAnschange", JSON.parse(val));
+//       } else {
+//         emit("customChange", JSON.parse(val));
+//       }
+//     }
+//   }
+// );
+
+// watch(
+//   () => modelData.value,
+//   (val) => {
+//     if (modelData.value) {
+//       // console.log(props.mode);
+//       // console.log(val);
+//       if (props.mode == "live-ans") {
+//         emit("customAnschange", val);
+//       } else {
+//         emit("customChange", val);
+//       }
+//     }
+//   }
+// );
 </script>

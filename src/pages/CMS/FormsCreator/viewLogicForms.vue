@@ -188,7 +188,7 @@
                     />
                   </template>
                   <q-select
-                    v-else
+                    v-else-if="item.cfld_opr_ctrl === 'comp'"
                     filled
                     v-model="item.cfld_val"
                     :options="listForms"
@@ -196,6 +196,38 @@
                     emit-value
                     map-options
                     dense
+                  />
+                  <q-select
+                    v-else-if="item.cfld_opr_ctrl === 'user'"
+                    v-model="item.cfld_val"
+                    :options="optionsUsers"
+                    multiple
+                    label="Choose Users"
+                    emit-value
+                    map-options
+                    use-chips
+                    dense
+                    filled
+                    @filter="filterFnUsers"
+                    :loading="loadingUsers"
+                    use-input
+                    input-debounce="300"
+                  />
+                  <q-select
+                    v-else-if="item.cfld_opr_ctrl === 'role'"
+                    v-model="item.cfld_val"
+                    :options="optionsRoles"
+                    multiple
+                    label="Choose Roles"
+                    emit-value
+                    map-options
+                    use-chips
+                    dense
+                    filled
+                    @filter="filterFnRoles"
+                    :loading="loadingRoles"
+                    use-input
+                    input-debounce="300"
                   />
                 </div>
               </template>
@@ -291,6 +323,42 @@ const listLogic = ref([]);
 const listForms = ref([]);
 const listActType = ref([]);
 const listResultAct = ref([]);
+const optionsUsers = ref([]);
+const optionsRoles = ref([]);
+const loadingUsers = ref(false);
+const loadingRoles = ref(false);
+
+const getDefaultCfldValByCtrl = (ctrl) => {
+  return ctrl === "user" ? [] : "";
+};
+
+const normalizeCfldVal = (ctrl, value) => {
+  if (ctrl === "user" || ctrl === "role") {
+    if (Array.isArray(value)) return value;
+    if (value === "" || value == null) return [];
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+};
+
+const parseCfldValFromJson = (value) => {
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const toJsonString = (value) => {
+  return JSON.stringify(value ?? "");
+};
 
 onMounted(async () => {
   listForms.value = props.forms
@@ -306,7 +374,10 @@ onMounted(async () => {
     desc.value = props.logic.seq_desc;
     listLogic.value = props.logic.data.map((item) => ({
       cfld_opr: item.cfld_opr,
-      cfld_val: item.cfld_val,
+      cfld_val: normalizeCfldVal(
+        item.cfld_opr_ctrl,
+        parseCfldValFromJson(item.cfld_val)
+      ),
       cfld_opr_ctrl: item.cfld_opr_ctrl,
       cfld_res: item.cfld_res,
       cfld_actions: item.cfld_actions,
@@ -386,12 +457,22 @@ const getListResult = async () => {
 const onAddLogic = async (type) => {
   listLogic.value.push({
     cfld_opr: "",
-    cfld_val: "",
+    cfld_val: getDefaultCfldValByCtrl(""),
     cfld_opr_ctrl: "",
     cfld_res: "",
     cfld_actions: type,
   });
 };
+
+watch(
+  listLogic,
+  (items) => {
+    items.forEach((item) => {
+      item.cfld_val = normalizeCfldVal(item.cfld_opr_ctrl, item.cfld_val);
+    });
+  },
+  { deep: true }
+);
 
 const onSubmit = () => {
   if (listLogic.value.length === 0) {
@@ -405,7 +486,102 @@ const onSubmit = () => {
   onDialogOK({
     seq_name: title.value,
     seq_desc: desc.value,
-    data: listLogic.value,
+    data: listLogic.value.map((item) => ({
+      ...item,
+      cfld_val: toJsonString(item.cfld_val),
+    })),
   });
+};
+
+const filterFnUsers = (val, update) => {
+  if (val === "") {
+    update(() => {
+      getUsers().then((data) => {
+        console.log(data);
+        optionsUsers.value = data;
+      });
+    });
+  } else {
+    update(() => {
+      getUsers().then((data) => {
+        optionsUsers.value = data.filter((option) => {
+          return option.label.toLowerCase().includes(val.toLowerCase());
+        });
+      });
+    });
+  }
+};
+
+const filterFnRoles = (val, update) => {
+  if (val === "") {
+    update(() => {
+      getRoles().then((data) => {
+        console.log(data);
+        optionsRoles.value = data;
+      });
+    });
+  } else {
+    update(() => {
+      getRoles().then((data) => {
+        optionsRoles.value = data.filter((option) => {
+          return option.label.toLowerCase().includes(val.toLowerCase());
+        });
+      });
+    });
+  }
+};
+
+const getUsers = async () => {
+  try {
+    loadingUsers.value = true;
+    const data = await postData(
+      "get",
+      null,
+      "portal/users/ActiveOnly",
+      false,
+      false,
+      true
+    );
+    if (data?.data) {
+      return data.data.map((user) => {
+        return {
+          label: user.pud_first_name + " " + user.pud_last_name,
+          value: user.username,
+        };
+      });
+    }
+  } catch (error) {
+    console.error("Error loading users:", error);
+    return [];
+  } finally {
+    loadingUsers.value = false;
+  }
+};
+
+const getRoles = async () => {
+  try {
+    loadingRoles.value = true;
+    const data = await postData(
+      "get",
+      null,
+      "portal/roles",
+      false,
+      false,
+      true
+    );
+    if (data?.data) {
+      return data.data.map((role) => {
+        return {
+          label: role.rm_role_name,
+          value: role.id,
+        };
+      });
+    }
+  } catch (error) {
+    console.error("Error loading roles:", error);
+    return [];
+  } finally {
+    loadingRoles.value = false;
+  }
 };
 </script>

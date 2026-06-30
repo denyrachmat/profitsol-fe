@@ -357,9 +357,9 @@ onMounted(async () => {
     console.warn("Notif init error:", e);
   }
 
-  if (!authStore.getStatusLog) {
-    router.push("/login");
-  }
+  // if (!authStore.getStatusLog) {
+  //   router.push("/login");
+  // }
 
   // For tour guide Start
   tour = driver({
@@ -847,9 +847,9 @@ watch(
 watch(
   () => router.currentRoute.value.path,
   (newPath) => {
-    if (!authStore.getStatusLog) {
-      router.push("/login");
-    }
+    // if (!authStore.getStatusLog) {
+    //   router.push("/login");
+    // }
 
     if (newPath === "/") {
       // Find the menu item where is_main == 1
