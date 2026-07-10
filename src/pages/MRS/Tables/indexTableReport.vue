@@ -186,9 +186,11 @@
                 />
                 <q-btn
                   :color="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3 &&
-                    !props.canEdit
+                    !props.canEdit &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
                       ? 'grey'
                       : 'orange'
                   "
@@ -197,9 +199,11 @@
                   @click="onEditData(props.row)"
                   outline
                   :disabled="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3 &&
-                    !props.canEdit
+                    !props.canEdit &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
                   "
                 />
                 <q-btn
