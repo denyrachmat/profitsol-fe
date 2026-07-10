@@ -186,8 +186,8 @@
                 />
                 <q-btn
                   :color="
-                    (parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3) ||
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canEdit
                       ? 'grey'
                       : 'orange'
@@ -197,15 +197,15 @@
                   @click="onEditData(props.row)"
                   outline
                   :disabled="
-                    (parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3) ||
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canEdit
                   "
                 />
                 <q-btn
                   :color="
-                    (parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3) ||
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canDelete
                       ? 'grey'
                       : 'red'
@@ -215,8 +215,8 @@
                   @click="onDelete(props.row)"
                   outline
                   :disabled="
-                    (parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3) ||
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canDelete
                   "
                 />
