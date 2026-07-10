@@ -187,10 +187,11 @@
                 <q-btn
                   :color="
                     !props.canEdit &&
-                    !(
-                      parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3
-                    )
+                    (isRPAOrApproval &&
+                      !(
+                        parseInt(props.row.prh_flag) > 0 &&
+                        parseInt(props.row.prh_flag) < 3
+                      ))
                       ? 'grey'
                       : 'orange'
                   "
@@ -200,16 +201,18 @@
                   outline
                   :disabled="
                     !props.canEdit &&
-                    !(
-                      parseInt(props.row.prh_flag) > 0 &&
-                      parseInt(props.row.prh_flag) < 3
-                    )
+                    (isRPAOrApproval &&
+                      !(
+                        parseInt(props.row.prh_flag) > 0 &&
+                        parseInt(props.row.prh_flag) < 3
+                      ))
                   "
                 />
                 <q-btn
                   :color="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3 &&
+                    (isRPAOrApproval &&
+                      (parseInt(props.row.prh_flag) > 0 &&
+                        parseInt(props.row.prh_flag) < 3)) &&
                     !props.canDelete
                       ? 'grey'
                       : 'red'
@@ -219,8 +222,9 @@
                   @click="onDelete(props.row)"
                   outline
                   :disabled="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3 &&
+                    (isRPAOrApproval &&
+                      (parseInt(props.row.prh_flag) > 0 &&
+                        parseInt(props.row.prh_flag) < 3)) &&
                     !props.canDelete
                   "
                 />
@@ -311,6 +315,11 @@ const enableMultipleCreate = ref(false);
 const enableMultipleEditNewForm = ref(false);
 const enableMultipleDeleteNewForm = ref(false);
 const selectedRows = ref([]);
+
+// Computed property to check if the report is an RPA or Approval type
+const isRPAOrApproval = computed(() => {
+  return propsReports.value && (propsReports.value.includes('rpa') || propsReports.value.includes('approval'));
+});
 
 onMounted(async () => {
   console.log("props result", props);
