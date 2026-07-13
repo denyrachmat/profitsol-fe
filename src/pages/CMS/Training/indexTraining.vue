@@ -375,7 +375,7 @@ const onUploadFile = () => {
           ],
         },
       ],
-      downloadTemplate: true, // Enable the download template button feature
+      downloadTemplate: false, // Changed to false to hide the button; we handle download in onOk
     },
   })
     .onOk(async ({ result, fileName, dynamicOptions }) => {
@@ -410,6 +410,14 @@ const onUploadFile = () => {
         // const data = await postData('post', formData, 'cms/scan-quiz-with-ai', true, false, true);
         // if (data) { /* handle success */ }
       }
+
+      // Optionally, you can also trigger a template download based on method here
+      // For example:
+      // if (method === 'template') {
+      //   window.open('/path/to/template.xlsx', '_blank');
+      // } else if (method === 'ai') {
+      //   window.open('/path/to/ai-template.xlsx', '_blank');
+      // }
     })
     .onCancel(() => {
       $q.notify({
@@ -417,16 +425,16 @@ const onUploadFile = () => {
         color: "negative",
       });
     })
-    .onDownloadTemplate(() => {
-      // Handle the download template action here
-      $q.notify({
-        message: "Downloading template...",
-        color: "primary",
-      });
-      // ponytail: Implement actual template download logic here.
-      // For example, trigger a file download or navigate to a template URL.
-      // window.open('/path/to/your/template.xlsx', '_blank');
-    });
+    // Removed onDownloadTemplate callback because we handle download in onOk
+    // .onDownloadTemplate(() => {
+    //   $q.notify({
+    //     message: "Downloading template...",
+    //     color: "primary",
+    //   });
+    //   // ponytail: Implement actual template download logic here.
+    //   // For example, trigger a file download or navigate to a template URL.
+    //   // window.open('/path/to/your/template.xlsx', '_blank');
+    // });
 };
 
 const onClickSetupTraining = () => {
