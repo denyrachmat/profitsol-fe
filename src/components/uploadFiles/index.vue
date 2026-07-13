@@ -79,7 +79,7 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, onMounted } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);
@@ -102,16 +102,18 @@ const props = defineProps({
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
-// Initialize dynamicOptionValues based on props.options
-if (props.options) {
-  props.options.forEach((optionGroup) => {
-    if (optionGroup.name) {
-      // Use the provided value if present, otherwise null
-      dynamicOptionValues[optionGroup.name] =
-        optionGroup.value !== undefined ? optionGroup.value : null;
-    }
-  });
-}
+// Initialize dynamicOptionValues after component is mounted
+onMounted(() => {
+  if (props.options) {
+    props.options.forEach((optionGroup) => {
+      if (optionGroup.name) {
+        // Use the provided value if present, otherwise null
+        dynamicOptionValues[optionGroup.name] =
+          optionGroup.value !== undefined ? optionGroup.value : null;
+      }
+    });
+  }
+});
 
 function factoryFn(files) {
   isUploading.value = true;
