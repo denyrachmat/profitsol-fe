@@ -86,8 +86,8 @@ const isUploading = ref(false);
 const result = ref([]);
 const resultFileName = ref([]);
 
-// Use a reactive object for radio values, initialized synchronously from props
-const radioValues = reactive({});
+// Changed to ref holding an object for better reactivity with dynamic properties
+const radioValues = ref({});
 
 const props = defineProps({
   title: String,
@@ -109,14 +109,16 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 // Initialize radioValues synchronously from props.options
-// This ensures the values are set before the component's template is rendered.
+// Create a plain object first, then assign to radioValues.value
 if (props.options) {
+  const initialRadioState = {};
   props.options.forEach((optionGroup) => {
     if (optionGroup.name) {
-      radioValues[optionGroup.name] =
+      initialRadioState[optionGroup.name] =
         optionGroup.value !== undefined ? optionGroup.value : null;
     }
   });
+  radioValues.value = initialRadioState;
 }
 
 function factoryFn(files) {
@@ -162,7 +164,7 @@ const canProceed = computed(() => {
   // Check if all required dynamic options are selected
   if (props.options) {
     for (const optionGroup of props.options) {
-      if (optionGroup.required && !radioValues[optionGroup.name]) {
+      if (optionGroup.required && !radioValues.value[optionGroup.name]) { // Access .value here
         return false; // A required option is missing
       }
     }
@@ -181,7 +183,7 @@ const onOKClick = () => {
     onDialogOK({
       result: props.multiple ? result.value : result.value[0],
       fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
-      dynamicOptions: radioValues, // Pass the collected dynamic option values
+      dynamicOptions: radioValues.value, // Pass the .value of the ref
     });
   }
 };
