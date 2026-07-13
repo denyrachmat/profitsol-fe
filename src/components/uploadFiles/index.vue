@@ -93,7 +93,7 @@ const props = defineProps({
   multiple: Boolean,
   options: Array, // New prop for custom form elements
   downloadTemplate: {
-    type: boolean,
+    type: Boolean,
     default: false,
   },
 });
@@ -106,7 +106,9 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 if (props.options) {
   props.options.forEach((optionGroup) => {
     if (optionGroup.name) {
-      dynamicOptionValues[optionGroup.name] = null; // Initialize with null or default value
+      // Use the provided value if present, otherwise null
+      dynamicOptionValues[optionGroup.name] =
+        optionGroup.value !== undefined ? optionGroup.value : null;
     }
   });
 }
