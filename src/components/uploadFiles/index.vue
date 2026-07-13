@@ -152,6 +152,18 @@ const onOKClick = () => {
 };
 
 const disabledButton = computed(() => {
+  // Check if any required dynamic option is empty
+  if (props.options && props.options.length > 0) {
+    for (const optionGroup of props.options) {
+      if (optionGroup.required) {
+        const value = dynamicOptionValues.value[optionGroup.name];
+        if (value === undefined || value === null || value === "") {
+          return true; // Disable button because a required option is not selected
+        }
+      }
+    }
+  }
+  // Also disable if no file has been uploaded or if upload is in progress
   return result.value.length === 0 || isUploading.value;
 });
 </script>
