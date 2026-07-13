@@ -375,7 +375,7 @@ const onUploadFile = () => {
           ],
         },
       ],
-      downloadTemplate: true, // Enable the download template button
+      downloadTemplate: true, // Enable the download template button feature
     },
   })
     .onOk(async ({ result, fileName, dynamicOptions }) => {
@@ -416,6 +416,16 @@ const onUploadFile = () => {
         message: "Upload cancelled.",
         color: "negative",
       });
+    })
+    .onDownloadTemplate(() => {
+      // Handle the download template action here
+      $q.notify({
+        message: "Downloading template...",
+        color: "primary",
+      });
+      // ponytail: Implement actual template download logic here.
+      // For example, trigger a file download or navigate to a template URL.
+      // window.open('/path/to/your/template.xlsx', '_blank');
     });
 };
 

@@ -8,7 +8,10 @@
             <div class="text-h6">{{ props.title || "Upload File" }}</div>
           </div>
 
-          <div class="col text-right" v-if="props.downloadTemplate">
+          <div
+            class="col text-right"
+            v-if="props.downloadTemplate && dynamicOptionValues.uploadMethod === 'template'"
+          >
             <q-btn
               label="Download Template"
               icon="download"
@@ -93,10 +96,12 @@ const props = defineProps({
   multiple: Boolean,
   options: Array, // New prop for custom form elements
   downloadTemplate: {
-    type: boolean,
+    type: Boolean, // Corrected type definition
     default: false,
   },
 });
+
+const emit = defineEmits(['download-template']); // Declare emitted events
 
 // REQUIRED; must be called inside of setup()
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
