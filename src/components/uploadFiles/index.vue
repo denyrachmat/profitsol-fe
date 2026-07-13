@@ -79,7 +79,7 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive } from "vue"; // Removed onMounted
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);
@@ -109,6 +109,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 // Initialize radioValues synchronously from props.options
+// This ensures the values are set before the component's template is rendered.
 if (props.options) {
   props.options.forEach((optionGroup) => {
     if (optionGroup.name) {

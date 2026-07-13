@@ -356,6 +356,31 @@ const onClickChooseHTML = (idxForm = {}) => {
   });
 };
 
+// Define the options array outside the dialog call for easier manipulation
+const uploadOptions = [
+  {
+    type: "radio-group",
+    name: "uploadMethod", // Key to store the selected value
+    label: "Choose Upload Method:",
+    required: true,
+    value: "template", // Default selected value
+    choices: [
+      {
+        value: "template",
+        label: "Upload using template",
+      },
+      { value: "ai", label: "Use AI to scan question bank" },
+    ],
+  },
+];
+
+// Determine downloadTemplate prop based on the initial default uploadMethod
+const initialUploadMethodOption = uploadOptions.find(
+  (opt) => opt.name === "uploadMethod"
+);
+const showDownloadTemplateButton =
+  initialUploadMethodOption && initialUploadMethodOption.value === "template";
+
 const onUploadFile = () => {
   $q.dialog({
     component: UploadFiles,
@@ -363,23 +388,8 @@ const onUploadFile = () => {
       title: "Upload Question Bank",
       accept: ".csv,.txt,.json,.xlsx,.docx",
       multiple: false, // Assuming single file upload for question bank
-      options: [
-        {
-          type: "radio-group",
-          name: "uploadMethod", // Key to store the selected value
-          label: "Choose Upload Method:",
-          required: true,
-          value: "template", // Default selected value
-          choices: [
-            {
-              value: "template",
-              label: "Upload using template",
-            },
-            { value: "ai", label: "Use AI to scan question bank" },
-          ],
-        },
-      ],
-      downloadTemplate: false, // Changed to false to hide the button; we handle download in onOk
+      options: uploadOptions, // Use the defined options array
+      downloadTemplate: showDownloadTemplateButton, // Dynamically set based on initial uploadMethod
       onDownloadTemplate: handleDownloadTemplate, // Pass the function prop
     },
   })
@@ -430,7 +440,6 @@ const onUploadFile = () => {
         color: "negative",
       });
     });
-  // Removed onDownloadTemplate callback because we handle download via onDownloadTemplate prop
 };
 
 // Define the download handler function
