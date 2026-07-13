@@ -1,62 +1,114 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <q-dialog ref="dialogRef" @hide="onDialogHide">
-    <q-card class="q-dialog-plugin" style="min-width: 400px">
-      <q-card-section>
-        <div class="text-h6">Upload Question Bank</div>
-      </q-card-section>
-
-      <q-card-section class="q-pt-none">
-        <q-file
-          v-model="selectedFile"
-          label="Pick a file"
-          filled
-          counter
-          clearable
-          class="q-mb-md"
-          accept=".csv,.txt,.json,.xlsx,.docx"
-        >
-          <template v-slot:prepend>
-            <q-icon name="attach_file" />
-          </template>
-        </q-file>
-
-        <div class="q-mt-md">
-          <div class="text-subtitle1 q-mb-sm">Choose Upload Method:</div>
-          <q-radio v-model="uploadMethod" val="template" label="Upload using template" class="q-mb-sm" />
-          <q-radio v-model="uploadMethod" val="ai" label="Use AI to scan question bank" />
+  <q-dialog ref="dialogRef">
+    <div class="bg-white" style="min-width: 500px; min-height: 500px">
+      <div class="row full-height">
+        <div class="col full-height">
+          <q-uploader
+            class="full-width"
+            style="min-height: 500px"
+            :factory="factoryFn"
+            :label="props.title"
+            :accept="!props.accept ? '.jpg, image/*' : props.accept"
+            auto-upload
+            :multiple="props.multiple"
+            @uploaded="onUploaded"
+            :loading="isUploading"
+          />
         </div>
-      </q-card-section>
-
-      <q-card-actions align="right">
-        <q-btn color="red" label="Cancel" @click="onDialogCancel" />
-        <q-btn
-          label="Upload"
-          color="primary"
-          @click="onOKClick()"
-          :disable="!selectedFile || !uploadMethod"
-        />
-      </q-card-actions>
-    </q-card>
+      </div>
+      <div class="row q-pa-sm">
+        <div class="col text-right">
+          <q-btn-group spread>
+            <q-btn color="red" label="Cancel" v-close-popup />
+            <q-btn
+              label="Ok"
+              color="primary"
+              @click="onOKClick()"
+              :disable="!result"
+            />
+          </q-btn-group>
+        </div>
+      </div>
+    </div>
   </q-dialog>
 </template>
 <script setup>
-import { ref } from "vue";
+import { defineComponent, onMounted, ref } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
-const selectedFile = ref(null);
-const uploadMethod = ref(null); // Will be 'template' or 'ai'
+const isUploading = ref(false);
 
+const onUploaded = () => {
+  isUploading.value = false;
+};
+
+const props = defineProps({
+  title: String,
+  accept: String,
+  multiple: Boolean,
+});
 // REQUIRED; must be called inside of setup()
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
+// dialogRef      - Vue ref to be applied to QDialog
+// onDialogHide   - Function to be used as handler for @hide on QDialog
+// onDialogOK     - Function to call to settle dialog with "ok" outcome
+//                    example: onDialogOK() - no payload
+//                    example: onDialogOK({ /*.../* }) - with payload
+// onDialogCancel - Function to call to settle dialog with "cancel" outcome
+const result = ref([]);
+const resultFileName = ref([]);
+
+function factoryFn(val) {
+  isUploading.value = true;
+  // result.value = convertBase64(val).result;
+  // console.log(convertBase64(val));
+  // console.log(val);
+  return convertBase64(val).result;
+  return new Promise((resolve) => {
+    // simulating a delay of 2 seconds
+    setTimeout(() => {
+      resolve({
+        url: "http://localhost:4444/upload",
+        data: convertBase64(val).result,
+      });
+    }, 2000);
+  });
+}
+
+const convertBase64 = (filenya, callback) => {
+  const reader = new FileReader();
+  var hasil = "";
+
+  // if (multiple.value) {
+  //   reader.readAsDataURL(filenya);
+  // } else {
+  //   reader.readAsDataURL(filenya[0]);
+  // }
+
+  reader.readAsDataURL(filenya[0]);
+  reader.onload = function (readerEvt) {
+    hasil = reader.result;
+    result.value = [...result.value, reader.result];
+    resultFileName.value = [...resultFileName.value, filenya[0].name];
+  };
+  reader.onerror = function (error) {
+    return `Error: ${error}`;
+  };
+
+  return reader;
+};
 
 const onOKClick = () => {
-  if (selectedFile.value && uploadMethod.value) {
-    onDialogOK({
-      file: selectedFile.value,
-      method: uploadMethod.value,
-    });
-  }
+  console.log("Result:", result.value);
+  // on OK, it is REQUIRED to
+  // call onDialogOK (with optional payload)
+  onDialogOK({
+    result: props.multiple ? result.value : result.value[0],
+    fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
+  });
+  // or with payload: onDialogOK({ ... })
+  // ...and it will also hide the dialog automatically
 };
 </script>
