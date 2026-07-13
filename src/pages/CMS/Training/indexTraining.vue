@@ -246,6 +246,7 @@ import { useQuasar } from "quasar";
 import componentViewVue from "../componentView.vue";
 import chooseComponent from "../chooseComponent.vue";
 import addContentComponent from "../addContentComponent.vue";
+import UploadFiles from "src/components/uploadFiles/index.vue"; // Import the new component
 
 import apiRequest from "src/components/apiRequest";
 
@@ -359,6 +360,52 @@ const onClickChooseHTML = (idxForm = {}) => {
     }
   });
 };
+
+const onUploadFile = () => {
+  $q.dialog({
+    component: UploadFiles,
+    // componentProps: {
+    //   // You can pass props here if needed, e.g., title, accept, multiple
+    //   // title: 'Upload Question Bank',
+    //   // accept: '.csv,.txt,.json,.xlsx,.docx',
+    //   // multiple: false,
+    // },
+  }).onOk(async ({ file, method }) => {
+    console.log('File selected for upload:', file.name);
+    console.log('Chosen upload method:', method);
+
+    // Here you would implement the logic to process the file
+    // based on whether 'template' or 'ai' was selected.
+    // For example:
+    if (method === 'template') {
+      $q.notify({
+        message: `Uploading "${file.name}" using template...`,
+        color: 'info',
+      });
+      // ponytail: API call for template upload, add when backend is ready.
+      // const formData = new FormData();
+      // formData.append('file', file);
+      // const data = await postData('post', formData, 'cms/upload-template-quiz', true, false, true);
+      // if (data) { /* handle success */ }
+    } else if (method === 'ai') {
+      $q.notify({
+        message: `Scanning "${file.name}" with AI...`,
+        color: 'info',
+      });
+      // ponytail: API call for AI scan, add when backend is ready.
+      // const formData = new FormData();
+      // formData.append('file', file);
+      // const data = await postData('post', formData, 'cms/scan-quiz-with-ai', true, false, true);
+      // if (data) { /* handle success */ }
+    }
+  }).onCancel(() => {
+    $q.notify({
+      message: 'Upload cancelled.',
+      color: 'negative',
+    });
+  });
+};
+
 
 const onClickSetupTraining = () => {
   $q.dialog({
