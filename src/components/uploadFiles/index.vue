@@ -24,7 +24,6 @@
           class="full-width"
           :factory="factoryFn"
           :accept="props.accept || '.jpg, image/*'"
-          auto-upload
           :multiple="props.multiple"
           @uploaded="onUploaded"
           :loading="isUploading"
@@ -164,7 +163,8 @@ const canProceed = computed(() => {
   // Check if all required dynamic options are selected
   if (props.options) {
     for (const optionGroup of props.options) {
-      if (optionGroup.required && !radioValues.value[optionGroup.name]) { // Access .value here
+      if (optionGroup.required && !radioValues.value[optionGroup.name]) {
+        // Access .value here
         return false; // A required option is missing
       }
     }
