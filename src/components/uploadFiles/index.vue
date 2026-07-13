@@ -55,7 +55,7 @@
             <q-radio
               v-for="(choice, choiceIndex) in optionGroup.choices"
               :key="choiceIndex"
-              v-model="dynamicOptionValues[optionGroup.name]"
+              v-model="radioValues[optionGroup.name]"
               :val="choice.value"
               :label="choice.label"
               class="q-mb-sm"
@@ -79,13 +79,15 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, computed, reactive, onMounted } from "vue";
+import { ref, computed, reactive } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);
 const result = ref([]);
 const resultFileName = ref([]);
-const dynamicOptionValues = reactive({}); // Stores values for dynamic options
+
+// Use a reactive object for radio values, initialized synchronously from props
+const radioValues = reactive({});
 
 const props = defineProps({
   title: String,
@@ -96,24 +98,25 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  onDownloadTemplate: {
+    type: Function,
+    default: null,
+  },
 });
 
 // REQUIRED; must be called inside of setup()
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
-// Initialize dynamicOptionValues after component is mounted
-onMounted(() => {
-  if (props.options) {
-    props.options.forEach((optionGroup) => {
-      if (optionGroup.name) {
-        // Use the provided value if present, otherwise null
-        dynamicOptionValues[optionGroup.name] =
-          optionGroup.value !== undefined ? optionGroup.value : null;
-      }
-    });
-  }
-});
+// Initialize radioValues synchronously from props.options
+if (props.options) {
+  props.options.forEach((optionGroup) => {
+    if (optionGroup.name) {
+      radioValues[optionGroup.name] =
+        optionGroup.value !== undefined ? optionGroup.value : null;
+    }
+  });
+}
 
 function factoryFn(files) {
   isUploading.value = true;
@@ -158,7 +161,7 @@ const canProceed = computed(() => {
   // Check if all required dynamic options are selected
   if (props.options) {
     for (const optionGroup of props.options) {
-      if (optionGroup.required && !dynamicOptionValues[optionGroup.name]) {
+      if (optionGroup.required && !radioValues[optionGroup.name]) {
         return false; // A required option is missing
       }
     }
@@ -167,7 +170,9 @@ const canProceed = computed(() => {
 });
 
 const onDownloadTemplate = () => {
-  emit("download-template"); // Emit an event to the parent to handle the download
+  if (props.onDownloadTemplate) {
+    props.onDownloadTemplate();
+  }
 };
 
 const onOKClick = () => {
@@ -175,7 +180,7 @@ const onOKClick = () => {
     onDialogOK({
       result: props.multiple ? result.value : result.value[0],
       fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
-      dynamicOptions: dynamicOptionValues, // Pass the collected dynamic option values
+      dynamicOptions: radioValues, // Pass the collected dynamic option values
     });
   }
 };

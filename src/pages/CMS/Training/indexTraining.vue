@@ -380,6 +380,7 @@ const onUploadFile = () => {
         },
       ],
       downloadTemplate: false, // Changed to false to hide the button; we handle download in onOk
+      onDownloadTemplate: handleDownloadTemplate, // Pass the function prop
     },
   })
     .onOk(async ({ result, fileName, dynamicOptions }) => {
@@ -429,16 +430,18 @@ const onUploadFile = () => {
         color: "negative",
       });
     });
-  // Removed onDownloadTemplate callback because we handle download in onOk
-  // .onDownloadTemplate(() => {
-  //   $q.notify({
-  //     message: "Downloading template...",
-  //     color: "primary",
-  //   });
-  //   // ponytail: Implement actual template download logic here.
-  //   // For example, trigger a file download or navigate to a template URL.
-  //   // window.open('/path/to/your/template.xlsx', '_blank');
-  // });
+  // Removed onDownloadTemplate callback because we handle download via onDownloadTemplate prop
+};
+
+// Define the download handler function
+const handleDownloadTemplate = () => {
+  $q.notify({
+    message: "Downloading template...",
+    color: "primary",
+  });
+  // ponytail: Implement actual template download logic here.
+  // For example, trigger a file download or navigate to a template URL.
+  // window.open('/path/to/your/template.xlsx', '_blank');
 };
 
 const onClickSetupTraining = () => {
