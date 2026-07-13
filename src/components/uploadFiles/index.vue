@@ -18,7 +18,16 @@
           hide-upload-btn
           ref="uploaderRef"
           style="min-height: 200px"
-        />
+        >
+          <template v-slot:body="scope">
+            <div class="full-width full-height column flex-center">
+              <q-icon name="cloud_upload" size="xl" color="grey-6" />
+              <div class="text-h6 text-grey-6 q-mt-sm">
+                Drop files here or click +
+              </div>
+            </div>
+          </template>
+        </q-uploader>
       </q-card-section>
 
       <q-card-section v-if="props.options && props.options.length > 0">
