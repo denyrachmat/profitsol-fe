@@ -78,6 +78,14 @@
           >
             <q-tooltip> Add HTML Rows. </q-tooltip>
           </q-btn>
+          <q-btn
+            color="orange"
+            icon="upload"
+            @click="onUploadFile"
+            :disable="!title"
+          >
+            <q-tooltip> Upload Questions Bank </q-tooltip>
+          </q-btn>
         </q-btn-group>
       </div>
     </div>
