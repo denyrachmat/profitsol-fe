@@ -364,37 +364,52 @@ const onClickChooseHTML = (idxForm = {}) => {
 const onUploadFile = () => {
   $q.dialog({
     component: UploadFiles,
-    // componentProps: {
-    //   // You can pass props here if needed, e.g., title, accept, multiple
-    //   // title: 'Upload Question Bank',
-    //   // accept: '.csv,.txt,.json,.xlsx,.docx',
-    //   // multiple: false,
-    // },
-  }).onOk(async ({ file, method }) => {
-    console.log('File selected for upload:', file.name);
-    console.log('Chosen upload method:', method);
+    componentProps: {
+      title: 'Upload Question Bank',
+      accept: '.csv,.txt,.json,.xlsx,.docx',
+      multiple: false, // Assuming single file upload for question bank
+      options: [
+        {
+          type: 'radio-group',
+          name: 'uploadMethod', // Key to store the selected value
+          label: 'Choose Upload Method:',
+          required: true,
+          choices: [
+            { value: 'template', label: 'Upload using template' },
+            { value: 'ai', label: 'Use AI to scan question bank' }
+          ]
+        }
+      ]
+    },
+  }).onOk(async ({ result, fileName, dynamicOptions }) => {
+    console.log('Uploaded file base64:', result);
+    console.log('Uploaded file name:', fileName);
+    console.log('Chosen upload method:', dynamicOptions.uploadMethod); // Access the method from dynamicOptions
 
-    // Here you would implement the logic to process the file
-    // based on whether 'template' or 'ai' was selected.
-    // For example:
+    const fileContent = result; // This is the base64 content
+    const actualFileName = fileName; // This is the file name
+    const method = dynamicOptions.uploadMethod;
+
     if (method === 'template') {
       $q.notify({
-        message: `Uploading "${file.name}" using template...`,
+        message: `Uploading "${actualFileName}" using template...`,
         color: 'info',
       });
       // ponytail: API call for template upload, add when backend is ready.
       // const formData = new FormData();
-      // formData.append('file', file);
+      // formData.append('fileContent', fileContent); // Send base64
+      // formData.append('fileName', actualFileName);
       // const data = await postData('post', formData, 'cms/upload-template-quiz', true, false, true);
       // if (data) { /* handle success */ }
     } else if (method === 'ai') {
       $q.notify({
-        message: `Scanning "${file.name}" with AI...`,
+        message: `Scanning "${actualFileName}" with AI...`,
         color: 'info',
       });
       // ponytail: API call for AI scan, add when backend is ready.
       // const formData = new FormData();
-      // formData.append('file', file);
+      // formData.append('fileContent', fileContent); // Send base64
+      // formData.append('fileName', actualFileName);
       // const data = await postData('post', formData, 'cms/scan-quiz-with-ai', true, false, true);
       // if (data) { /* handle success */ }
     }

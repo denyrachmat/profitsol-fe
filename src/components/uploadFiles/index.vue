@@ -1,114 +1,138 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <q-dialog ref="dialogRef">
-    <div class="bg-white" style="min-width: 500px; min-height: 500px">
-      <div class="row full-height">
-        <div class="col full-height">
-          <q-uploader
-            class="full-width"
-            style="min-height: 500px"
-            :factory="factoryFn"
-            :label="props.title"
-            :accept="!props.accept ? '.jpg, image/*' : props.accept"
-            auto-upload
-            :multiple="props.multiple"
-            @uploaded="onUploaded"
-            :loading="isUploading"
-          />
-        </div>
-      </div>
-      <div class="row q-pa-sm">
-        <div class="col text-right">
-          <q-btn-group spread>
-            <q-btn color="red" label="Cancel" v-close-popup />
-            <q-btn
-              label="Ok"
-              color="primary"
-              @click="onOKClick()"
-              :disable="!result"
+  <q-dialog ref="dialogRef" @hide="onDialogHide">
+    <q-card class="q-dialog-plugin" style="min-width: 500px">
+      <q-card-section>
+        <div class="text-h6">{{ props.title || 'Upload File' }}</div>
+      </q-card-section>
+
+      <q-card-section>
+        <q-uploader
+          class="full-width"
+          :factory="factoryFn"
+          :accept="props.accept || '.jpg, image/*'"
+          auto-upload
+          :multiple="props.multiple"
+          @uploaded="onUploaded"
+          :loading="isUploading"
+          hide-upload-btn
+          ref="uploaderRef"
+        />
+      </q-card-section>
+
+      <q-card-section v-if="props.options && props.options.length > 0">
+        <div v-for="(optionGroup, groupIndex) in props.options" :key="groupIndex">
+          <div class="text-subtitle1 q-mb-sm" v-if="optionGroup.label">{{ optionGroup.label }}</div>
+          <div v-if="optionGroup.type === 'radio-group'">
+            <q-radio
+              v-for="(choice, choiceIndex) in optionGroup.choices"
+              :key="choiceIndex"
+              v-model="dynamicOptionValues[optionGroup.name]"
+              :val="choice.value"
+              :label="choice.label"
+              class="q-mb-sm"
             />
-          </q-btn-group>
+          </div>
+          <!-- ponytail: Add other input types (checkbox, text, etc.) here when needed. -->
+          <!-- skipped: other input types, add when specific requirements arise. -->
         </div>
-      </div>
-    </div>
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn color="red" label="Cancel" @click="onDialogCancel" />
+        <q-btn
+          label="Ok"
+          color="primary"
+          @click="onOKClick()"
+          :disable="!canProceed"
+        />
+      </q-card-actions>
+    </q-card>
   </q-dialog>
 </template>
 <script setup>
-import { defineComponent, onMounted, ref } from "vue";
+import { ref, computed, reactive } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);
-
-const onUploaded = () => {
-  isUploading.value = false;
-};
+const result = ref([]);
+const resultFileName = ref([]);
+const dynamicOptionValues = reactive({}); // Stores values for dynamic options
 
 const props = defineProps({
   title: String,
   accept: String,
   multiple: Boolean,
+  options: Array, // New prop for custom form elements
 });
+
 // REQUIRED; must be called inside of setup()
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
-// dialogRef      - Vue ref to be applied to QDialog
-// onDialogHide   - Function to be used as handler for @hide on QDialog
-// onDialogOK     - Function to call to settle dialog with "ok" outcome
-//                    example: onDialogOK() - no payload
-//                    example: onDialogOK({ /*.../* }) - with payload
-// onDialogCancel - Function to call to settle dialog with "cancel" outcome
-const result = ref([]);
-const resultFileName = ref([]);
 
-function factoryFn(val) {
-  isUploading.value = true;
-  // result.value = convertBase64(val).result;
-  // console.log(convertBase64(val));
-  // console.log(val);
-  return convertBase64(val).result;
-  return new Promise((resolve) => {
-    // simulating a delay of 2 seconds
-    setTimeout(() => {
-      resolve({
-        url: "http://localhost:4444/upload",
-        data: convertBase64(val).result,
-      });
-    }, 2000);
+// Initialize dynamicOptionValues based on props.options
+if (props.options) {
+  props.options.forEach(optionGroup => {
+    if (optionGroup.name) {
+      dynamicOptionValues[optionGroup.name] = null; // Initialize with null or default value
+    }
   });
 }
 
-const convertBase64 = (filenya, callback) => {
-  const reader = new FileReader();
-  var hasil = "";
+function factoryFn(files) {
+  isUploading.value = true;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function (readerEvt) {
+      const base64String = readerEvt.target.result;
+      result.value = props.multiple ? [...result.value, base64String] : [base64String];
+      resultFileName.value = props.multiple ? [...resultFileName.value, files[0].name] : [files[0].name];
+      isUploading.value = false;
+      resolve({
+        url: "http://localhost:4444/upload", // Placeholder URL, q-uploader expects one
+        data: {
+          base64: base64String,
+          filename: files[0].name
+        }
+      });
+    };
+    reader.onerror = function (error) {
+      isUploading.value = false;
+      reject(`Error: ${error}`);
+    };
+    reader.readAsDataURL(files[0]);
+  });
+}
 
-  // if (multiple.value) {
-  //   reader.readAsDataURL(filenya);
-  // } else {
-  //   reader.readAsDataURL(filenya[0]);
-  // }
-
-  reader.readAsDataURL(filenya[0]);
-  reader.onload = function (readerEvt) {
-    hasil = reader.result;
-    result.value = [...result.value, reader.result];
-    resultFileName.value = [...resultFileName.value, filenya[0].name];
-  };
-  reader.onerror = function (error) {
-    return `Error: ${error}`;
-  };
-
-  return reader;
+const onUploaded = () => {
+  // isUploading.value is already set to false in factoryFn's resolve/reject
+  // This handler can be used for additional post-upload logic if needed.
 };
 
+const canProceed = computed(() => {
+  // Check if a file has been processed
+  if (!result.value || result.value.length === 0) {
+    return false;
+  }
+
+  // Check if all required dynamic options are selected
+  if (props.options) {
+    for (const optionGroup of props.options) {
+      if (optionGroup.required && !dynamicOptionValues[optionGroup.name]) {
+        return false; // A required option is missing
+      }
+    }
+  }
+  return true;
+});
+
 const onOKClick = () => {
-  console.log("Result:", result.value);
-  // on OK, it is REQUIRED to
-  // call onDialogOK (with optional payload)
-  onDialogOK({
-    result: props.multiple ? result.value : result.value[0],
-    fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
-  });
-  // or with payload: onDialogOK({ ... })
-  // ...and it will also hide the dialog automatically
+  if (canProceed.value) {
+    onDialogOK({
+      result: props.multiple ? result.value : result.value[0],
+      fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
+      dynamicOptions: dynamicOptionValues, // Pass the collected dynamic option values
+    });
+  }
 };
 </script>
