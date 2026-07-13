@@ -1,9 +1,9 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <q-dialog ref="dialogRef" @hide="onDialogHide">
-    <q-card class="q-dialog-plugin" style="min-width: 500px">
+  <q-dialog ref="dialogRef" @hide="onDialogHide" style="min-width: 700px">
+    <q-card class="q-dialog-plugin" style="min-width: 700px">
       <q-card-section>
-        <div class="text-h6">{{ props.title || 'Upload File' }}</div>
+        <div class="text-h6">{{ props.title || "Upload File" }}</div>
       </q-card-section>
 
       <q-card-section>
@@ -17,12 +17,18 @@
           :loading="isUploading"
           hide-upload-btn
           ref="uploaderRef"
+          style="min-height: 200px"
         />
       </q-card-section>
 
       <q-card-section v-if="props.options && props.options.length > 0">
-        <div v-for="(optionGroup, groupIndex) in props.options" :key="groupIndex">
-          <div class="text-subtitle1 q-mb-sm" v-if="optionGroup.label">{{ optionGroup.label }}</div>
+        <div
+          v-for="(optionGroup, groupIndex) in props.options"
+          :key="groupIndex"
+        >
+          <div class="text-subtitle1 q-mb-sm" v-if="optionGroup.label">
+            {{ optionGroup.label }}
+          </div>
           <div v-if="optionGroup.type === 'radio-group'">
             <q-radio
               v-for="(choice, choiceIndex) in optionGroup.choices"
@@ -72,7 +78,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 
 // Initialize dynamicOptionValues based on props.options
 if (props.options) {
-  props.options.forEach(optionGroup => {
+  props.options.forEach((optionGroup) => {
     if (optionGroup.name) {
       dynamicOptionValues[optionGroup.name] = null; // Initialize with null or default value
     }
@@ -85,15 +91,19 @@ function factoryFn(files) {
     const reader = new FileReader();
     reader.onload = function (readerEvt) {
       const base64String = readerEvt.target.result;
-      result.value = props.multiple ? [...result.value, base64String] : [base64String];
-      resultFileName.value = props.multiple ? [...resultFileName.value, files[0].name] : [files[0].name];
+      result.value = props.multiple
+        ? [...result.value, base64String]
+        : [base64String];
+      resultFileName.value = props.multiple
+        ? [...resultFileName.value, files[0].name]
+        : [files[0].name];
       isUploading.value = false;
       resolve({
         url: "http://localhost:4444/upload", // Placeholder URL, q-uploader expects one
         data: {
           base64: base64String,
-          filename: files[0].name
-        }
+          filename: files[0].name,
+        },
       });
     };
     reader.onerror = function (error) {
