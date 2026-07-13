@@ -79,7 +79,7 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, computed, reactive } from "vue"; // Removed onMounted
+import { ref, computed, reactive } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);

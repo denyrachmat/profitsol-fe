@@ -309,7 +309,6 @@ const onChooseValue = (val, idx) => {
 };
 
 const onClickChooseComponent = (idxForm = {}) => {
-  console.log(forms.value[idxForm]);
   $q.dialog({
     component: chooseComponent,
     componentProps: {
@@ -356,14 +355,14 @@ const onClickChooseHTML = (idxForm = {}) => {
   });
 };
 
-// Define the options array outside the dialog call for easier manipulation
-const uploadOptions = [
+// Define the options array as a ref to make it reactive
+const uploadOptions = ref([
   {
     type: "radio-group",
     name: "uploadMethod", // Key to store the selected value
     label: "Choose Upload Method:",
     required: true,
-    value: "template", // Default selected value
+    value: "template", // Default selected value, now reactive
     choices: [
       {
         value: "template",
@@ -372,14 +371,16 @@ const uploadOptions = [
       { value: "ai", label: "Use AI to scan question bank" },
     ],
   },
-];
+]);
 
 // Determine downloadTemplate prop based on the initial default uploadMethod
-const initialUploadMethodOption = uploadOptions.find(
-  (opt) => opt.name === "uploadMethod"
-);
-const showDownloadTemplateButton =
-  initialUploadMethodOption && initialUploadMethodOption.value === "template";
+// Now a computed property to react to changes in uploadOptions.value[0].value
+const showDownloadTemplateButton = computed(() => {
+  const uploadMethodOption = uploadOptions.value.find(
+    (opt) => opt.name === "uploadMethod"
+  );
+  return uploadMethodOption && uploadMethodOption.value === "template";
+});
 
 const onUploadFile = () => {
   $q.dialog({
@@ -388,8 +389,8 @@ const onUploadFile = () => {
       title: "Upload Question Bank",
       accept: ".csv,.txt,.json,.xlsx,.docx",
       multiple: false, // Assuming single file upload for question bank
-      options: uploadOptions, // Use the defined options array
-      downloadTemplate: showDownloadTemplateButton, // Dynamically set based on initial uploadMethod
+      options: uploadOptions.value, // Use the .value of the ref
+      downloadTemplate: showDownloadTemplateButton.value, // Use the .value of the computed prop
       onDownloadTemplate: handleDownloadTemplate, // Pass the function prop
     },
   })
