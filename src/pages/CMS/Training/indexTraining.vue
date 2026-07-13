@@ -369,8 +369,12 @@ const onUploadFile = () => {
           name: "uploadMethod", // Key to store the selected value
           label: "Choose Upload Method:",
           required: true,
+          value: "template", // Default selected value
           choices: [
-            { value: "template", label: "Upload using template" },
+            {
+              value: "template",
+              label: "Upload using template",
+            },
             { value: "ai", label: "Use AI to scan question bank" },
           ],
         },
@@ -424,17 +428,17 @@ const onUploadFile = () => {
         message: "Upload cancelled.",
         color: "negative",
       });
-    })
-    // Removed onDownloadTemplate callback because we handle download in onOk
-    // .onDownloadTemplate(() => {
-    //   $q.notify({
-    //     message: "Downloading template...",
-    //     color: "primary",
-    //   });
-    //   // ponytail: Implement actual template download logic here.
-    //   // For example, trigger a file download or navigate to a template URL.
-    //   // window.open('/path/to/your/template.xlsx', '_blank');
-    // });
+    });
+  // Removed onDownloadTemplate callback because we handle download in onOk
+  // .onDownloadTemplate(() => {
+  //   $q.notify({
+  //     message: "Downloading template...",
+  //     color: "primary",
+  //   });
+  //   // ponytail: Implement actual template download logic here.
+  //   // For example, trigger a file download or navigate to a template URL.
+  //   // window.open('/path/to/your/template.xlsx', '_blank');
+  // });
 };
 
 const onClickSetupTraining = () => {
