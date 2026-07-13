@@ -78,12 +78,7 @@
           >
             <q-tooltip> Add HTML Rows. </q-tooltip>
           </q-btn>
-          <q-btn
-            color="orange"
-            icon="upload"
-            @click="onUploadFile"
-            :disable="!title"
-          >
+          <q-btn color="orange" icon="upload" @click="onUploadFile">
             <q-tooltip> Upload Questions Bank </q-tooltip>
           </q-btn>
         </q-btn-group>
@@ -365,62 +360,64 @@ const onUploadFile = () => {
   $q.dialog({
     component: UploadFiles,
     componentProps: {
-      title: 'Upload Question Bank',
-      accept: '.csv,.txt,.json,.xlsx,.docx',
+      title: "Upload Question Bank",
+      accept: ".csv,.txt,.json,.xlsx,.docx",
       multiple: false, // Assuming single file upload for question bank
       options: [
         {
-          type: 'radio-group',
-          name: 'uploadMethod', // Key to store the selected value
-          label: 'Choose Upload Method:',
+          type: "radio-group",
+          name: "uploadMethod", // Key to store the selected value
+          label: "Choose Upload Method:",
           required: true,
           choices: [
-            { value: 'template', label: 'Upload using template' },
-            { value: 'ai', label: 'Use AI to scan question bank' }
-          ]
-        }
-      ]
+            { value: "template", label: "Upload using template" },
+            { value: "ai", label: "Use AI to scan question bank" },
+          ],
+        },
+      ],
+      downloadTemplate: true, // Enable the download template button
     },
-  }).onOk(async ({ result, fileName, dynamicOptions }) => {
-    console.log('Uploaded file base64:', result);
-    console.log('Uploaded file name:', fileName);
-    console.log('Chosen upload method:', dynamicOptions.uploadMethod); // Access the method from dynamicOptions
+  })
+    .onOk(async ({ result, fileName, dynamicOptions }) => {
+      console.log("Uploaded file base64:", result);
+      console.log("Uploaded file name:", fileName);
+      console.log("Chosen upload method:", dynamicOptions.uploadMethod); // Access the method from dynamicOptions
 
-    const fileContent = result; // This is the base64 content
-    const actualFileName = fileName; // This is the file name
-    const method = dynamicOptions.uploadMethod;
+      const fileContent = result; // This is the base64 content
+      const actualFileName = fileName; // This is the file name
+      const method = dynamicOptions.uploadMethod;
 
-    if (method === 'template') {
+      if (method === "template") {
+        $q.notify({
+          message: `Uploading "${actualFileName}" using template...`,
+          color: "info",
+        });
+        // ponytail: API call for template upload, add when backend is ready.
+        // const formData = new FormData();
+        // formData.append('fileContent', fileContent); // Send base64
+        // formData.append('fileName', actualFileName);
+        // const data = await postData('post', formData, 'cms/upload-template-quiz', true, false, true);
+        // if (data) { /* handle success */ }
+      } else if (method === "ai") {
+        $q.notify({
+          message: `Scanning "${actualFileName}" with AI...`,
+          color: "info",
+        });
+        // ponytail: API call for AI scan, add when backend is ready.
+        // const formData = new FormData();
+        // formData.append('fileContent', fileContent); // Send base64
+        // formData.append('fileName', actualFileName);
+        // const data = await postData('post', formData, 'cms/scan-quiz-with-ai', true, false, true);
+        // if (data) { /* handle success */ }
+      }
+    })
+    .onCancel(() => {
       $q.notify({
-        message: `Uploading "${actualFileName}" using template...`,
-        color: 'info',
+        message: "Upload cancelled.",
+        color: "negative",
       });
-      // ponytail: API call for template upload, add when backend is ready.
-      // const formData = new FormData();
-      // formData.append('fileContent', fileContent); // Send base64
-      // formData.append('fileName', actualFileName);
-      // const data = await postData('post', formData, 'cms/upload-template-quiz', true, false, true);
-      // if (data) { /* handle success */ }
-    } else if (method === 'ai') {
-      $q.notify({
-        message: `Scanning "${actualFileName}" with AI...`,
-        color: 'info',
-      });
-      // ponytail: API call for AI scan, add when backend is ready.
-      // const formData = new FormData();
-      // formData.append('fileContent', fileContent); // Send base64
-      // formData.append('fileName', actualFileName);
-      // const data = await postData('post', formData, 'cms/scan-quiz-with-ai', true, false, true);
-      // if (data) { /* handle success */ }
-    }
-  }).onCancel(() => {
-    $q.notify({
-      message: 'Upload cancelled.',
-      color: 'negative',
     });
-  });
 };
-
 
 const onClickSetupTraining = () => {
   $q.dialog({

@@ -3,7 +3,20 @@
   <q-dialog ref="dialogRef" @hide="onDialogHide" style="min-width: 700px">
     <q-card class="q-dialog-plugin" style="min-width: 700px">
       <q-card-section>
-        <div class="text-h6">{{ props.title || "Upload File" }}</div>
+        <div class="row">
+          <div class="col">
+            <div class="text-h6">{{ props.title || "Upload File" }}</div>
+          </div>
+
+          <div class="col text-right" v-if="props.downloadTemplate">
+            <q-btn
+              label="Download Template"
+              icon="download"
+              color="green"
+              @click="onDownloadTemplate"
+            ></q-btn>
+          </div>
+        </div>
       </q-card-section>
 
       <q-card-section>
@@ -19,7 +32,7 @@
           ref="uploaderRef"
           style="min-height: 200px"
         >
-          <template v-slot:body="scope">
+          <template>
             <div class="full-width full-height column flex-center">
               <q-icon name="cloud_upload" size="xl" color="grey-6" />
               <div class="text-h6 text-grey-6 q-mt-sm">
@@ -79,6 +92,10 @@ const props = defineProps({
   accept: String,
   multiple: Boolean,
   options: Array, // New prop for custom form elements
+  downloadTemplate: {
+    type: boolean,
+    default: false,
+  },
 });
 
 // REQUIRED; must be called inside of setup()
@@ -144,6 +161,10 @@ const canProceed = computed(() => {
   }
   return true;
 });
+
+const onDownloadTemplate = () => {
+  emit("download-template"); // Emit an event to the parent to handle the download
+};
 
 const onOKClick = () => {
   if (canProceed.value) {
