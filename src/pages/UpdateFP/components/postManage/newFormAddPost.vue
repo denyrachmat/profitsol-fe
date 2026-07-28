@@ -39,7 +39,7 @@
             />
           </div>
         </div>
-        <div class="row">
+        <div class="row q-gutter-md q-pb-md">
           <div class="col">
             <q-btn
               label="Manage Category"
@@ -62,22 +62,7 @@
               </q-chip>
             </template>
           </div>
-        </div>
-        <q-separator class="q-my-md" />
-        <div class="row">
-          <div class="col-12">
-            <comment-component
-              @submit="(value) => onClickSave(value)"
-              @onCancel="
-                () => {
-                  editor = '';
-                }
-              "
-              :modelValue="editor"
-              :initial-attachments="listAttachments"
-            />
-          </div>
-          <div class="col-12">
+          <div class="col">
             <div class="text-subtitle2 q-mb-sm">Tags</div>
             <div v-if="tags.length > 0" class="q-gutter-xs">
               <q-chip
@@ -96,6 +81,32 @@
               No tags found. Tags will appear automatically when you type #
               followed by text in the editor.
             </div>
+          </div>
+        </div>
+        <q-separator class="q-my-md" />
+        <div class="row q-gutter-md">
+          <div class="col-12">
+            <comment-component
+              :key="refreshKey || idRef || props.postsData.id || 'new-post'"
+              @submit="(value) => onClickSave(value)"
+              @onCancel="
+                () => {
+                  editor = '';
+                  onDialogCancel();
+                }
+              "
+              :bypass-confirm="true"
+              :modelValue="editor"
+              :initial-attachments="listAttachments"
+              @onChange="
+                (value) => {
+                  editor = value;
+                  tags =
+                    value.match(/#(\w+)/g)?.map((tag) => tag.substring(1)) ||
+                    [];
+                }
+              "
+            />
           </div>
         </div>
       </q-card-section>
@@ -136,6 +147,7 @@ const idContent = ref("");
 const tags = ref([]);
 const categories = ref([]);
 const listAttachments = ref([]);
+const refreshKey = ref(0); // Key to force re-rendering of the comment component
 
 const props = defineProps({
   postsData: {
@@ -145,17 +157,23 @@ const props = defineProps({
 });
 
 onMounted(async () => {
+  console.log("props.postsData:", props.postsData);
   if (props.postsData) {
     postTitle.value = props.postsData.title || "";
     postDescription.value = props.postsData.description || "";
-    categories.value = props.postsData.categories || [];
-    tags.value = props.postsData.tags || [];
+    categories.value = props.postsData.tags || [];
+    tags.value =
+      props.postsData.hashtags ||
+      editor.value.match(/#(\w+)/g)?.map((tag) => tag.substring(1)) ||
+      [];
     editor.value = props.postsData.content || "";
   }
 
   if (props.postsData && props.postsData.id) {
     await getDataForms();
   }
+
+  refreshKey.value++; // Increment the key to force re-rendering of the comment component
 });
 
 const getDataForms = async () => {
@@ -198,6 +216,10 @@ const getDataForms = async () => {
         editor.value = htmlContent;
         console.log("Editor instance:", editor.value);
       }
+
+      if (dataFetch.setupTraining && dataFetch.setupTraining.attachments) {
+        listAttachments.value = dataFetch.setupTraining.attachments;
+      }
     }
   } catch (error) {
     loading.value = false;
@@ -231,7 +253,7 @@ const onClickSave = (valueData) => {
           content: [
             {
               id: idContent.value,
-              content: valueData,
+              content: valueData.comment, // Use the comment content from the dialog
               type: "html",
             },
           ],
@@ -240,14 +262,16 @@ const onClickSave = (valueData) => {
       title: postTitle.value,
       desc: postDescription.value,
       isQuiz: 3, // Set as needed
-      setupTraining: null, // Set as needed
+      setupTraining: {
+        attachments: valueData.attachments,
+      }, // Set as needed
       shareForms: null, // Set as needed
       shareFormsIsMainMenu: null, // Set as needed
       shareFormsIsRoles: null, // Set as needed
       selectedSharedMenu: null, // Set as needed
       shareFormsMenuIcon: null, // Set as needed
       tags: categories.value,
-      hastags: tags.value,
+      hashtags: tags.value, // Use the attachments from the dialog
     };
 
     // Simulate API call

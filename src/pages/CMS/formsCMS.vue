@@ -47,6 +47,14 @@
           >
             <q-tooltip> Share this form </q-tooltip>
           </q-btn>
+          <q-btn
+            color="teal"
+            icon="analytics"
+            @click="onClickCompletion"
+            :disable="!idRef"
+          >
+            <q-tooltip> Completion Status </q-tooltip>
+          </q-btn>
         </q-btn-group>
       </div>
     </div>
@@ -204,6 +212,7 @@ import shareFormsVue from "./Forms/shareForms.vue";
 import setupTraining from "./Training/setupTraining.vue";
 import showLogicField from "./Forms/showLogicField.vue";
 import showLogicForms from "./Forms/showLogicForms.vue";
+import completionDashboard from "./Training/completionDashboard.vue";
 
 const { postData } = apiRequest();
 
@@ -241,6 +250,8 @@ const shareFormsMenuIcon = ref("");
 const selectedTableRoles = ref("");
 const logicsFields = ref([]);
 const formEvents = ref([]);
+const formStatus = ref("draft");
+const formYear = ref(null);
 
 const onAddRows = () => {
   // formsInit.seq_name = `Rows ${forms.value.length + 1}`;
@@ -360,6 +371,9 @@ const onClickSave = () => {
         ans: [],
         title: title.value,
         isQuiz: false,
+        status: formStatus.value,
+        year: formYear.value,
+        setupTraining: setupTrainingSetup.value,
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
         shareFormsIsRoles: shareIsroles.value,
@@ -409,7 +423,14 @@ const openTraining = () => {
     selectedTableRoles.value = val.shareFormsRoleID;
     logicsFields.value = val.logicsFields;
     formEvents.value = val.formEvents;
-    // forms.value[idxForm].content = val;
+    formStatus.value = val.status || "draft";
+    formYear.value = val.year || null;
+    if (val.setupTraining) {
+      setupTrainingSetup.value = {
+        ...setupTrainingSetup.value,
+        ...val.setupTraining,
+      };
+    }
   });
 };
 
@@ -470,7 +491,8 @@ const onClickSetupTraining = () => {
     },
   }).onOk(async (val) => {
     setupTrainingSetup.value = val;
-    // forms.value[idxForm].content = val;
+    formStatus.value = val.formStatus || "draft";
+    formYear.value = val.formYear || null;
   });
 };
 
@@ -500,6 +522,16 @@ const onClickLogicForms = () => {
     },
   }).onOk(async (val) => {
     formEvents.value = val;
+  });
+};
+
+const onClickCompletion = () => {
+  $q.dialog({
+    component: completionDashboard,
+    componentProps: {
+      formId: parseInt(idRef.value),
+      formTitle: title.value,
+    },
   });
 };
 </script>

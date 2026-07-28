@@ -1,5 +1,5 @@
 <template>
-  <q-layout class="shadow-2">
+  <q-layout class="shadow-2" view="hHh Lpr lFf">
     <q-header
       :elevated="mainConfData.headerElevated == 1"
       :style="{
@@ -179,7 +179,6 @@
 
     <q-drawer
       v-model="drawerLeft"
-      show-if-above
       :width="300"
       :breakpoint="500"
       bordered
@@ -196,7 +195,7 @@
       </q-scroll-area>
     </q-drawer>
 
-    <q-page-container class="full-height">
+    <q-page-container class="full-height relative-position">
       <div class="row" :key="refreshKeys">
         <div v-if="loading" class="col flex flex-center column">
           <q-spinner color="primary" size="15em" class="q-mt-xl" />
@@ -211,9 +210,12 @@
               v-if="
                 (choosedPages.forms &&
                   choosedPages.forms.id &&
-                  choosedPages.is_main == 1) ||
+                  choosedPages.is_main == 1 &&
+                  formStore.getCMSPageChoosed.type !== 'posts' &&
+                  formStore.getCMSPageChoosed.type !== 'tags') ||
                 viewMode == 'edit'
               "
+              @loading-state="onShowComponentLoading"
               :setup="choosedPages.forms.setupTraining"
               :id="() => String(choosedPages.forms.id)"
               :showFormOnly="true"
@@ -248,6 +250,15 @@
         </template>
       </div>
     </q-page-container>
+
+    <transition name="fade">
+      <div v-if="showHomeOverlay" class="home-loading-overlay">
+        <q-spinner-dots color="primary" size="80px" />
+        <div class="text-subtitle1 text-weight-medium q-mt-md">
+          Preparing home components...
+        </div>
+      </div>
+    </transition>
   </q-layout>
 </template>
 <script setup>
@@ -289,10 +300,16 @@ const drawerLeft = ref(false);
 const refreshKeys = ref(0);
 const refreshKeysContent = ref(0);
 const loadingDrawer = ref(false);
+const showComponentLoadingCount = ref(0);
+const loadingShowComponent = ref(false);
+const initialOverlayLock = ref(true);
+const hasShowComponentLoadingSignal = ref(false);
 const viewMode = ref("view");
 const isSubscribed = ref(false);
 
 let intervalId = null;
+let hideShowComponentOverlayTimer = null;
+const SHOW_COMPONENT_OVERLAY_HIDE_DELAY_MS = 250;
 
 const choosedPages = ref([]);
 const listMainConf = ref([]);
@@ -319,6 +336,89 @@ const mainConfData = computed(() => {
     return acc;
   }, {});
 });
+
+const shouldRenderMainShowComponent = computed(
+  () =>
+    ((choosedPages.value?.forms &&
+      choosedPages.value.forms.id &&
+      choosedPages.value?.is_main == 1) ||
+      viewMode.value == "edit") ??
+    false
+);
+
+const showHomeOverlay = computed(
+  () =>
+    initialOverlayLock.value ||
+    loading.value ||
+    loadingDrawer.value ||
+    loadingShowComponent.value
+);
+
+const onShowComponentLoading = (val) => {
+  hasShowComponentLoadingSignal.value = true;
+
+  if (val) {
+    if (hideShowComponentOverlayTimer) {
+      clearTimeout(hideShowComponentOverlayTimer);
+      hideShowComponentOverlayTimer = null;
+    }
+
+    showComponentLoadingCount.value += 1;
+    loadingShowComponent.value = true;
+    return;
+  }
+
+  showComponentLoadingCount.value = Math.max(
+    0,
+    showComponentLoadingCount.value - 1
+  );
+
+  if (showComponentLoadingCount.value === 0) {
+    hideShowComponentOverlayTimer = setTimeout(() => {
+      if (showComponentLoadingCount.value === 0) {
+        loadingShowComponent.value = false;
+        initialOverlayLock.value = false;
+      }
+    }, SHOW_COMPONENT_OVERLAY_HIDE_DELAY_MS);
+  }
+};
+
+watch(
+  () => [
+    loading.value,
+    loadingDrawer.value,
+    loadingShowComponent.value,
+    shouldRenderMainShowComponent.value,
+    hasShowComponentLoadingSignal.value,
+  ],
+  ([
+    isLoading,
+    isDrawerLoading,
+    isShowCompLoading,
+    shouldRenderShowComp,
+    hasSignal,
+  ]) => {
+    if (
+      !isLoading &&
+      !isDrawerLoading &&
+      !isShowCompLoading &&
+      !shouldRenderShowComp
+    ) {
+      initialOverlayLock.value = false;
+      return;
+    }
+
+    if (
+      !isLoading &&
+      !isDrawerLoading &&
+      !isShowCompLoading &&
+      shouldRenderShowComp &&
+      hasSignal
+    ) {
+      initialOverlayLock.value = false;
+    }
+  }
+);
 
 const props = defineProps({
   mode: {
@@ -350,7 +450,9 @@ onMounted(async () => {
         });
       } else {
         // Firefox: boleh tetap auto minta izin seperti behavior lama
-        await requestPermissionAndSubscribe(true);
+        if (authStore.getStatusLog) {
+          await requestPermissionAndSubscribe(true);
+        }
       }
     }
   } catch (e) {
@@ -379,8 +481,9 @@ onMounted(async () => {
   await getMainConf();
 
   if (!formStore.getIsFrontPageTourDone && authStore.getStatusLog) {
-    startTutorial();
+    // startTutorial();
   }
+
   await getDataNav();
 
   // Find the menu item where is_main == 1
@@ -424,6 +527,11 @@ onMounted(async () => {
 onUnmounted(() => {
   if (intervalId) {
     clearInterval(intervalId);
+  }
+
+  if (hideShowComponentOverlayTimer) {
+    clearTimeout(hideShowComponentOverlayTimer);
+    hideShowComponentOverlayTimer = null;
   }
 });
 
@@ -692,6 +800,16 @@ const executeUnsubscribe = async () => {
 
 // ====== fungsi minta izin + lanjut subscribe ======
 const requestPermissionAndSubscribe = async (byPassQuestion = true) => {
+  if (!authStore.getStatusLog) {
+    $q.notify({
+      type: "warning",
+      message: "Please log in to enable notifications.",
+    });
+
+    router.push("/login");
+    return;
+  }
+
   console.log("--- [REQ] requestPermissionAndSubscribe ---");
 
   const currentPermission = Notification.permission;
@@ -859,6 +977,15 @@ watch(
         formStore.setCMSPageChoosed(mainMenuItem);
         // isHome.value = true;
       }
+    } else if (newPath.startsWith("/pages/")) {
+      formStore.setCMSPageChoosed({
+        type: "posts",
+        value: null,
+        tags:
+          newPath.split("/pages/")[1]?.split("/")[0] || "",
+        url:
+          newPath.split("/pages/")[1]?.split("/").slice(1).join("/") || "",
+      });
     }
   }
 );
@@ -873,5 +1000,28 @@ body.driver-active {
 body.driver-active .driver-popover,
 body.driver-active .driver-popover * {
   pointer-events: auto;
+}
+
+.home-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

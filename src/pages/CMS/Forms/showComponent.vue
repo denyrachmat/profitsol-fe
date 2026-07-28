@@ -5,6 +5,7 @@
       ========================================================= -->
     <div class="row q-gutter-md" v-if="shouldShowHistoryReport">
       <div class="col">
+        {{ canEditTable }}
         <tableReport
           :idReport="connectedMRSVal.id"
           :TableTitle="connectedMRSVal.mrm_name"
@@ -13,6 +14,8 @@
           :maxAPIOpt="props.setup?.APISearchQuota || 0"
           :is-add-active-period="periodStateChecker"
           :activate-multiple-create="multipleFormSetup"
+          :can-edit="canEditTable"
+          :can-delete="props.setup?.allowDeleteData || false"
         />
       </div>
     </div>
@@ -39,11 +42,66 @@
         />
       </div>
     </div>
+
     <!-- =========================================================
       2) LIVE MODE (render form / html / posts / files / quiz)
       ========================================================= -->
     <template v-else-if="!shouldShowHistoryReport">
-      <div v-if="getNowData.length > 0" :style="contentWrapperStyle">
+      <!-- NEW PAGE BUILDER: delegate to blockRenderer -->
+      <div v-if="isNewPageFormat" :key="`page-builder-${refreshedPosts}`">
+        <!-- Header card (optional) -->
+        <div class="row" v-if="props.useHeader">
+          <div class="col">
+            <q-card class="bg-white shadow-1 rounded-borders" bordered>
+              <q-card-section>
+                <div class="text-h6">{{ props.headersComp.title }}</div>
+                <div class="text-subtitle2">
+                  {{ props.headersComp.description }}
+                </div>
+                <div class="text-caption text-italic">
+                  By: {{ props.headersComp.author }} -
+                  {{ timeAgo(props.headersComp.date) }}
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+
+        <div class="page-builder-render" :style="pageBuilderContainerStyle">
+          <blockRenderer
+            v-for="(block, idx) in forms"
+            :key="block.id || `block-${idx}`"
+            :block="block"
+            :preview="true"
+          />
+        </div>
+
+        <!-- Comment section (optional) -->
+        <div v-if="props.useCommentSection" class="q-mt-lg">
+          <q-card class="bg-white shadow-1 rounded-borders" bordered>
+            <q-card-section>
+              <div class="text-h6">Comments</div>
+            </q-card-section>
+            <q-card-section v-if="authStore.isLoggedIn === true">
+              <commentComponentVue
+                @submit="onSubmitComment"
+                @loading-state="onChildLoadingState"
+              />
+            </q-card-section>
+            <q-card-section v-else class="text-center text-grey-6 q-pa-md">
+              <q-icon name="chat_bubble_outline" size="48px" class="q-mb-sm" />
+              <div class="text-body1">Please log in to comment</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- OLD CMS FORMAT: render form / html / posts / files / quiz -->
+      <div
+        v-else-if="getNowData.length > 0"
+        :style="contentWrapperStyle"
+        :key="`showComponent-${refreshedPosts}`"
+      >
         <!-- Batch upload button (optional) -->
         <div class="row" v-if="uploaderUsersList">
           <div class="col text-right">
@@ -71,7 +129,7 @@
           </div>
         </div>
 
-        <div style="height: 100%">
+        <div>
           <!-- Header card (optional) -->
           <div class="row" v-if="props.useHeader">
             <div class="col">
@@ -186,6 +244,31 @@
                   </div>
                 </q-card-section>
               </q-card>
+
+              <q-card
+                class="bg-white shadow-1 rounded-borders"
+                bordered
+                v-if="(props.setup?.attachments?.length || 0) > 0"
+              >
+                <q-card-section>
+                  <div class="text-h6">Attachments</div>
+
+                  <div class="q-mt-sm">
+                    <q-chip
+                      v-for="(att, idx) in props.setup?.attachments"
+                      :key="idx"
+                      outline
+                      color="primary"
+                      class="q-mr-sm q-mb-sm cursor-pointer"
+                      @click="onOpenAttachment(att)"
+                      clickable
+                    >
+                      <q-icon name="attachment" class="q-mr-sm" />
+                      {{ att.name }}
+                    </q-chip>
+                  </div>
+                </q-card-section>
+              </q-card>
             </div>
           </div>
 
@@ -198,19 +281,40 @@
             :key="'row-' + rowIdx"
           >
             <template
-              v-for="(col, colIdx) in row.content"
-              :key="'col-' + col.id"
+              v-for="(col, colIdx) in getRowColumns(row)"
+              :key="`col-${rowIdx}-${colIdx}-${col.id ?? 'no-id'}`"
             >
               <div
-                v-if="!col.hidden"
+                v-if="isColumnVisible(col)"
                 :class="getColClass(row, col)"
                 style="word-wrap: break-word; overflow-wrap: break-word"
               >
+                <!-- ========= HTML BLOCK ========= -->
                 <q-card
+                  v-if="col.type === 'html' && props.useCardSeparator"
+                  class="bg-white shadow-1 rounded-borders q-pa-md"
+                  bordered
+                  flat
+                  style="width: 100%; height: auto; max-height: 100%"
+                >
+                  <div
+                    class="html-content-wrap"
+                    v-html="processHtml(col.content)"
+                  ></div>
+                </q-card>
+                <div v-else-if="col.type === 'html'" style="width: 100%">
+                  <div
+                    class="html-content-wrap"
+                    v-html="processHtml(col.content)"
+                  ></div>
+                </div>
+
+                <q-card
+                  v-else
                   class="bg-white shadow-1 rounded-borders"
                   :bordered="props.useCardSeparator"
                   :flat="!props.useCardSeparator"
-                  style="width: 100%; height: 100%"
+                  style="width: 100%; height: auto"
                 >
                   <q-card-section>
                     <!-- ========= FORM COMPONENT ========= -->
@@ -236,13 +340,6 @@
                       :readonly="col.readonly"
                     />
 
-                    <!-- ========= HTML BLOCK ========= -->
-                    <div v-else-if="col.type === 'html'">
-                      <!-- WARNING: processHtml() injects styles + runs scripts (XSS risk).
-                           Use only for trusted HTML sources. -->
-                      <div v-html="processHtml(col.content)"></div>
-                    </div>
-
                     <!-- ========= POSTS BLOCK ========= -->
                     <div
                       v-else-if="col.type === 'posts'"
@@ -263,6 +360,7 @@
                                 col.currentPost.id &&
                                 col.currentPost.forms
                               "
+                              @loading-state="onChildLoadingState"
                               :setup="col.currentPost.setupTraining"
                               :id="col.currentPost.id"
                               :showFormOnly="true"
@@ -656,7 +754,7 @@
                                 icon="delete"
                                 color="negative"
                                 class="q-ml-sm"
-                                @click="() => onDeleteComment(prop.node.id)"
+                                @click="() => onDeleteComment(prop.node.idx)"
                               />
                             </template>
                           </div>
@@ -669,9 +767,11 @@
                           >
                             <commentComponentVue
                               @submit="
-                                (value) => onSubmitComment(value, prop.node)
+                                (value) =>
+                                  onSubmitComment(value, prop.node.parent)
                               "
                               @onCancel="resetReplyState"
+                              @loading-state="onChildLoadingState"
                               :modelValue="selectedReplyContent"
                               :initial-attachments="selectedReplyAttachments"
                             />
@@ -686,6 +786,7 @@
                 <q-card-section>
                   <commentComponentVue
                     @submit="onSubmitComment"
+                    @loading-state="onChildLoadingState"
                     v-if="authStore.isLoggedIn === true"
                   />
                   <div v-else class="text-center text-grey-6 q-pa-md">
@@ -713,7 +814,10 @@
       <!-- =========================================================
         3) Wizard navigation actions (optional)
         ========================================================= -->
-      <div class="absolute-bottom">
+      <div
+        v-if="showControl && getNowData.length > 0 && !removeButtons"
+        class="q-mt-md"
+      >
         <div class="row q-pt-sm">
           <div class="col flex flex-center">
             <q-pagination
@@ -764,6 +868,7 @@
 import {
   ref,
   defineProps,
+  defineEmits,
   onMounted,
   computed,
   onBeforeUnmount,
@@ -784,6 +889,9 @@ import commentComponentVue from "src/pages/Frontpage/commentComponent.vue";
 import uploadFilesIndex from "src/components/uploadFiles/index.vue";
 
 import showComponentAsChecklistVue from "./showComponentAsChecklist.vue";
+
+import blockRenderer from "../../UpdateFP/components/pageManage/blockRenderer.vue";
+import widgetRegistry from "../../UpdateFP/components/pageManage/widgets/widgetRegistry.js";
 
 /**
  * =========================================================
@@ -844,7 +952,13 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  showControl: {
+    type: Boolean,
+    default: true,
+  },
 });
+
+const emit = defineEmits(["loading-state"]);
 
 /**
  * =========================================================
@@ -861,6 +975,8 @@ const preventClears = ref(false);
 const removeButtons = ref(false);
 const isFullHeight = ref(false);
 const isBulkUpload = ref(false);
+const selfLoading = ref(false);
+const nestedLoadingCount = ref(0);
 
 const refreshedPosts = ref(0);
 
@@ -882,7 +998,117 @@ const selectedReplyAttachments = ref([]);
 /**
  * Wrapper style: keep scrollable if there is content.
  */
-const contentWrapperStyle = computed(() => `max-height: 70%; overflow: auto;`);
+const contentWrapperStyle = computed(() => {
+  // Avoid nested scrolling when comments are shown so comments stay anchored
+  // below long content instead of appearing to float in a fixed-height area.
+  if (props.useCommentSection) {
+    return "width: 100%;";
+  }
+
+  return "max-height: 70%; overflow: auto;";
+});
+
+const pageBuilderContainerStyle = computed(() => {
+  const widthMode = props.setup?.containerWidth || "contained";
+  const mobileFriendly = !!props.setup?.mobileFriendly;
+  const maxWidth =
+    widthMode === "wide" ? "1200px" : widthMode === "full" ? "100%" : "900px";
+  const padding = widthMode === "full" ? "0" : "0 16px";
+  let style = `max-width: ${maxWidth}; margin: 0 auto; padding: ${padding};`;
+  if (mobileFriendly) {
+    style += " width: 100%; box-sizing: border-box;";
+  }
+  return style;
+});
+
+const NEW_PAGE_TYPES = new Set(Object.keys(widgetRegistry));
+const isNewPageFormat = computed(() => {
+  const items = forms.value;
+  if (!Array.isArray(items) || items.length === 0) return false;
+  return items.some(
+    (f) => f && f.type && f.type !== "row" && NEW_PAGE_TYPES.has(f.type)
+  );
+});
+
+/**
+ * Normalize blocks loaded from backend so they match what the page-builder
+ * widget renderers expect. Backend convertToFE returns:
+ *   - html: content is a raw string, but HtmlRenderer expects { body: "..." }
+ *   - posts: content has "tags" key, but PostsRenderer expects "category"
+ *   - all non-row, non-html: content includes detail_data[] which renderers don't need
+ *   - columns: children embedded in JSON don't have these issues but col.size → col.width
+ */
+const normalizeBlock = (block) => {
+  if (!block || typeof block !== "object") return block;
+  const b = { ...block };
+  let content = b.content;
+
+  if (b.type === "html") {
+    if (typeof content === "string") {
+      try {
+        const parsed = JSON.parse(content);
+        content =
+          typeof parsed === "object" && parsed.body
+            ? parsed
+            : { body: content };
+      } catch {
+        content = { body: content };
+      }
+    } else if (content && typeof content === "object" && !content.body) {
+      content = {
+        body: typeof content === "string" ? content : JSON.stringify(content),
+      };
+    }
+  } else if (b.type === "posts") {
+    if (content && typeof content === "object") {
+      if (content.tags && !content.category) {
+        content = { ...content, category: content.tags };
+      }
+      const { detail_data, ...rest } = content;
+      content = rest;
+    }
+  } else if (b.type === "columns") {
+    const { detail_data, ...rest } = content || {};
+    content = rest;
+    if (content.columns) {
+      content = {
+        ...content,
+        columns: content.columns.map((col) => ({
+          ...col,
+          width: col.size || col.width || 6,
+          children: (col.children || []).map(normalizeBlock),
+        })),
+      };
+    }
+  } else if (b.type === "carousel") {
+    const { detail_data, _currentSlide, ...rest } = content || {};
+    content = rest;
+    if (content.slides) {
+      content = {
+        ...content,
+        slides: content.slides.map((slide) => ({
+          ...slide,
+          children: (slide.children || []).map(normalizeBlock),
+        })),
+      };
+    }
+  } else if (
+    content &&
+    typeof content === "object" &&
+    !Array.isArray(content)
+  ) {
+    const { detail_data, ...rest } = content;
+    content = rest;
+  }
+
+  b.content = content;
+  return b;
+};
+
+const normalizeBlocksForPreview = (blocks) => {
+  if (!Array.isArray(blocks)) return blocks;
+  return blocks.map(normalizeBlock);
+};
 
 /**
  * Determine whether we should show MRS report in history mode.
@@ -902,19 +1128,32 @@ const shouldShowHistoryReport = computed(() => {
  */
 const isShowFormOnly = ref(!!props.showFormOnly);
 
+const normalizeSeqName = (seq, fallback = "1") =>
+  String(seq ?? fallback)
+    .trim()
+    .replace(/^$/, fallback);
+
 /**
  * Current wizard index & data pages (rows filtered by seq_name)
  */
 const getNowIdx = computed(() =>
-  forms.value.findIndex((x) => x.seq_name == nowSeq.value)
+  forms.value.findIndex(
+    (x) => normalizeSeqName(x.seq_name) === normalizeSeqName(nowSeq.value)
+  )
 );
 
 const getNowData = computed(() =>
-  forms.value.filter((x) => x.seq_name == nowSeq.value)
+  forms.value.filter(
+    (x) => normalizeSeqName(x.seq_name) === normalizeSeqName(nowSeq.value)
+  )
 );
 
 const getNextData = computed(() =>
-  forms.value.filter((x) => x.seq_name == parseInt(nowSeq.value) + 1)
+  forms.value.filter(
+    (x) =>
+      normalizeSeqName(x.seq_name) ===
+      normalizeSeqName(parseInt(nowSeq.value) + 1)
+  )
 );
 
 const getFormsBySeqName = computed(() => {
@@ -980,70 +1219,118 @@ const authorSubscribeColor = computed(() =>
   !isAuthorSubscribed.value ? "primary" : "grey"
 );
 
+const isComponentLoading = computed(
+  () => selfLoading.value || nestedLoadingCount.value > 0
+);
+
+watch(
+  () => isComponentLoading.value,
+  (val) => {
+    emit("loading-state", !!val);
+  },
+  { immediate: true }
+);
+
+const onChildLoadingState = (isLoading) => {
+  if (isLoading) {
+    nestedLoadingCount.value += 1;
+  } else {
+    nestedLoadingCount.value = Math.max(0, nestedLoadingCount.value - 1);
+  }
+};
+
 /**
  * =========================================================
  * Lifecycle
  * =========================================================
  */
+watch(
+  () => props.data,
+  (newData) => {
+    if (newData && Array.isArray(newData)) {
+      forms.value = newData;
+      if (isNewPageFormat.value) {
+        forms.value = normalizeBlocksForPreview(newData);
+      }
+    }
+  }
+);
+
 onMounted(async () => {
-  // 1) init local forms from props
-  forms.value = props.data || [];
+  selfLoading.value = true;
 
-  // 2) init slide matrix for carousels: each row has slide index per col
-  slide.value = forms.value.map((row) =>
-    Array.isArray(row.content) ? row.content.map(() => 0) : [0]
-  );
+  try {
+    // 1) init local forms from props
+    forms.value = props.data || [];
 
-  // 3) flags
-  isFullHeight.value = props.fullHeight;
-  preventClears.value = props.preventClear === true;
-  isBulkUpload.value = !!(props.setup && props.setup.isBulkUpload);
-  removeButtons.value = props.removeButton || false;
+    // 1b) normalize new page builder blocks for widget renderers
+    if (isNewPageFormat.value) {
+      forms.value = normalizeBlocksForPreview(forms.value);
+    }
 
-  // 4) wizard seq initialization
-  if (props.setup && props.setup.isWizard) {
-    nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
-  } else {
-    // normalize seq_name if not wizard
-    forms.value = updateRowSeqNames(forms.value, false);
-    nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
+    // 2) init slide matrix for carousels: each row has slide index per col
+    slide.value = forms.value.map((row) =>
+      Array.isArray(row.content) ? row.content.map(() => 0) : [0]
+    );
+
+    // 3) flags
+    isFullHeight.value = props.fullHeight;
+    preventClears.value = props.preventClear === true;
+    isBulkUpload.value = !!(props.setup && props.setup.isBulkUpload);
+    removeButtons.value = props.removeButton || false;
+
+    // 4) wizard seq initialization
+    if (props.setup && props.setup.isWizard) {
+      nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
+    } else {
+      // normalize seq_name if not wizard
+      forms.value = updateRowSeqNames(forms.value, false);
+      nowSeq.value = forms.value?.[0]?.seq_name ?? "1";
+    }
+
+    // 5) history mode: fetch connected MRS data
+    if (props.setup && props.setup.isHistory == 1) {
+      isShowFormOnly.value = !!props.showFormOnly;
+      await getConnectedMRS(props.id);
+    } else {
+      connectedMRSVal.value = null;
+    }
+
+    // 6) restore default answers unless prevented
+    if (!preventClears.value) {
+      store.restoreDefault();
+    } else {
+      // 🟢 KHUSUS MODE EDIT: Paksa UI refreshedPosts berkedip agar watch di anak langsung membaca data store lama
+      setTimeout(() => {
+        refreshedPosts.value += 1;
+      }, 100);
+    }
+
+    // 7-9) OLD-FORMAT ONLY: logic engine, posts fetch, comments
+    // These rely on row-based structure that new page builder blocks don't have.
+    if (!isNewPageFormat.value) {
+      logicsChecker("onMounted");
+
+      const postsTargets = findPostsColumns(forms.value);
+      await Promise.all(
+        postsTargets.map(({ rowIdx, colIdx }) => getPostsData(rowIdx, colIdx))
+      );
+
+      if (props.useCommentSection) {
+        await getComment();
+      }
+    }
+
+    // console.log(JSON.stringify(forms.value));
+  } finally {
+    selfLoading.value = false;
   }
-
-  // 5) history mode: fetch connected MRS data
-  if (props.setup && props.setup.isHistory == 1) {
-    isShowFormOnly.value = !!props.showFormOnly;
-    await getConnectedMRS(props.id);
-  } else {
-    connectedMRSVal.value = null;
-  }
-
-  // 6) restore default answers unless prevented
-  if (!preventClears.value) {
-    store.restoreDefault();
-  } else {
-    // 🟢 KHUSUS MODE EDIT: Paksa UI refreshedPosts berkedip agar watch di anak langsung membaca data store lama
-    setTimeout(() => {
-      refreshedPosts.value += 1;
-    }, 100);
-  }
-
-  // 7) run logic engine on mount
-  logicsChecker("onMounted");
-
-  // 8) fetch posts blocks (if any)
-  const postsTargets = findPostsColumns(forms.value);
-  postsTargets.forEach(({ rowIdx, colIdx }) => getPostsData(rowIdx, colIdx));
-
-  // 9) comments
-  if (props.useCommentSection) {
-    getComment();
-  }
-
-  // console.log(JSON.stringify(forms.value));
 });
 
 onBeforeUnmount(() => {
   isMountedTriggered.value = false;
+  nestedLoadingCount.value = 0;
+  emit("loading-state", false);
 });
 
 /**
@@ -1058,13 +1345,29 @@ onBeforeUnmount(() => {
  * - Else -> divide equally based on row content length
  */
 const getColClass = (row, col) => {
+  const totalCols = getRowColumns(row).length || 1;
   const width =
     col?.width && !isNaN(Number(col.width))
       ? `col-md-${col.width}`
-      : `col-md-${Math.floor(12 / (row?.content?.length || 1))}`;
+      : `col-md-${Math.floor(12 / totalCols)}`;
 
   return ["col-12", "text-wrap", "break-all", width];
 };
+
+/**
+ * Normalize a top-level item into renderable columns.
+ * Some older/generated forms contain direct components at root level
+ * (type: form/html/posts) instead of wrapping them in a row.
+ */
+const getRowColumns = (row) => {
+  if (Array.isArray(row?.content)) return row.content;
+  if (row && typeof row === "object" && row.type && row.type !== "row") {
+    return [row];
+  }
+  return [];
+};
+
+const isColumnVisible = (col) => !convertToBoolean(col?.hidden);
 
 /**
  * Time-ago label for header
@@ -1370,14 +1673,12 @@ const onSubmitData = () => {
  */
 const updateRowSeqNames = (data, add = false) => {
   return (data || []).map((row, index) => {
-    // Only modify if it's a row
-    if (row.type === "row") {
-      return {
-        ...row,
-        seq_name: add ? (index + 1).toString() : "1",
-      };
-    }
-    return row;
+    const fallbackSeq = add ? (index + 1).toString() : "1";
+    return {
+      ...row,
+      // Non-wizard mode should render every row in one page (seq 1)
+      seq_name: add ? row?.seq_name ?? fallbackSeq : fallbackSeq,
+    };
   });
 };
 
@@ -1385,6 +1686,9 @@ watch(
   () => nowSeq.value,
   (newData, oldData) => {
     console.log(`Seq changed from ${oldData} to ${newData}`);
+    console.log("Current forms:", getNowData.value);
+    console.log("all forms:", forms.value);
+    refreshedPosts.value += 1; // trigger child components to refresh
     if (newData !== oldData && parseInt(newData) > 1) {
       const check = nextPage(parseInt(newData));
       if (!check) {
@@ -1745,7 +2049,7 @@ const getConnectedMRS = async (id) => {
 const findPostsColumns = (rows = []) => {
   const result = [];
   rows.forEach((row, rowIdx) => {
-    (row.content || []).forEach((col, colIdx) => {
+    getRowColumns(row).forEach((col, colIdx) => {
       if (col?.type === "posts") result.push({ rowIdx, colIdx });
     });
   });
@@ -1794,10 +2098,11 @@ const viewAllPosts = (col) => {
  * 4) If layout=grid -> chunk posts by perSlide.
  */
 const getPostsData = async (rowIdx, colIdx) => {
-  const dataContent = forms.value?.[rowIdx]?.content?.[colIdx];
+  const row = forms.value?.[rowIdx];
+  const dataContent = getRowColumns(row)?.[colIdx];
   if (!dataContent) return;
 
-  forms.value[rowIdx].content[colIdx].loadingPosts = true;
+  dataContent.loadingPosts = true;
 
   const response = await postData(
     "post",
@@ -1812,7 +2117,7 @@ const getPostsData = async (rowIdx, colIdx) => {
   );
 
   if (!response) {
-    forms.value[rowIdx].content[colIdx].loadingPosts = false;
+    dataContent.loadingPosts = false;
     return;
   }
 
@@ -1835,10 +2140,10 @@ const getPostsData = async (rowIdx, colIdx) => {
       );
 
       if (getForms?.data?.value) {
-        forms.value[rowIdx].content[colIdx].currentPost = getForms.data.value;
+        dataContent.currentPost = getForms.data.value;
       }
     }
-    forms.value[rowIdx].content[colIdx].loadingPosts = false;
+    dataContent.loadingPosts = false;
     refreshedPosts.value += 1;
     return;
   }
@@ -1868,14 +2173,14 @@ const getPostsData = async (rowIdx, colIdx) => {
         return textarea.value;
       };
 
-      forms.value[rowIdx].content[colIdx].postsList[idx].image =
+      dataContent.postsList[idx].image =
         matches.length > 0 ? decodeHtmlEntities(matches[0][1]) : null;
 
       // Extract plain text (simple)
       const contentRegex = /<[^>]*>|&[^;]+;/g;
       const cleanContent = String(html).replace(contentRegex, "").trim();
 
-      forms.value[rowIdx].content[colIdx].postsList[idx].desc =
+      dataContent.postsList[idx].desc =
         cleanContent.substring(0, 150) +
         (cleanContent.length > 150 ? "..." : "");
     })
@@ -1888,10 +2193,10 @@ const getPostsData = async (rowIdx, colIdx) => {
     for (let i = 0; i < dataContent.postsList.length; i += perSlide) {
       chunked.push(dataContent.postsList.slice(i, i + perSlide));
     }
-    forms.value[rowIdx].content[colIdx].postsList = chunked;
+    dataContent.postsList = chunked;
   }
 
-  forms.value[rowIdx].content[colIdx].loadingPosts = false;
+  dataContent.loadingPosts = false;
   refreshedPosts.value += 1;
 };
 
@@ -1963,10 +2268,48 @@ const onClickTag = (tag) => {
  * Safely parse comment JSON (avoid repeated JSON.parse in template).
  */
 const parseCommentJson = (node) => {
-  try {
-    return node?.comment || "{}";
-  } catch {
+  const rawComment = node?.comment;
+
+  if (rawComment === null || rawComment === undefined) {
     return {};
+  }
+
+  if (typeof rawComment === "object") {
+    return Array.isArray(rawComment)
+      ? { comment: rawComment.join("\n") }
+      : rawComment;
+  }
+
+  if (typeof rawComment !== "string") {
+    return { comment: String(rawComment) };
+  }
+
+  const trimmed = rawComment.trim();
+  if (trimmed === "") {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    // Handle cases where payload is double-encoded JSON string.
+    if (typeof parsed === "string") {
+      try {
+        const parsedAgain = JSON.parse(parsed);
+        return typeof parsedAgain === "object"
+          ? parsedAgain
+          : { comment: String(parsedAgain) };
+      } catch {
+        return { comment: parsed };
+      }
+    }
+
+    return typeof parsed === "object" && parsed !== null
+      ? parsed
+      : { comment: String(parsed) };
+  } catch {
+    // Legacy rows can contain plain text/HTML, not JSON.
+    return { comment: rawComment };
   }
 };
 
@@ -2027,23 +2370,40 @@ const resetReplyState = () => {
  */
 const onSubmitComment = async (commentData, parentId = null) => {
   const payload = {
-    data: {
-      pgm_code: "FP_COMMENT",
-      pgm_value: props.id,
-      pgm_value2: authStore.authDet.username,
-      pgm_value3: commentData,
-      pgm_desc: `Comment from ${authStore.authDet.username} on form ${props.id}`,
-      pgm_parent: parentId ? parentId.idx : null,
-    },
-    keys: {
-      pgm_code: "FP_COMMENT",
-      pgm_value: props.id,
-      pgm_value2: authStore.authDet.username,
-    },
+    data: selectedReplyComment.value
+      ? {
+          id: selectedReplyComment.value,
+          pgm_code: "FP_COMMENT",
+          pgm_value: props.id,
+          pgm_value2: authStore.authDet.username,
+          pgm_value3: commentData,
+          pgm_desc: `Comment from ${authStore.authDet.username} on form ${props.id}`,
+          pgm_parent: parentId ?? null,
+        }
+      : {
+          pgm_code: "FP_COMMENT",
+          pgm_value: props.id,
+          pgm_value2: authStore.authDet.username,
+          pgm_value3: commentData,
+          pgm_desc: `Comment from ${authStore.authDet.username} on form ${props.id}`,
+          pgm_parent: parentId ?? null,
+        },
+    keys: selectedReplyComment.value
+      ? {
+          id: selectedReplyComment.value,
+          pgm_code: "FP_COMMENT",
+          pgm_value: props.id,
+          pgm_value2: authStore.authDet.username,
+        }
+      : {
+          pgm_code: "FP_COMMENT",
+          pgm_value: props.id,
+          pgm_value2: authStore.authDet.username,
+        },
     notify: {
       title: "You have a new comment",
       message: `A new comment has been submitted by ${authStore.authDet.username}.`,
-      to: [props.headersComp.author, parentId ? parentId.email : null],
+      to: [props.headersComp.author, parentId ?? null],
       methods: ["email", "webpush"],
       link: route.fullPath,
     },
@@ -2079,6 +2439,7 @@ const getComment = async () => {
           comment: "pgm_value3|array",
           created_date: "created_at",
           children: "children",
+          parent: "pgm_parent|int",
         },
         withParents: true,
         filter: {
@@ -2138,6 +2499,7 @@ const getUsersDetail = async (username) => {
  * Download/open attachment by URL
  */
 const onOpenAttachment = (attachment) => {
+  console.log("Downloading attachment:", attachment);
   const link = document.createElement("a");
   link.href = attachment.url;
   link.download = attachment.name || "download";
@@ -2151,12 +2513,49 @@ const onOpenAttachment = (attachment) => {
  * implement this function (your original code referenced it but didn't include it).
  */
 const onDeleteComment = async (id) => {
+  console.log("Attempting to delete comment with ID:", id);
   // TODO: implement based on your API endpoint.
   // Keeping placeholder to avoid runtime errors if template calls it.
-  $q.notify({
-    message: "Delete comment is not implemented yet.",
-    color: "warning",
-    icon: "warning",
+  $q.dialog({
+    title: "Confirm Delete",
+    message: "Are you sure you want to delete this comment?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      const response = await postData(
+        "post",
+        {
+          filter: [
+            {
+              column: "id",
+              operator: "=",
+              value: id,
+            },
+          ],
+        },
+        `portal/gencode/deleteDetail/FP_COMMENT`,
+        false,
+        true,
+        true
+      );
+
+      if (response) {
+        $q.notify({
+          message: "Comment deleted successfully.",
+          color: "green",
+          icon: "check",
+        });
+        getComment(); // Refresh comments after deletion
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      $q.notify({
+        message: "Failed to delete comment.",
+        color: "negative",
+        icon: "error",
+      });
+    }
   });
 };
 
@@ -2261,6 +2660,11 @@ const onClickDownloadTemplate = async () => {
 };
 
 const convertToBoolean = (value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+    if (["0", "false", "no", "n", "off", ""].includes(normalized)) return false;
+  }
   if (typeof value === "number") {
     return value !== 0;
   }
@@ -2291,13 +2695,19 @@ const uploaderUsersList = computed(() => {
 });
 
 const multipleFormSetup = computed(() => {
+  const renderUsers = props.setup?.listSpecificUserRenderMode || [];
   return (
     props.setup?.renderMode !== "disabled" &&
-    (props.setup?.listSpecificUserRenderMode.length === 0 ||
-      props.setup?.listSpecificUserRenderMode?.some(
-        (item) => item == authStore.authDet.username
-      ))
+    (renderUsers.length === 0 ||
+      renderUsers.some((item) => item == authStore.authDet.username))
   );
+});
+
+const canEditTable = computed(() => {
+  return convertToBoolean(props.setup?.isEditData) &&
+    !convertToBoolean(props.setup?.specificUserSetEditDataPeriod)
+    ? true
+    : false;
 });
 </script>
 
@@ -2332,6 +2742,34 @@ const multipleFormSetup = computed(() => {
 
 .my-blink-animation {
   animation: blink 1s infinite;
+}
+
+.html-content-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.html-content-wrap::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+:deep(.html-content-wrap *) {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:deep(.html-content-wrap img),
+:deep(.html-content-wrap iframe),
+:deep(.html-content-wrap video),
+:deep(.html-content-wrap embed),
+:deep(.html-content-wrap object) {
+  max-width: 100%;
 }
 
 @keyframes blink {

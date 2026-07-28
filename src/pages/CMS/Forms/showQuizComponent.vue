@@ -3,8 +3,8 @@
     <div v-if="doneSubmiting" class="quiz-fill">
       <div class="quiz-body">
         <showQuizResultVue
-          :resShow="props.setup.showResult"
-          :answerShow="props.setup.showRightKeysAnswer"
+          :resShow="props.setup?.showResult"
+          :answerShow="props.setup?.showRightKeysAnswer"
           :dataQuiz="props.data"
           :idQuiz="props.id"
           :is-retry="true"
@@ -237,16 +237,28 @@ onMounted(async () => {
   if (props.setup) {
     if (props.setup.randomizeQuestion) {
       const formsOnly = getFormsOnly.value;
-      const [shuffledForms, shufIdx] = shuffle(formsOnly);
-      // Rebuild groupedFormsByPage with shuffled forms
+      const [shuffledForms] = shuffle([...formsOnly]);
+
+      const parsedMaxQuestion = parseInt(props.setup.maxQuestionCount);
+      const hasValidLimit =
+        Number.isFinite(parsedMaxQuestion) && parsedMaxQuestion > 0;
+
+      const selectedForms = hasValidLimit
+        ? shuffledForms.slice(0, parsedMaxQuestion)
+        : shuffledForms;
+
+      // Keep original page slots, but only fill up to selectedForms length.
       let formIndex = 0;
       groupedFormsByPage.value = groupedFormsByPage.value.map((page) => {
-        return page.map((form) => {
-          if (form.type === "form") {
-            return shuffledForms[formIndex++];
-          }
-          return form;
-        });
+        const pageFormCount = (page || []).filter(
+          (f) => f.type === "form"
+        ).length;
+        const nextPageForms = selectedForms.slice(
+          formIndex,
+          formIndex + pageFormCount
+        );
+        formIndex += pageFormCount;
+        return nextPageForms;
       });
     }
   }
@@ -255,7 +267,7 @@ onMounted(async () => {
 });
 
 const getFormsOnly = computed(() =>
-  props.data.filter((form) => form.type === "form")
+  (groupedFormsByPage.value || []).flat().filter((form) => form.type === "form")
 );
 
 const getFormAnswers = computed(() => store.getUsersAnswer || []);
@@ -348,15 +360,12 @@ const getNowHTML = computed(() => {
 });
 
 const nowFormIndex = computed(() => {
-  const formsInPage = groupedFormsByPage.value[nowSeq.value] || [];
-  return props.data
-    .filter((form) => form.type === "form")
-    .findIndex((form) => form.id === getNowQuestion.value?.id);
+  return getFormsOnly.value.findIndex(
+    (form) => form.id === getNowQuestion.value?.id
+  );
 });
 
-const getAllForms = computed(
-  () => props.data.filter((form) => form.type === "form") || []
-);
+const getAllForms = computed(() => getFormsOnly.value || []);
 
 const getNowData = computed(() => {
   const formsInPage = props.data[nowSeq.value] || [];
@@ -515,7 +524,10 @@ const onClickSubmit = async (questId = [], passConfirm = false) => {
           doneSubmiting.value = true;
         }
 
-        if (props.setup.showRightKeysAnswerLocation === "question") {
+        if (
+          props.setup &&
+          props.setup.showRightKeysAnswerLocation === "question"
+        ) {
           return data;
         }
       }
@@ -586,8 +598,7 @@ const getNowTimer = computed(() => {
 });
 
 watch(getNowTimer, (time) => {
-  console.log("watcherr", props.setup.setUpTimer, store.getFinishQuizState);
-  if (props.setup.setUpTimer && !store.getFinishQuizState) {
+  if (props.setup && props.setup.setUpTimer && !store.getFinishQuizState) {
     // console.log(props.setup.setUpTimer);
     if (time.hours === 0 && time.minutes === 1 && time.seconds === 0) {
       $q.notify({

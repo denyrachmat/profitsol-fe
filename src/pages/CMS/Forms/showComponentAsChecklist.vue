@@ -11,9 +11,9 @@
 
             <th
               class="text-center text-wrap text-subtitle2 q-px-md header-cell"
-              v-for="flatCol in flattenedFields"
-              :key="'head-' + flatCol.id"
-              v-show="!flatCol.hidden"
+              v-for="(flatCol, flatColIdx) in flattenedFields"
+              :key="'head-' + (flatCol.__fieldKey ?? flatCol.id ?? flatColIdx)"
+              v-show="isColumnVisible(flatCol)"
             >
               <div class="header-content">
                 <span v-html="flatCol.content?.label || flatCol.label"></span>
@@ -44,9 +44,14 @@
             </td>
 
             <td
-              v-for="flatCol in flattenedFields"
-              :key="'instance-input-' + instanceIdx + '-' + flatCol.id"
-              v-show="!flatCol.hidden"
+              v-for="(flatCol, flatColIdx) in flattenedFields"
+              :key="
+                'instance-input-' +
+                instanceIdx +
+                '-' +
+                (flatCol.__fieldKey ?? flatCol.id ?? flatColIdx)
+              "
+              v-show="isColumnVisible(flatCol)"
               class="q-pa-sm input-cell"
             >
               <div class="cell-wrapper">
@@ -155,7 +160,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, defineEmits, watch, ref } from "vue";
+import { computed, defineProps, defineEmits, watch, ref, onMounted } from "vue";
 import { useFormStore } from "stores/formStore";
 import componentViewVue from "../componentView.vue";
 
@@ -164,6 +169,11 @@ const props = defineProps({
   isMultipleMode: { type: Boolean, default: false },
   enableDeleteInstance: { type: Boolean, default: false },
   maxInstances: { type: Number, default: 10 },
+});
+
+onMounted(() => {
+  // Inisialisasi localTotalRows saat komponen pertama kali dimuat
+  console.log("Mounted: localTotalRows diinisialisasi menjadi 1", props);
 });
 
 const localTotalRows = ref(1);
@@ -197,20 +207,32 @@ const emit = defineEmits([
 const store = useFormStore();
 const getUserAnswers = computed(() => store.getUsersAnswerForm);
 
+const getFieldUniqKey = (col, colIdx = 0) => {
+  const rawId = col?.id;
+  const id = String(rawId ?? "").trim();
+  if (id !== "") return `id:${id}`;
+
+  const type = String(col?.type ?? "").trim();
+  const label = String(col?.content?.label ?? col?.label ?? "").trim();
+  return `fallback:${colIdx}:${type}:${label}`;
+};
+
 /**
  * 1. FIX FLATTENED FIELDS (Ambil skema dari blueprint asli secara aman)
  */
 const flattenedFields = computed(() => {
   const fields = [];
+  const seenKeys = new Set();
   // Kita hanya ambil skema dari kelompok baris (row) asli bawaan form pertama kali
   if (props.data && props.data.length > 0) {
     // Cari baris-baris awal yang membentuk 1 halaman form utuh
     props.data.forEach((row) => {
       if (Array.isArray(row.content)) {
-        row.content.forEach((col) => {
-          // Cegah duplikasi field ID di dalam susunan kolom header
-          if (!fields.some((f) => f.id === col.id)) {
-            fields.push(col);
+        row.content.forEach((col, colIdx) => {
+          const fieldKey = getFieldUniqKey(col, colIdx);
+          if (!seenKeys.has(fieldKey)) {
+            seenKeys.add(fieldKey);
+            fields.push({ ...col, __fieldKey: fieldKey });
           }
         });
       }
@@ -273,6 +295,21 @@ const emitAddRow = () => {
 };
 const emitRemoveRow = (index) => {
   emit("removeInstance", index);
+};
+
+const isColumnVisible = (col) => {
+  const hidden = col?.hidden;
+  if (typeof hidden === "string") {
+    const normalized = hidden.trim().toLowerCase();
+    if (["1", "true", "yes", "y", "on"].includes(normalized)) {
+      return false;
+    }
+    if (["0", "false", "no", "n", "off", ""].includes(normalized)) {
+      return true;
+    }
+  }
+  if (typeof hidden === "number") return hidden === 0;
+  return !hidden;
 };
 
 // Pantau perubahan data jawaban di store secara mendalam

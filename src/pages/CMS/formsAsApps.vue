@@ -1,7 +1,14 @@
 <template>
   <div class="q-pa-md">
+    <div v-if="blockedMessage" class="flex flex-center" style="min-height: 60vh">
+      <q-card flat bordered class="q-pa-xl text-center" style="max-width: 500px">
+        <q-icon name="info" size="64px" color="orange" class="q-mb-md" />
+        <div class="text-h5 text-weight-bold q-mb-sm">Form Unavailable</div>
+        <div class="text-body1 text-grey-7">{{ blockedMessage }}</div>
+      </q-card>
+    </div>
     <showComponentVue
-      v-if="!loading && datas.forms"
+      v-else-if="!loading && datas.forms"
       :data="datas.forms"
       :id="datas.id"
       :setup="setup"
@@ -16,24 +23,23 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useQuasar } from "quasar";
-import { useRoute } from "vue-router";
 
 import apiRequest from "src/components/apiRequest";
 import showComponentVue from "./Forms/showComponent.vue";
 
 const props = defineProps({
-  linkID: String, // match the parameter name
+  linkID: String,
 });
 
 const $q = useQuasar();
 const { postData } = apiRequest();
 
 const loading = ref(false);
-// ✅ Default to empty object, not null
 const datas = ref({ forms: null, id: null });
 const setup = ref({});
+const blockedMessage = ref(null);
+
 onMounted(async () => {
-  console.log("linkID", props.linkID);
   await getData();
 });
 
@@ -49,27 +55,29 @@ const getData = async () => {
     );
 
     if (res?.status) {
-      console.log("res", res);
       loading.value = false;
       datas.value = {
         forms: res.data?.value.forms ?? null,
         id: res.data?.value.id ?? null,
       };
       setup.value = res.data?.value.setupTraining ?? {};
-      console.log("datas", datas.value);
     } else {
       loading.value = false;
-      $q.notify({
-        type: "negative",
-        message: "Failed to load form data",
-      });
+      blockedMessage.value = res?.message || "Failed to load form data";
     }
   } catch (err) {
     console.error("Error fetching form data:", err);
-    $q.notify({
-      type: "negative",
-      message: "Something went wrong",
-    });
+    loading.value = false;
+
+    if (err?.response?.status === 403) {
+      blockedMessage.value =
+        err.response.data?.message || "This form is currently unavailable.";
+    } else {
+      $q.notify({
+        type: "negative",
+        message: "Something went wrong",
+      });
+    }
   } finally {
     loading.value = false;
   }

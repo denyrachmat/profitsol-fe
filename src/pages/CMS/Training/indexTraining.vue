@@ -1,354 +1,807 @@
 <template>
-  <q-page class="q-pa-md">
-    <q-card>
-      <q-card-section>
-        <div class="text-h6">Training Management</div>
-      </q-card-section>
-
-      <q-card-section>
-        <q-btn label="Add Training" color="primary" @click="openAddDialog" />
-      </q-card-section>
-
-      <q-card-section>
-        <!-- Training List Table (placeholder) -->
-        <q-table
-          title="Trainings"
-          :rows="trainings"
-          :columns="columns"
-          row-key="id"
-        >
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn
-                icon="edit"
-                flat
-                round
-                dense
-                @click="editTraining(props.row)"
-              />
-              <q-btn
-                icon="delete"
-                flat
-                round
-                dense
-                @click="deleteTraining(props.row.id)"
-              />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
-
-    <!-- Add/Edit Training Dialog -->
-    <q-dialog v-model="addEditDialog" persistent>
-      <q-card style="min-width: 700px">
-        <q-card-section>
-          <div class="text-h6">
-            {{ isEditing ? 'Edit Training' : 'Add New Training' }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-form @submit="saveTraining">
-            <q-input
-              v-model="currentTraining.title"
-              label="Title"
-              outlined
-              dense
-              class="q-mb-md"
-              :rules="[(val) => !!val || 'Title is required']"
-            />
-            <q-input
-              v-model="currentTraining.description"
-              label="Description"
-              type="textarea"
-              outlined
-              dense
-              class="q-mb-md"
-            />
-
-            <q-select
-              v-model="currentTraining.category"
-              :options="categoryOptions"
-              label="Category"
-              outlined
-              dense
-              class="q-mb-md"
-              :rules="[(val) => !!val || 'Category is required']"
-            />
-
-            <q-input
-              v-model="currentTraining.date"
-              label="Date"
-              type="date"
-              outlined
-              dense
-              class="q-mb-md"
-              :rules="[(val) => !!val || 'Date is required']"
-            />
-
-            <q-input
-              v-model="currentTraining.time"
-              label="Time"
-              type="time"
-              outlined
-              dense
-              class="q-mb-md"
-              :rules="[(val) => !!val || 'Time is required']"
-            />
-
-            <q-input
-              v-model="currentTraining.location"
-              label="Location"
-              outlined
-              dense
-              class="q-mb-md"
-            />
-
-            <q-radio
-              v-model="currentTraining.status"
-              val="active"
-              label="Active"
-              class="q-mr-md"
-            />
-            <q-radio
-              v-model="currentTraining.status"
-              val="inactive"
-              label="Inactive"
-            />
-
-            <div class="q-mt-md">
-              <div class="text-subtitle1">Upload Files</div>
-              <q-uploader
-                ref="uploader"
-                url="http://localhost:4444/upload"
-                label="Select files to upload"
-                multiple
-                batch
-                :auto-upload="false"
-                @uploaded="handleUploaded"
-                @failed="handleUploadFailed"
-                @added="handleFilesAdded"
-                @removed="handleFilesRemoved"
-                class="q-mt-sm"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn label="Cancel" color="grey" flat @click="closeAddDialog" />
+  <div class="q-pa-md">
+    <div class="row">
+      <div class="col">
+        <q-btn-group flat>
+          <q-btn color="primary" label="File" flat no-caps>
+            <q-menu>
+              <q-list dense style="min-width: 100px">
+                <q-item clickable v-close-popup @click="onNewQuiz">
+                  <q-item-section>New Quiz</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="openTraining">
+                  <q-item-section>Open...</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onSaveQuestion"
+                  :disable="!title"
+                >
+                  <q-item-section>Save Quiz</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+          <q-btn color="primary" label="Action" flat no-caps>
+            <q-menu>
+              <q-list dense style="min-width: 100px">
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openPreview"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Test your question</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickSetupTraining"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Setting this question bank</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickShare"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Share this question</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </q-btn-group>
+      </div>
+    </div>
+    <div class="row q-pt-sm">
+      <div class="col q-pr-md">
+        <q-input
+          outlined
+          label="Question Bank Title"
+          v-model="title"
+          dense
+          :loading="loadingUpload"
+        />
+      </div>
+      <div class="col-2 text-right">
+        <q-btn-group>
           <q-btn
-            label="OK"
-            color="primary"
-            @click="triggerUploadAndSave"
-            :disable="!canSave"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </q-page>
-</template>
+            color="accent"
+            icon="description"
+            @click="onClickChooseComponent"
+            :disable="!title"
+          >
+            <q-tooltip> Add more question. </q-tooltip>
+          </q-btn>
+          <q-btn
+            color="cyan"
+            icon="html"
+            @click="onClickChooseHTML"
+            :disable="!title"
+          >
+            <q-tooltip> Add HTML Rows. </q-tooltip>
+          </q-btn>
+          <q-btn
+            color="orange"
+            icon="upload"
+            @click="onUploadFile"
+            :loading="loadingUpload"
+          >
+            <q-tooltip> Upload Questions Bank </q-tooltip>
+          </q-btn>
+        </q-btn-group>
+      </div>
+    </div>
 
+    <div class="row q-py-md">
+      <div class="col">
+        <hr />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <fieldset
+          style="
+            border: 1px solid #ccc !important;
+            border-radius: 16px;
+            max-height: 80vh;
+            overflow: auto;
+          "
+        >
+          <legend>Add question here</legend>
+
+          <!-- Rows Content -->
+          <template v-if="forms.length > 0">
+            <b>*Don't forget to add answers to each of question.</b>
+            <div
+              class="row q-pt-md"
+              v-for="(col, idxCol) in forms"
+              :key="idxCol + 'col'"
+            >
+              <div
+                class="col q-pa-md"
+                style="border: 1px dashed #ccc !important; border-radius: 5px"
+              >
+                <div class="row">
+                  <!-- <div class="col-1" v-if="col.type !== 'html'">
+                    <q-icon
+                      name="check"
+                      class="text-blue"
+                      size="2em"
+                      v-if="valueSubmited[idxCol]"
+                    />
+                    <q-icon
+                      name="cancel"
+                      class="text-orange"
+                      size="2em"
+                      v-else
+                    />
+                  </div> -->
+
+                  <div class="col-2" style="display: flex">
+                    <div v-if="col.type !== 'html'" class="q-pr-sm">
+                      <q-icon
+                        name="check"
+                        class="text-blue"
+                        size="3em"
+                        v-if="hasAnswer(getNormalizedAnswerValue(idxCol, col))"
+                      />
+                      <q-icon
+                        name="cancel"
+                        class="text-orange"
+                        size="3em"
+                        v-else
+                      />
+                    </div>
+                    <q-input
+                      outlined
+                      v-model="col.seq_name"
+                      input-class="text-h6"
+                      dense
+                    >
+                      <template v-slot:prepend>
+                        <span class="text-h6">Page :</span>
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col q-px-md text-right">
+                    <q-btn
+                      dense
+                      flat
+                      icon="edit"
+                      @click="
+                        col.type === 'html'
+                          ? onClickChooseHTML(idxCol)
+                          : onClickChooseComponent(idxCol)
+                      "
+                      color="orange"
+                    >
+                      <q-tooltip> Edit this question. </q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      dense
+                      flat
+                      icon="content_copy"
+                      color="green"
+                      @click="duplicateQuestion(col)"
+                    >
+                      <q-tooltip> Duplicate this question. </q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      dense
+                      flat
+                      icon="delete"
+                      color="red"
+                      @click="deleteQuestion(idxCol)"
+                    >
+                      <q-tooltip> Delete this question. </q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+
+                <div v-if="col.type === 'html'" v-html="col.content"></div>
+                <componentViewVue
+                  v-else
+                  :type="col.content.component.category"
+                  :type-input="col.content.component.value.type"
+                  :comp="col.content.component.value.comp"
+                  :label="col.content.label"
+                  :detail="col.content.detail_data"
+                  mode="live-ans"
+                  @customAnschange="(val) => onChooseValue(val, idxCol)"
+                  :key="idxCol + 'color'"
+                  :ans="
+                    !Array.isArray(getNormalizedAnswerValue(idxCol, col))
+                      ? getNormalizedAnswerValue(idxCol, col)
+                      : ''
+                  "
+                  :ansArr="
+                    Array.isArray(getNormalizedAnswerValue(idxCol, col))
+                      ? getNormalizedAnswerValue(idxCol, col)
+                      : []
+                  "
+                />
+
+                <div
+                  class="row"
+                  v-if="hasAnswer(getNormalizedAnswerValue(idxCol, col))"
+                >
+                  <div class="col">
+                    <span class="text-bold">Explanation (Optional)</span>
+                    <q-editor
+                      min-height="5rem"
+                      v-model="explainSubmit[idxCol]"
+                    />
+                  </div>
+                </div>
+              </div></div
+          ></template>
+          <div class="row q-pt-md" v-else>
+            <div class="col">No question added</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+</template>
 <script setup>
-import { ref, computed } from 'vue';
-import { useQuasar } from 'quasar';
+import { computed, ref, watch } from "vue";
+import { useQuasar } from "quasar";
+import componentViewVue from "../componentView.vue";
+import chooseComponent from "../chooseComponent.vue";
+import addContentComponent from "../addContentComponent.vue";
+import UploadFiles from "src/components/uploadFiles/index.vue"; // Import the new component
+
+import apiRequest from "src/components/apiRequest";
+
+import setupTraining from "./setupTraining.vue";
+import openTrainingVue from "./openTraining.vue";
+import previewComponentVue from "../Forms/previewComponent.vue";
+import shareFormsVue from "../Forms/shareForms.vue";
 
 const $q = useQuasar();
+const { postData } = apiRequest();
 
-const trainings = ref([]);
-const addEditDialog = ref(false);
-const isEditing = ref(false);
-const currentTraining = ref({
-  id: null,
-  title: '',
-  description: '',
-  category: null,
-  date: '',
-  time: '',
-  location: '',
-  status: 'active',
-  files: [], // To store uploaded file info
+const idRef = ref("");
+const title = ref("");
+const forms = ref([]);
+const setupTrainingSetup = ref({
+  defaultTypeChoice: "multiple-radio",
+  defaultNumberOfChoice: "1",
+  showResult: true,
+  randomizeQuestion: true,
+  maxQuestionCount: 1,
+  skipNextButtonMedia: false,
+  showRightKeysAnswer: true,
+  showRightKeysAnswerLocation: "end",
+  setUpTimer: false,
+  timerEveryQuestion: false,
+  hourTimer: 0,
+  minTimer: 0,
+  secTimer: 0,
+  minPass: 100,
+  startQuiz: "",
+  endQuiz: "",
+});
+const share = ref([]);
+const shareMainMenu = ref(0);
+const shareIsroles = ref(0);
+const shareFormsMenuIcon = ref("");
+const loadingUpload = ref(false);
+
+const valueSubmited = ref([]);
+const explainSubmit = ref([]);
+const idDetForm = ref([]);
+
+const initChoice = ref({
+  content: {
+    label: "",
+    component: {
+      label: "Multiple Choice",
+      category: "multiple",
+      value: { type: "multiple-radio", comp: "q-radio" },
+    },
+    detail_data: [],
+    multipleOnly: true,
+  },
+  value: null,
 });
 
-const categoryOptions = ['IT', 'HR', 'Sales', 'Marketing'];
+const getFormsOnly = computed(() =>
+  forms.value.filter((fil) => fil.type === "form")
+);
 
-const columns = [
-  { name: 'title', required: true, label: 'Title', align: 'left', field: 'title', sortable: true },
-  { name: 'category', label: 'Category', align: 'left', field: 'category', sortable: true },
-  { name: 'date', label: 'Date', align: 'left', field: 'date', sortable: true },
-  { name: 'time', label: 'Time', align: 'left', field: 'time', sortable: true },
-  { name: 'status', label: 'Status', align: 'left', field: 'status', sortable: true },
-  { name: 'actions', label: 'Actions', align: 'right' },
-];
+const onChooseValue = (val, idx) => {
+  console.log([val, idx, val.exp]);
+  valueSubmited.value[idx] = val;
+  // explainSubmit.value = val.exp;
+  forms.value[idx].value = val;
+};
 
-const uploader = ref(null);
-const filesInUploader = ref([]);
-const isUploading = ref(false);
+const getAnswerValue = (idx, formRow) => {
+  const answers = valueSubmited.value;
 
-// Computed property to enable/disable the "OK" button
-const canSave = computed(() => {
-  // Check if required form fields are filled
-  const formValid =
-    currentTraining.value.title &&
-    currentTraining.value.category &&
-    currentTraining.value.date &&
-    currentTraining.value.time;
-
-  // The "OK" button should be disabled if an upload is in progress
-  // or if there are files to upload but the form is not valid.
-  // If there are no files to upload, the form validity is enough.
-  return formValid && !isUploading.value;
-});
-
-function openAddDialog() {
-  isEditing.value = false;
-  currentTraining.value = {
-    id: null,
-    title: '',
-    description: '',
-    category: null,
-    date: '',
-    time: '',
-    location: '',
-    status: 'active',
-    files: [],
-  };
-  filesInUploader.value = []; // Clear files from previous dialogs
-  if (uploader.value) {
-    uploader.value.reset(); // Reset the uploader component
+  if (Array.isArray(answers)) {
+    return answers[idx];
   }
-  addEditDialog.value = true;
-}
 
-function closeAddDialog() {
-  addEditDialog.value = false;
-  isUploading.value = false; // Reset upload status
-  if (uploader.value) {
-    uploader.value.reset(); // Reset the uploader component
+  if (answers && typeof answers === "object") {
+    if (
+      formRow &&
+      formRow.id !== undefined &&
+      formRow.id !== null &&
+      answers[formRow.id] !== undefined
+    ) {
+      return answers[formRow.id];
+    }
+
+    if (answers[idx] !== undefined) {
+      return answers[idx];
+    }
   }
-}
 
-function editTraining(training) {
-  isEditing.value = true;
-  currentTraining.value = { ...training };
-  // When editing, if there are existing files, you might want to display them
-  // or handle them differently. For now, we'll clear the uploader.
-  filesInUploader.value = [];
-  if (uploader.value) {
-    uploader.value.reset();
+  return undefined;
+};
+
+const normalizeSingleAnswer = (answer, formRow) => {
+  const options = formRow?.content?.detail_data || [];
+
+  if (answer === undefined || answer === null || answer === "") {
+    return answer;
   }
-  addEditDialog.value = true;
-}
 
-function deleteTraining(id) {
+  if (typeof answer === "object" && !Array.isArray(answer)) {
+    const nestedAnswer =
+      answer.value ?? answer.ans ?? answer.answer ?? answer.id ?? null;
+
+    if (nestedAnswer !== null) {
+      return normalizeSingleAnswer(nestedAnswer, formRow);
+    }
+  }
+
+  if (!Array.isArray(options) || options.length === 0) {
+    return answer;
+  }
+
+  const normalized = String(answer).trim().toLowerCase();
+
+  const exactMatch = options.find((opt) => opt?.value === answer);
+  if (exactMatch) {
+    return exactMatch.value;
+  }
+
+  const looseValueMatch = options.find(
+    (opt) => String(opt?.value).trim().toLowerCase() === normalized
+  );
+  if (looseValueMatch) {
+    return looseValueMatch.value;
+  }
+
+  const labelMatch = options.find(
+    (opt) => String(opt?.label).trim().toLowerCase() === normalized
+  );
+  if (labelMatch) {
+    return labelMatch.value;
+  }
+
+  if (typeof answer === "string") {
+    const firstChar = answer.trim().charAt(0).toUpperCase();
+    if (/^[A-Z]$/.test(firstChar)) {
+      const idx = firstChar.charCodeAt(0) - 65;
+      if (idx >= 0 && idx < options.length) {
+        return options[idx].value;
+      }
+    }
+  }
+
+  return answer;
+};
+
+const getNormalizedAnswerValue = (idx, formRow) => {
+  const answer = getAnswerValue(idx, formRow);
+
+  if (Array.isArray(answer)) {
+    return answer.map((item) => normalizeSingleAnswer(item, formRow));
+  }
+
+  return normalizeSingleAnswer(answer, formRow);
+};
+
+const hasAnswer = (answer) => {
+  if (Array.isArray(answer)) {
+    return answer.length > 0;
+  }
+
+  return answer !== undefined && answer !== null && answer !== "";
+};
+
+const onClickChooseComponent = (idxForm = {}) => {
   $q.dialog({
-    title: 'Confirm',
-    message: 'Are you sure you want to delete this training?',
+    component: chooseComponent,
+    componentProps: {
+      currComponent:
+        forms.value[idxForm] && forms.value[idxForm].content
+          ? {
+              content: {
+                ...forms.value[idxForm].content,
+                multipleOnly: true,
+              },
+            }
+          : initChoice.value,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+    if (forms.value[idxForm] && forms.value[idxForm].content) {
+      forms.value[idxForm] = val;
+    } else {
+      forms.value.push({
+        ...val,
+        seq_name:
+          forms.value.length > 0
+            ? parseInt(forms.value[forms.value.length - 1].seq_name) + 1
+            : 1,
+      });
+    }
+  });
+};
+
+const onClickChooseHTML = (idxForm = {}) => {
+  $q.dialog({
+    component: addContentComponent,
+    componentProps: {
+      comp: forms.value[idxForm] ? forms.value[idxForm].content : "",
+    },
+  }).onOk(async (val) => {
+    // console.log(val);
+    if (forms.value[idxForm]) {
+      forms.value[idxForm] = val;
+    } else {
+      // console.log(val);
+      forms.value.push(val);
+    }
+  });
+};
+
+// Define the options array as a ref to make it reactive
+const uploadOptions = ref([
+  {
+    type: "radio-group",
+    name: "uploadMethod", // Key to store the selected value
+    label: "Choose Upload Method:",
+    required: true,
+    value: "template", // Default selected value, now reactive
+    choices: [
+      {
+        value: "template",
+        label: "Upload using template",
+      },
+      { value: "ai", label: "Use AI to scan question bank" },
+    ],
+  },
+]);
+
+// Determine downloadTemplate prop based on the initial default uploadMethod
+// Now a computed property to react to changes in uploadOptions.value[0].value
+const showDownloadTemplateButton = computed(() => {
+  const uploadMethodOption = uploadOptions.value.find(
+    (opt) => opt.name === "uploadMethod"
+  );
+  return uploadMethodOption && uploadMethodOption.value === "template";
+});
+
+const onUploadFile = () => {
+  $q.dialog({
+    component: UploadFiles,
+    componentProps: {
+      title: "Upload Question Bank",
+      accept: ".csv,.txt,.json,.xlsx,.docx",
+      multiple: false, // Assuming single file upload for question bank
+      options: uploadOptions.value, // Use the .value of the ref
+      isDownloadTemplate: {
+        enabled: showDownloadTemplateButton.value, // Use the .value of the computed prop
+        url: `${process.env.API}cms/downloadQuizTemplate`, // Replace with your actual template URL
+      },
+      onDownloadTemplate: handleDownloadTemplate, // Pass the function prop
+      isBase64: false,
+    },
+  })
+    .onOk(async ({ result, fileName, dynamicOptions }) => {
+      console.log("Uploaded file base64:", result);
+      console.log("Uploaded file name:", fileName);
+      console.log("Chosen upload method:", dynamicOptions); // Access the method from dynamicOptions
+
+      const actualFileName = fileName;
+      const method = dynamicOptions.uploadMethod;
+      loadingUpload.value = true;
+
+      if (method === "template") {
+        $q.notify({
+          message: `Uploading "${actualFileName}" using template...`,
+          color: "info",
+        });
+
+        const formData = new FormData();
+        formData.append("file", result);
+        if (actualFileName) {
+          formData.append("fileName", actualFileName);
+        }
+
+        const data = await postData(
+          "post",
+          formData,
+          `cms/uploadQuizTemplate`,
+          false,
+          false,
+          true
+        );
+
+        if (data) {
+          $q.notify({
+            message: `File "${actualFileName}" uploaded successfully!`,
+            color: "positive",
+          });
+          // Handle the response data as needed
+          console.log("Response from server:", data);
+          title.value = data.title;
+          forms.value = data.forms;
+          valueSubmited.value = data.ans;
+          explainSubmit.value = data.exp;
+          loadingUpload.value = false;
+        } else {
+          $q.notify({
+            message: `Failed to upload "${actualFileName}".`,
+            color: "negative",
+          });
+          loadingUpload.value = false;
+        }
+      } else if (method === "ai") {
+        $q.notify({
+          message: `Scanning "${actualFileName}" with AI...`,
+          color: "info",
+        });
+
+        const formData = new FormData();
+        formData.append("file", result);
+        if (actualFileName) {
+          formData.append("fileName", actualFileName);
+        }
+
+        const data = await postData(
+          "post",
+          formData,
+          `cms/uploadQuizTemplateAi`,
+          false,
+          false,
+          true
+        );
+
+        if (data) {
+          $q.notify({
+            message: `File "${actualFileName}" uploaded successfully!`,
+            color: "positive",
+          });
+          // Handle the response data as needed
+          console.log("Response from server:", data);
+          title.value = data.title;
+          forms.value = data.forms;
+          valueSubmited.value = data.ans;
+          explainSubmit.value = data.exp;
+          loadingUpload.value = false;
+        } else {
+          $q.notify({
+            message: `Failed to upload "${actualFileName}".`,
+            color: "negative",
+          });
+          loadingUpload.value = false;
+        }
+      }
+    })
+    .onCancel(() => {
+      $q.notify({
+        message: "Upload cancelled.",
+        color: "negative",
+      });
+    });
+};
+
+// Define the download handler function
+const handleDownloadTemplate = () => {
+  $q.notify({
+    message: "Downloading template...",
+    color: "primary",
+  });
+  // ponytail: Implement actual template download logic here.
+  // For example, trigger a file download or navigate to a template URL.
+  // window.open('/path/to/your/template.xlsx', '_blank');
+};
+
+const onClickSetupTraining = () => {
+  $q.dialog({
+    component: setupTraining,
+    componentProps: {
+      setupTrainingSetup: setupTrainingSetup.value,
+    },
+  }).onOk(async (val) => {
+    setupTrainingSetup.value = val;
+    // forms.value[idxForm].content = val;
+  });
+};
+
+const onClickShare = () => {
+  $q.dialog({
+    component: shareFormsVue,
+    componentProps: {
+      id: idRef.value,
+      shared: share.value,
+    },
+  }).onOk(async (val) => {
+    share.value = val.emails;
+    shareMainMenu.value = val.isMainMenu;
+    shareIsroles.value = val.isRoles;
+    shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+  });
+};
+
+const duplicateQuestion = (data) => {
+  console.log(forms.value);
+  console.log(data);
+  forms.value.push(data);
+};
+
+const deleteQuestion = (idx) => {
+  forms.value.splice(idx, 1);
+  valueSubmited.value.splice(idx, 1);
+};
+
+const onSaveQuestion = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to save this quiz ?",
     cancel: true,
     persistent: true,
-  }).onOk(() => {
-    trainings.value = trainings.value.filter((t) => t.id !== id);
-    $q.notify({
-      message: 'Training deleted successfully.',
-      color: 'positive',
-      icon: 'check_circle',
-    });
-  });
-}
+  }).onOk(async () => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idRef.value,
+        forms: forms.value,
+        ans: valueSubmited.value,
+        exp: explainSubmit.value,
+        title: title.value,
+        isQuiz: true,
+        setupTraining: setupTrainingSetup.value,
+        shareForms: share.value,
+        shareFormsIsMainMenu: shareMainMenu.value,
+        shareFormsIsRoles: shareIsroles.value,
+      },
+      `cms/forms`,
+      false,
+      false,
+      true
+    );
 
-// Handles files added to the uploader queue
-function handleFilesAdded(files) {
-  filesInUploader.value = files;
-}
-
-// Handles files removed from the uploader queue
-function handleFilesRemoved(files) {
-  filesInUploader.value = uploader.value.files; // Update the list of files currently in the uploader
-}
-
-// Trigger upload and then save the training
-async function triggerUploadAndSave() {
-  // Validate form fields first
-  const formValid =
-    currentTraining.value.title &&
-    currentTraining.value.category &&
-    currentTraining.value.date &&
-    currentTraining.value.time;
-
-  if (!formValid) {
-    $q.notify({
-      message: 'Please fill in all required training details.',
-      color: 'negative',
-      icon: 'warning',
-    });
-    return;
-  }
-
-  if (filesInUploader.value.length > 0) {
-    isUploading.value = true;
-    uploader.value.upload(); // Manually trigger upload
-  } else {
-    // No files to upload, proceed directly to saving
-    saveTraining();
-  }
-}
-
-// Handles successful upload
-function handleUploaded({ files, xhr }) {
-  isUploading.value = false;
-  const response = JSON.parse(xhr.responseText);
-  // Assuming your backend returns an array of uploaded file details
-  // e.g., [{ name: 'file1.jpg', url: '...', size: '...' }]
-  currentTraining.value.files = response.uploadedFiles || [];
-
-  $q.notify({
-    message: 'Files uploaded successfully!',
-    color: 'positive',
-    icon: 'cloud_done',
-  });
-
-  saveTraining(); // Now save the training details with file info
-}
-
-// Handles upload failure
-function handleUploadFailed({ files, xhr }) {
-  isUploading.value = false;
-  $q.notify({
-    message: `File upload failed for ${files.map(f => f.name).join(', ')}.`,
-    color: 'negative',
-    icon: 'error',
-  });
-  // Decide if you want to prevent saving the training if upload fails
-  // For now, we'll still allow saving the training details without the files.
-  // If files are mandatory, you might want to prevent saveTraining() here.
-  // saveTraining(); // Or prevent this if files are critical
-}
-
-function saveTraining() {
-  if (isEditing.value) {
-    const index = trainings.value.findIndex((t) => t.id === currentTraining.value.id);
-    if (index !== -1) {
-      trainings.value[index] = { ...currentTraining.value };
+    if (data) {
+      $q.dialog({
+        title: "Confirm",
+        message: "Save Success, Do you want to continue edit this quiz ?",
+        cancel: true,
+        persistent: true,
+      })
+        .onOk(async () => {})
+        .onCancel(() => {
+          title.value = "";
+          forms.value = [];
+        });
+      console.log(data);
     }
-    $q.notify({
-      message: 'Training updated successfully.',
-      color: 'positive',
-      icon: 'check_circle',
-    });
-  } else {
-    currentTraining.value.id = trainings.value.length > 0 ? Math.max(...trainings.value.map(t => t.id)) + 1 : 1;
-    trainings.value.push({ ...currentTraining.value });
-    $q.notify({
-      message: 'Training added successfully.',
-      color: 'positive',
-      icon: 'check_circle',
-    });
-  }
-  closeAddDialog();
-}
-</script>
+  });
+  // console.log(forms.value);
+};
 
-<style scoped>
-/* Add any specific styles here if needed */
-</style>
+const openTraining = () => {
+  $q.dialog({
+    component: openTrainingVue,
+    componentProps: {
+      type: "quiz",
+    },
+  }).onOk(async (val) => {
+    console.log(val.forms);
+    setupTrainingSetup.value = null;
+    idRef.value = val.id;
+    title.value = val.title;
+    forms.value = val.forms;
+    valueSubmited.value = val.ans;
+    explainSubmit.value = val.exp;
+    setupTrainingSetup.value = val.setupTraining;
+    idDetForm.value = val.ans_id;
+    share.value = val.share;
+  });
+};
+
+const onNewQuiz = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to create new quiz ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    title.value = "";
+    forms.value = [];
+    valueSubmited.value = [];
+    explainSubmit.value = [];
+    setupTrainingSetup.value = {
+      defaultTypeChoice: "multiple-radio",
+      defaultNumberOfChoice: "1",
+      showResult: true,
+      randomizeQuestion: true,
+      maxQuestionCount: 1,
+      skipNextButtonMedia: false,
+      showRightKeysAnswer: true,
+      showRightKeysAnswerLocation: "end",
+      setUpTimer: false,
+      timerEveryQuestion: false,
+      hourTimer: 0,
+      minTimer: 0,
+      secTimer: 0,
+      minPass: 100,
+      startQuiz: "",
+      endQuiz: "",
+    };
+    share.value = [];
+    shareMainMenu.value = 0;
+    shareIsroles.value = 0;
+    shareFormsMenuIcon.value = "";
+  });
+};
+
+const openPreview = () => {
+  $q.dialog({
+    component: previewComponentVue,
+    componentProps: {
+      data: forms.value,
+      setup: setupTrainingSetup.value,
+      id: idRef.value,
+      mode: "quiz",
+      idDet: idDetForm.value,
+    },
+  }).onOk(async (val) => {
+    console.log(val);
+  });
+};
+
+watch(
+  () => JSON.stringify(setupTrainingSetup.value),
+  (val) => {
+    const valParse = JSON.parse(val);
+    console.log(valParse);
+
+    if (valParse) {
+      initChoice.value.content.component.value.comp =
+        valParse.defaultTypeChoice === "multiple-radio"
+          ? "q-radio"
+          : "q-checkbox";
+      initChoice.value.content.component.value.type =
+        valParse.defaultTypeChoice;
+
+      const hasilDetail = [];
+      for (let index = 0; index < valParse.defaultNumberOfChoice; index++) {
+        hasilDetail.push({
+          col_det_id: "opt-" + (index + 1),
+          col_det_label: "",
+          label: "",
+          value: index + 1,
+        });
+      }
+
+      initChoice.value.content.detail_data = hasilDetail;
+    }
+    // refreshDetail.value = refreshDetail.value + 1;
+    // emit("onDeleted", JSON.parse(val));
+  }
+);
+</script>

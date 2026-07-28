@@ -251,25 +251,47 @@ const $q = useQuasar();
 const rows = ref([{ cfmt_title: "Page 1", desc: "Description for Page 1" }]);
 const columns = ref([
   { name: "id", label: "ID", field: "id", align: "left" },
-  { name: "cfmt_title", label: "Name", field: "cfmt_title", align: "left" },
-  { name: "url", label: "URL", field: "url", align: "left" },
+  {
+    name: "cfmt_title",
+    label: "Name",
+    field: "cfmt_title",
+    align: "left",
+    style: "max-width: 180px; white-space: normal; word-break: break-word;",
+  },
+  {
+    name: "url",
+    label: "URL",
+    field: "url",
+    align: "left",
+    style: "max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+  },
   {
     name: "desc",
     label: "Description",
     field: "desc",
     align: "left",
+    style: "max-width: 250px; white-space: normal; word-break: break-word;",
   },
   {
     name: "tags",
     label: "Category",
     field: "tags",
     align: "left",
+    style: "max-width: 200px;",
   },
   {
     name: "created_at",
     label: "Created At",
     field: "created_at",
     align: "left",
+    sortable: true,
+  },
+  {
+    name: "updated_at",
+    label: "Updated At",
+    field: "updated_at",
+    align: "left",
+    sortable: true,
   },
   { name: "action", label: "Action", field: "action", align: "left" },
   {
@@ -291,7 +313,7 @@ const loading = ref(false);
 
 const onClickAddPage = (item) => {
   $q.dialog({
-    component: formAddPost,
+    component: newFormAddPost,
     componentProps: {
       postsData: item,
     },

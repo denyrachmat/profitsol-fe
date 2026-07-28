@@ -6,10 +6,15 @@
     </div>
     <template v-else>
       <article v-if="choosedPages && choosedPages.forms" class="content">
+        <q-breadcrumbs class="text-grey-6 q-mb-md">
+          <q-breadcrumbs-el icon="home" to="/" label="Home" />
+          <q-breadcrumbs-el :label="choosedPages.title || 'Article'" />
+        </q-breadcrumbs>
         <showComponent
+          :key="`${route.params.slug}-${route.params.url}-${refreshKey}`"
           :data="choosedPages.forms"
           v-if="choosedPages.forms[0] && choosedPages.forms[0].id"
-          :setup="choosedPages.forms[0].setupTraining"
+          :setup="choosedPages.setupTraining"
           :id="choosedPages.forms[0].id"
           :showFormOnly="true"
           :preventClear="true"
@@ -56,12 +61,12 @@ const isLoading = ref(true); // Status loading
 const error = ref(null); // Untuk menyimpan pesan error
 
 const choosedPages = ref(null);
+const refreshKey = ref(0);
 
 defineEmits(["isLoadingChange"]);
 
 // --- FUNGSI UNTUK MENGAMBIL DATA ---
 const fetchPost = async () => {
-  // Ambil 'slug' dari parameter URL, contoh: 'hello-world'
   const slug = route.params.slug;
   const url = route.params.url;
 
@@ -69,35 +74,13 @@ const fetchPost = async () => {
   error.value = null;
 
   try {
-    // INI BAGIAN PENTING: Ganti bagian ini dengan API call sesungguhnya
-    // Di sini kita simulasikan pengambilan data dari API
-    const datas = await getForms(url ?? slug);
-
-    console.log("Fetched Forms Data:", datas.value);
-    // Jika data ditemukan, simpan ke state 'post'
-    choosedPages.value = datas.value || null;
+    const response = await postData("get", null, `cms/viewBySlug/${url ?? slug}`);
+    choosedPages.value = response?.data?.value || null;
   } catch (err) {
-    // Jika terjadi error (misal: artikel tidak ditemukan), simpan pesan errornya
-    console.error("Gagal mengambil data artikel:", err);
+    console.error("Failed to fetch article:", err);
     error.value = err.message;
   } finally {
-    // Setelah selesai (baik sukses atau gagal), matikan status loading
     isLoading.value = false;
-  }
-};
-
-// --- SIMULASI API CALL ---
-// Fungsi ini hanya untuk contoh. Kamu harus menggantinya dengan fetch/axios ke backend-mu.
-const getForms = async (idForms) => {
-  // viewByID
-  try {
-    const response = await postData("get", null, `cms/viewBySlug/${idForms}`);
-    if (response.data) {
-      console.log("Forms Data:", response.data);
-      return response.data || [];
-    }
-  } catch (error) {
-    console.error("Error fetching forms data:", error);
   }
 };
 
@@ -108,19 +91,21 @@ onMounted(() => {
 });
 
 watch(
-  () => route.params.slug,
-  (newSlug, oldSlug) => {
-    console.log("Route changed, new slug:", newSlug);
-    if (newSlug !== oldSlug) {
+  [() => route.params.slug, () => route.params.url],
+  ([newSlug, newUrl], [oldSlug, oldUrl]) => {
+    if (newSlug !== oldSlug || newUrl !== oldUrl) {
+      refreshKey.value++;
       fetchPost();
     }
   }
 );
 
-watch(isLoading.value, (newVal) => {
-  // Emit perubahan status loading ke parent component
-  formStore.setLoadingArticle(newVal);
-});
+watch(
+  () => isLoading.value,
+  (newVal) => {
+    formStore.setLoadingArticle(newVal);
+  }
+);
 </script>
 
 <style scoped>

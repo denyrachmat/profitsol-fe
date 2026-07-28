@@ -1,7 +1,17 @@
 <template>
+  <div class="word-ruler" aria-hidden="true">
+    <div class="word-ruler-markers">
+      <span class="indent-marker left" title="Left indent"></span>
+      <span class="indent-marker first-line" title="First line indent"></span>
+      <span class="indent-marker right" title="Right indent"></span>
+    </div>
+  </div>
+
   <q-editor
     ref="editorRef"
+    class="comment-editor"
     v-model="comment"
+    toolbar-sticky
     :dense="$q.screen.lt.md"
     :toolbar="toolbarOptions"
     :fonts="{
@@ -19,6 +29,7 @@
     @click="onEditorClick"
     @keydown.ctrl.enter.prevent="onSubmitComment"
     :sanitize="sanitizeHtml"
+    :content-style="editorContentStyle"
   />
 
   <input
@@ -192,9 +203,149 @@
 
         <q-btn dense label="Merge right" @click="mergeRight" />
         <q-btn dense label="Merge down" @click="mergeDown" />
+
+        <q-separator />
+
+        <q-btn
+          dense
+          label="Table style"
+          icon="palette"
+          color="primary"
+          @click="openTableStyleDialog"
+        />
       </q-card-section>
       <q-card-actions align="right">
         <q-btn flat label="Close" v-close-popup />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- TABLE STYLE DIALOG -->
+  <q-dialog v-model="tableStyleDialog">
+    <q-card style="min-width: 340px; max-width: 400px">
+      <q-card-section class="text-h6"> Table Style </q-card-section>
+
+      <q-card-section class="q-gutter-md">
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Border Color</div>
+          <q-input
+            v-model="tableStyle.borderColor"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.borderColor" class="color-pick" />
+        </div>
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Border Width</div>
+          <q-slider
+            v-model="tableStyle.borderWidth"
+            :min="0"
+            :max="5"
+            :step="1"
+            label
+            dense
+            style="flex: 1"
+          />
+        </div>
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Cell Padding</div>
+          <q-slider
+            v-model="tableStyle.cellPadding"
+            :min="2"
+            :max="20"
+            :step="1"
+            label
+            dense
+            style="flex: 1"
+          />
+        </div>
+
+        <q-separator />
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Header BG</div>
+          <q-input
+            v-model="tableStyle.headerBg"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.headerBg" class="color-pick" />
+        </div>
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Header Text</div>
+          <q-input
+            v-model="tableStyle.headerColor"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.headerColor" class="color-pick" />
+        </div>
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Table BG</div>
+          <q-input
+            v-model="tableStyle.tableBg"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.tableBg" class="color-pick" />
+        </div>
+
+        <q-separator />
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Stripe BG</div>
+          <q-input
+            v-model="tableStyle.stripeBg"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.stripeBg" class="color-pick" />
+        </div>
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Hover BG</div>
+          <q-input
+            v-model="tableStyle.hoverBg"
+            dense
+            filled
+            class="color-input"
+          />
+          <input type="color" v-model="tableStyle.hoverBg" class="color-pick" />
+        </div>
+
+        <q-separator />
+
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption" style="width: 100px">Text Align</div>
+          <q-select
+            v-model="tableStyle.textAlign"
+            :options="['left', 'center', 'right']"
+            dense
+            outlined
+            emit-value
+            map-options
+            style="flex: 1"
+          />
+        </div>
+
+        <div class="row items-center q-gutter-md">
+          <q-toggle v-model="tableStyle.striped" label="Striped rows" dense />
+          <q-toggle v-model="tableStyle.hoverHighlight" label="Hover highlight" dense />
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn flat label="Cancel" v-close-popup />
+        <q-btn color="primary" label="Apply" @click="applyTableStyle" v-close-popup />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -204,8 +355,11 @@
     v-if="showTableTools"
     class="table-tools-float"
     :style="{
+      position: 'fixed',
       top: tableToolsPos.top + 'px',
       left: tableToolsPos.left + 'px',
+      transform: 'translateX(-50%)',
+      zIndex: 9999,
     }"
   >
     <q-btn-group dense unelevated>
@@ -213,20 +367,17 @@
         size="xs"
         icon="border_top"
         @click="addRowAbove"
-        :title="'Insert row above'"
       />
       <q-btn
         size="xs"
         icon="border_bottom"
         @click="addRowBelow"
-        :title="'Insert row below'"
       />
       <q-btn
         size="xs"
         icon="horizontal_rule"
         color="negative"
         @click="deleteRow"
-        :title="'Delete row'"
       />
 
       <q-separator vertical inset />
@@ -235,20 +386,17 @@
         size="xs"
         icon="border_left"
         @click="addColumnLeft"
-        :title="'Insert column left'"
       />
       <q-btn
         size="xs"
         icon="border_right"
         @click="addColumnRight"
-        :title="'Insert column right'"
       />
       <q-btn
         size="xs"
         icon="more_vert"
         color="negative"
         @click="deleteColumn"
-        :title="'Delete column'"
       />
 
       <q-separator vertical inset />
@@ -257,9 +405,16 @@
         size="xs"
         icon="call_merge"
         @click="mergeRight"
-        :title="'Merge right'"
       />
-      <q-btn size="xs" icon="south" @click="mergeDown" :title="'Merge down'" />
+      <q-btn size="xs" icon="south" @click="mergeDown" />
+
+      <q-separator vertical inset />
+
+      <q-btn
+        size="xs"
+        icon="palette"
+        @click="openTableStyleDialog"
+      />
     </q-btn-group>
   </div>
 
@@ -289,6 +444,7 @@ import {
   nextTick,
   defineEmits,
   defineProps,
+  watch,
 } from "vue";
 import apiRequest from "src/components/apiRequest";
 import { EmojiButton } from "@joeattardi/emoji-button";
@@ -352,13 +508,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  bypassConfirm: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const $q = useQuasar();
 const { postData } = apiRequest();
 let picker;
 
-const emit = defineEmits(["submit", "onCancel"]);
+const emit = defineEmits(["submit", "onCancel", "onChange", "loading-state"]);
 
 const flowDialog = ref(false);
 const comment = ref("");
@@ -371,7 +531,13 @@ const tableToolsDialog = ref(false);
 const resizeDialog = ref(false);
 const resizeWidth = ref(100);
 const editorRef = ref(null);
+const editorFocused = ref(false);
 const fileInputRef = ref(null);
+const editorContentStyle = {
+  minHeight: "300px",
+  maxHeight: "600px",
+  overflowY: "auto",
+};
 const toolbarOptions = [
   [
     {
@@ -486,6 +652,21 @@ const uploadProgress = ref(0);
 const uploadLabel = ref("Uploading...");
 
 const tableDialog = ref(false);
+const tableStyleDialog = ref(false);
+
+const tableStyle = ref({
+  borderColor: "#d0d0d0",
+  borderWidth: 1,
+  cellPadding: 8,
+  headerBg: "#f0f4f8",
+  headerColor: "#333333",
+  tableBg: "#ffffff",
+  stripeBg: "#fafbfc",
+  hoverBg: "#e8f0fe",
+  textAlign: "left",
+  striped: true,
+  hoverHighlight: true,
+});
 
 // manual inputs
 const tableRows = ref(2);
@@ -503,6 +684,14 @@ onMounted(async () => {
   await nextTick();
   const root = getEditor()?.$el?.querySelector(".q-editor__content");
   if (!root) return;
+
+  root.addEventListener("keydown", onEditorKeydown);
+
+  root.addEventListener("focus", () => { editorFocused.value = true; });
+  root.addEventListener("blur", () => {
+    editorFocused.value = false;
+    showTableTools.value = false;
+  });
 
   root.addEventListener("beforepaste", (e) => {
     const items = e.clipboardData?.items;
@@ -539,7 +728,7 @@ onMounted(async () => {
   });
 
   // inisialisasi comment & attachments dari props
-  console.log(props.modelValue);
+  console.log("get from model", props.modelValue);
   comment.value = props.modelValue || "";
   attachments.value = Array.isArray(props.initialAttachments)
     ? props.initialAttachments
@@ -548,7 +737,67 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener("selectionchange", updateTableToolbar);
+
+  const root = getEditor()?.$el?.querySelector(".q-editor__content");
+  if (root) {
+    root.removeEventListener("keydown", onEditorKeydown);
+  }
 });
+
+function insertTextAtCursor(text) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+
+  const textNode = document.createTextNode(text);
+  range.insertNode(textNode);
+
+  range.setStartAfter(textNode);
+  range.setEndAfter(textNode);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function onEditorKeydown(evt) {
+  if (evt.key !== "Tab") return;
+
+  evt.preventDefault();
+
+  const ed = getEditor();
+  if (!ed) return;
+
+  ed.focus();
+
+  const tabSpaces = "\u00a0\u00a0\u00a0\u00a0";
+
+  if (evt.shiftKey) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const node =
+      range.startContainer?.nodeType === Node.TEXT_NODE
+        ? range.startContainer
+        : range.startContainer?.firstChild;
+
+    if (node?.nodeType === Node.TEXT_NODE) {
+      const content = node.textContent || "";
+      const prefix = content.slice(0, 4);
+
+      if (/^(\u00a0|\s){4}$/.test(prefix)) {
+        node.textContent = content.slice(4);
+      }
+    }
+
+    syncModelFromDom();
+    return;
+  }
+
+  insertTextAtCursor(tabSpaces);
+  syncModelFromDom();
+}
 
 // Function Start
 function onInsertDiagram(payload) {
@@ -579,9 +828,7 @@ function buildTableHtml(rows, cols, hasHeader) {
   if (hasHeader) {
     thead += "<thead><tr>";
     for (let c = 0; c < cols; c++) {
-      thead += `<th style="border:1px solid #ccc;padding:4px;">Header ${
-        c + 1
-      }</th>`;
+      thead += `<th>Header ${c + 1}</th>`;
     }
     thead += "</tr></thead>";
   }
@@ -589,13 +836,13 @@ function buildTableHtml(rows, cols, hasHeader) {
   for (let r = 0; r < rows; r++) {
     tbody += "<tr>";
     for (let c = 0; c < cols; c++) {
-      tbody += `<td style="border:1px solid #ccc;padding:4px;">&nbsp;</td>`;
+      tbody += `<td>&nbsp;</td>`;
     }
     tbody += "</tr>";
   }
 
   return `
-    <table style="border-collapse:collapse;width:100%;max-width:100%;margin:4px 0;">
+    <table>
       ${thead}
       <tbody>${tbody}</tbody>
     </table>
@@ -641,6 +888,81 @@ function getCurrentCell() {
   return null;
 }
 
+function getCurrentTable() {
+  const cell = getCurrentCell();
+  if (!cell) return null;
+  return cell.closest("table");
+}
+
+function openTableStyleDialog() {
+  const table = getCurrentTable();
+  if (!table) {
+    $q.notify({ type: "warning", message: "Cursor harus di dalam tabel" });
+    return;
+  }
+
+  const s = table.style;
+  const th = table.querySelector("th");
+
+  tableStyle.value = {
+    borderColor: s.borderColor || s.borderTopColor || "#d0d0d0",
+    borderWidth: parseInt(s.borderWidth) || 1,
+    cellPadding: parseInt(th?.style?.padding) || 8,
+    headerBg: th?.style?.backgroundColor || "#f0f4f8",
+    headerColor: th?.style?.color || "#333333",
+    tableBg: s.backgroundColor || "#ffffff",
+    stripeBg: "#fafbfc",
+    hoverBg: "#e8f0fe",
+    textAlign: th?.style?.textAlign || "left",
+    striped: true,
+    hoverHighlight: true,
+  };
+
+  tableStyleDialog.value = true;
+}
+
+function applyTableStyle() {
+  const table = getCurrentTable();
+  if (!table) return;
+
+  const t = tableStyle.value;
+
+  table.style.borderColor = t.borderColor;
+  table.style.borderWidth = t.borderWidth + "px";
+  table.style.borderStyle = "solid";
+  table.style.borderCollapse = "collapse";
+  table.style.width = "100%";
+  table.style.maxWidth = "100%";
+  table.style.backgroundColor = t.tableBg;
+
+  table.querySelectorAll("th").forEach((th) => {
+    th.style.backgroundColor = t.headerBg;
+    th.style.color = t.headerColor;
+    th.style.textAlign = t.textAlign;
+    th.style.padding = t.cellPadding + "px 12px";
+    th.style.border = `${t.borderWidth}px solid ${t.borderColor}`;
+  });
+
+  table.querySelectorAll("td").forEach((td) => {
+    td.style.padding = t.cellPadding + "px 12px";
+    td.style.border = `${t.borderWidth}px solid ${t.borderColor}`;
+    td.style.textAlign = t.textAlign;
+  });
+
+  table.querySelectorAll("tr").forEach((tr, i) => {
+    const isEven = i % 2 === 1;
+    tr.style.backgroundColor = t.striped && isEven ? t.stripeBg : "";
+    tr.onmouseenter = t.hoverHighlight
+      ? () => { tr.style.backgroundColor = t.hoverBg; }
+      : null;
+    tr.onmouseleave = t.hoverHighlight
+      ? () => { tr.style.backgroundColor = t.striped && isEven ? t.stripeBg : ""; }
+      : null;
+  });
+
+  syncModelFromDom();
+}
+
 function syncModelFromDom() {
   const root = getContentRoot();
   if (!root) return;
@@ -668,6 +990,12 @@ function addRowBelow() {
 }
 
 function updateTableToolbar() {
+  if (!editorFocused.value) {
+    showTableTools.value = false;
+    currentCellEl.value = null;
+    return;
+  }
+
   const cell = getCurrentCell();
 
   if (!cell) {
@@ -681,8 +1009,7 @@ function updateTableToolbar() {
   const rect = cell.getBoundingClientRect();
 
   tableToolsPos.value = {
-    // sedikit naik di atas cell
-    top: rect.top - 32, // px
+    top: rect.top - 36,
     left: rect.left + rect.width / 2,
   };
 
@@ -743,9 +1070,6 @@ function addColumnRight() {
 
     const isHeader = refCell.tagName === "TH";
     const newCell = document.createElement(isHeader ? "th" : "td");
-
-    newCell.style.border = "1px solid #ccc";
-    newCell.style.padding = "4px";
     newCell.innerHTML = "&nbsp;";
 
     // insert setelah kolom aktif
@@ -771,9 +1095,6 @@ function addColumnLeft() {
 
     const isHeader = refCell.tagName === "TH";
     const newCell = document.createElement(isHeader ? "th" : "td");
-
-    newCell.style.border = "1px solid #ccc";
-    newCell.style.padding = "4px";
     newCell.innerHTML = "&nbsp;";
 
     tr.insertBefore(newCell, refCell);
@@ -926,6 +1247,7 @@ async function onPickFiles(e) {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
 
+  emit("loading-state", true);
   try {
     for (const file of files) {
       const meta = await uploadFile(file); // {url,name,mime,size}
@@ -937,6 +1259,7 @@ async function onPickFiles(e) {
       }
     }
   } finally {
+    emit("loading-state", false);
     e.target.value = "";
   }
 }
@@ -1332,21 +1655,31 @@ const insertEmoji = (emojiChar) => {
 };
 
 const onSubmitComment = () => {
-  console.log("Submit comment:", comment.value);
-  $q.dialog({
-    title: "Submit Comment",
-    message: "Are you sure you want to submit this comment?",
-    cancel: true,
-    persistent: true,
-  }).onOk(() => {
-    emit("submit", {
-      comment: comment.value,
-      attachments: attachments.value,
-    });
+  props.bypassConfirm
+    ? (() => {
+        emit("submit", {
+          comment: comment.value,
+          attachments: attachments.value,
+        });
+      })()
+    : confirmSubmit();
 
-    comment.value = "";
-    attachments.value = [];
-  });
+  function confirmSubmit() {
+    $q.dialog({
+      title: "Submit Comment",
+      message: "Are you sure you want to submit this comment?",
+      cancel: true,
+      persistent: true,
+    }).onOk(() => {
+      emit("submit", {
+        comment: comment.value,
+        attachments: attachments.value,
+      });
+
+      comment.value = "";
+      attachments.value = [];
+    });
+  }
 };
 
 const onCancelComment = () => {
@@ -1354,6 +1687,10 @@ const onCancelComment = () => {
   comment.value = "";
   attachments.value = [];
 };
+
+watch(comment.value, (newVal) => {
+  emit("onChange", newVal);
+});
 </script>
 
 <style>
@@ -1421,9 +1758,118 @@ const onCancelComment = () => {
   border-color: #3778ff;
 }
 
+/* ===== Table styles inside editor ===== */
+.comment-editor table,
+.q-editor__content table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 100%;
+  margin: 8px 0;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.comment-editor th,
+.q-editor__content th {
+  background-color: #f0f4f8;
+  font-weight: 600;
+  text-align: left;
+}
+
+.comment-editor th,
+.comment-editor td,
+.q-editor__content th,
+.q-editor__content td {
+  border: 1px solid #d0d0d0;
+  padding: 8px 12px;
+  min-width: 60px;
+}
+
+.comment-editor tr:nth-child(even),
+.q-editor__content tr:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+.comment-editor tr:hover,
+.q-editor__content tr:hover {
+  background-color: #e8f0fe;
+}
+
+/* ===== Floating table tools ===== */
 .table-tools-float .q-btn-group {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   background: white;
   border-radius: 999px;
+}
+
+.comment-editor .q-editor__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+}
+
+.word-ruler {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  height: 28px;
+  margin-bottom: 4px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    to right,
+    #f6f6f6 0,
+    #f6f6f6 24px,
+    #ececec 24px,
+    #ececec 25px
+  );
+}
+
+.word-ruler-markers {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.indent-marker {
+  position: absolute;
+  top: 5px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid #1976d2;
+}
+
+.indent-marker.left {
+  left: 16px;
+}
+
+.indent-marker.first-line {
+  left: 36px;
+  border-top-color: #26a69a;
+}
+
+.indent-marker.right {
+  right: 16px;
+  border-top-color: #5c6bc0;
+}
+
+/* ===== Table style dialog ===== */
+.color-input {
+  flex: 1;
+  max-width: 100px;
+}
+
+.color-pick {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
 }
 </style>

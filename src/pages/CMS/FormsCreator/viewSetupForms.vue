@@ -274,7 +274,7 @@
                   class="q-mt-md"
                 >
                   <q-badge color="red" floating>{{
-                    formsSetup.isAPI ? formsSetup.apiOpt.length : 0
+                    formsSetup.apiOpt.length
                   }}</q-badge>
                 </q-btn>
               </div>
@@ -994,10 +994,10 @@ onMounted(() => {
     }
 
     // isAPI and apiOpt
-    if (typeof localSetup.isAPI === "number") {
-      localSetup.isAPI = !!localSetup.isAPI ?? false;
+    if (localSetup.isAPI === undefined || localSetup.isAPI === null) {
+      localSetup.isAPI = false;
     } else {
-      localSetup.isAPI = false; // Default to false if undefined
+      localSetup.isAPI = convertToBoolean(localSetup.isAPI);
     }
 
     if (localSetup.apiOpt && localSetup.apiOpt.length > 0) {

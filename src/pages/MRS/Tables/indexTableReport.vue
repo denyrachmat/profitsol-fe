@@ -663,35 +663,30 @@ const onSendApproval = (row) => {
 };
 
 const onEditData = (row) => {
-  console.log("Bulk Editing Batch Data:", row);
+  console.log("Editing Batch Data:", row);
 
   // 1. Kosongkan store jawaban terlebih dahulu untuk mencegah sisa data sebelumnya menempel
   formStore.restoreDefault();
 
-  // 2. Loop semua properti kolom data yang dikembalikan oleh server mrs
+  // 2. Masukkan SEMUA field jawaban ke index 0 (satu baris saja)
+  //    POS data dari backend diabaikan — sama persis dengan cara kerja onBulkEditSelected
+  //    untuk satu baris. Ini mencegah "spreading" yang terjadi karena POS index
+  //    backend yang tidak berurutan / sparse.
   for (let index = 0; index < Object.keys(row).length; index++) {
     const idx = Object.keys(row)[index];
 
-    // Deteksi jika field mengandung informasi posisi/indeks baris pengisian
     if (idx.includes("CMS_REPORT_POS")) {
       const idxParts = idx.split("_");
-      const fieldId = idxParts[idxParts.length - 1]; // Mengambil ID field asli
-
+      const fieldId = idxParts[idxParts.length - 1];
       const ans = row[`CMS_REPORT_VAL_${fieldId}`];
-      const ansPos = row[`CMS_REPORT_POS_${fieldId}`]; // Berisi array koordinat [rowIdx, colIdx]
 
-      // Ambil index baris (instance) dari database, gunakan fallback 0 jika kosong
-      const targetRowIdx =
-        ansPos && ansPos[0] !== undefined ? parseInt(ansPos[0]) : 0;
-
-      // 3. Masukkan kembali jawaban lama ke store Pinia sesuai koordinat barisnya!
       if (ans !== undefined && ans !== null) {
-        formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+        formStore.addAnswersForm(0, fieldId, ans);
       }
     }
   }
 
-  // 4. Buka modal previewComponent dengan flag isEdit (preventClear = true)
+  // 3. Buka modal previewComponent dengan flag isEdit (preventClear = true)
   onOpenForms(true, row.batch_id);
 };
 

@@ -6,10 +6,12 @@
       </div>
     </div>
     <div class="row q-gutter-md q-pt-md" v-if="item.config == 'row'">
-      <recurseWebOpt
-        :rowNavData="item.children"
-        v-if="item.children && item.children.length > 0"
-      />
+      <div class="col">
+        <span class="text-h6 text-italic">{{ item.label }}</span>
+      </div>
+      <div class="col" v-if="item.children && item.children.length > 0">
+        <recurseWebOpt :rowNavData="item.children" />
+      </div>
     </div>
 
     <div

@@ -7,10 +7,17 @@
     full-width
   >
     <q-card class="bg-white text-black">
-      <indexFormsCreator
+      <!-- <indexFormsCreator
         mode="2"
         :data-forms="dataForms"
         v-if="isLoaded"
+        @save="onDialogOK()"
+      /> -->
+      <CMSPageCreator
+        v-if="isLoaded"
+        :mode="idForm ? 'edit' : 'new'"
+        :page-id="idForm || null"
+        :data-page="dataForms"
         @save="onDialogOK()"
       />
     </q-card>
@@ -22,6 +29,8 @@ import { useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
 import indexFormsCreator from "src/pages/CMS/FormsCreator/indexFormsCreator.vue";
+
+import CMSPageCreator from "./CMSPageCreator.vue";
 
 const { postData } = apiRequest();
 

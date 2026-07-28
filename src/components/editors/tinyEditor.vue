@@ -1,7 +1,7 @@
 <template>
   <div eager>
     <div class="editor-container">
-      <div class="editor-mode-toggle q-mb-sm">
+      <div class="editor-mode-toggle q-mb-sm row items-center q-gutter-sm">
         <q-toggle
           v-model="editorMode"
           label="Code View ?"
@@ -13,6 +13,61 @@
           dense
           outlined
         />
+
+        <q-space />
+
+        <q-expansion-item
+          label="Custom CSS"
+          icon="palette"
+          dense
+          header-class="text-primary"
+          class="col-auto"
+        >
+          <q-card flat bordered class="q-mt-xs">
+            <q-card-section class="q-pb-sm">
+              <div class="text-caption text-grey-7 q-mb-sm">
+                Load external CSS into the editor preview (HTTPS only, max 5).
+              </div>
+
+              <div
+                v-for="(url, i) in localCssUrls"
+                :key="i"
+                class="row items-center q-gutter-xs q-mb-xs"
+              >
+                <q-input
+                  v-model="localCssUrls[i]"
+                  dense
+                  outlined
+                  placeholder="https://example.com/style.css"
+                  class="col"
+                  :rules="[isValidCssUrl]"
+                  lazy-rules
+                />
+                <q-btn
+                  icon="delete"
+                  flat
+                  dense
+                  round
+                  color="negative"
+                  size="sm"
+                  @click="removeCssUrl(i)"
+                />
+              </div>
+
+              <q-btn
+                v-if="localCssUrls.length < MAX_CSS_FILES"
+                flat
+                dense
+                no-caps
+                icon="add"
+                label="Add CSS URL"
+                color="primary"
+                class="q-mt-xs"
+                @click="addCssUrl"
+              />
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
       </div>
 
       <div class="row q-gutter-md">
@@ -45,7 +100,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 import Editor from "@tinymce/tinymce-vue";
 import { useQuasar } from "quasar";
 import { html as beautifyHtml } from "js-beautify";
@@ -53,6 +108,48 @@ import { CodeEditor } from "monaco-editor-vue3";
 
 const editorMode = ref("visual"); // 'visual' or 'code'
 const monacoReady = ref(false);
+
+const MAX_CSS_FILES = 5;
+const BLOCKED_PROTOCOLS = ["javascript:", "data:", "vbscript:"];
+
+/* ================= CSS URL Security ================= */
+const isAbsoluteUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const isSecureUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const hasBlockedProtocol = (url) => {
+  const lower = url.trim().toLowerCase();
+  return BLOCKED_PROTOCOLS.some((p) => lower.startsWith(p));
+};
+
+const isValidCssUrl = (url) => {
+  if (!url || !url.trim()) return true;
+  if (hasBlockedProtocol(url)) return "Blocked protocol";
+  if (!isAbsoluteUrl(url)) return "Must be a full URL (https://...)";
+  if (!isSecureUrl(url)) return "HTTPS only";
+  if (!/\.(css)(\?.*)?$/i.test(url)) return "Must be a .css file";
+  return true;
+};
+
+const getSanitizedCssUrls = (urls) => {
+  return (urls || [])
+    .map((u) => (typeof u === "string" ? u.trim() : ""))
+    .filter((u) => u && isValidCssUrl(u) === true);
+};
 
 /* ================= Monaco Loader (CDN) ================= */
 const MONACO_BASE = "https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min";
@@ -100,13 +197,58 @@ async function ensureMonaco() {
   return window.monaco;
 }
 
-const props = defineProps({ modelValue: { type: String, default: "" } });
+const props = defineProps({
+  modelValue: { type: String, default: "" },
+  customCssUrls: { type: Array, default: () => [] },
+});
 const emit = defineEmits(["update:modelValue"]);
 const $q = useQuasar();
 const editors = ref("");
+const localCssUrls = ref([]);
+let tinyEditorInstance = null;
+const CUSTOM_CSS_ATTR = "data-custom-css";
+
+const addCssUrl = () => {
+  if (localCssUrls.value.length >= MAX_CSS_FILES) return;
+  localCssUrls.value.push("");
+};
+
+const removeCssUrl = (index) => {
+  localCssUrls.value.splice(index, 1);
+};
+
+const mergedContentCss = computed(() => {
+  const base = [
+    "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+  ];
+  const sanitized = getSanitizedCssUrls(localCssUrls.value);
+  return [...base, ...sanitized];
+});
+
+const applyCustomCss = (urls) => {
+  if (!tinyEditorInstance) return;
+
+  try {
+    const doc = tinyEditorInstance.getDoc();
+    if (!doc) return;
+
+    doc.querySelectorAll(`[${CUSTOM_CSS_ATTR}]`).forEach((el) => el.remove());
+
+    urls.forEach((url) => {
+      const link = doc.createElement("link");
+      link.rel = "stylesheet";
+      link.href = url;
+      link.setAttribute(CUSTOM_CSS_ATTR, "");
+      doc.head.appendChild(link);
+    });
+  } catch (e) {
+    console.error("Failed to apply custom CSS:", e);
+  }
+};
+
 onMounted(async () => {
   if (props.modelValue) editors.value = props.modelValue;
-  // Initialize Monaco environment when component mounts
+  localCssUrls.value = getSanitizedCssUrls(props.customCssUrls);
   await ensureMonaco();
   monacoReady.value = true;
 });
@@ -120,6 +262,10 @@ watch(
   () => editors.value,
   (v) => emit("update:modelValue", v)
 );
+
+watch(mergedContentCss, (urls) => {
+  applyCustomCss(getSanitizedCssUrls(urls));
+});
 
 const dialogConfig = {
   title: "Variable",
@@ -171,9 +317,7 @@ const initEditor = ref({
   toolbar_sticky: true,
   paste_data_images: true,
   image_advtab: true,
-  content_css: [
-    "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
-  ],
+  content_css: mergedContentCss.value,
   codesample_languages: [
     { text: "SQL", value: "sql" },
     { text: "HTML/XML", value: "markup" },
@@ -181,6 +325,11 @@ const initEditor = ref({
   codesample_content_css: "https://ourcodeworld.com/material/css/prism.css",
 
   setup: (editor) => {
+    tinyEditorInstance = editor;
+
+    editor.on("init", () => {
+      applyCustomCss(getSanitizedCssUrls(localCssUrls.value));
+    });
     editor.ui.registry.addButton("dialog-example-btn", {
       icon: "format-code",
       tooltip: "Add variable to become value",
@@ -329,6 +478,13 @@ const initEditor = ref({
     });
   },
 });
+
+const insertContent = (html) => {
+  if (!tinyEditorInstance) return;
+  tinyEditorInstance.execCommand("mceInsertContent", false, html);
+};
+
+defineExpose({ insertContent });
 </script>
 
 <style>

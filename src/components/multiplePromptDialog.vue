@@ -572,7 +572,7 @@ const onSubmit = () => {
       fields.value,
       isValid,
     ]);
-    onDialogOK(fields.value); // Emit the payload
+    onDialogOK(fieldValues.value); // Emit the payload
   }
 };
 

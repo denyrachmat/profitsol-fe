@@ -54,7 +54,7 @@
             <!-- Subscribers Table -->
             <div class="col-12">
               <q-table
-                :rows="subscribers"
+                :rows="filteredSubscribers"
                 :columns="columns"
                 row-key="id"
                 :pagination="pagination"
@@ -65,7 +65,7 @@
                     <q-chip
                       :color="getStatusColor(props.value)"
                       text-color="white"
-                      :label="props.value"
+                      :label="getStatusLabel(props.value)"
                     />
                   </q-td>
                 </template>
@@ -100,7 +100,19 @@
                       size="sm"
                       @click="onClickAddSubscriber(props.row)"
                       :loading="loading"
-                    />
+                    >
+                      <q-tooltip>Edit Subscriber</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      icon="edit"
+                      color="orange"
+                      size="sm"
+                      @click="onClickEditByListCategories(props.row)"
+                      :loading="loading"
+                    >
+                      <q-tooltip>Edit By Categories</q-tooltip>
+                    </q-btn>
                     <q-btn
                       flat
                       icon="delete"
@@ -156,7 +168,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useDialogPluginComponent, useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
@@ -173,7 +185,7 @@ const $q = useQuasar();
 const { postData } = apiRequest();
 // Reactive data
 const searchText = ref("");
-const statusFilter = ref("");
+const statusFilter = ref("All");
 const loading = ref(false);
 
 // Status options for filter
@@ -255,8 +267,15 @@ const columns = [
 ];
 
 // Method to get status color
+const getStatusLabel = (status) => {
+  if (status === "1" || status === 1 || status === "Active") return "Active";
+  if (status === "2" || status === 2 || status === "Inactive") return "Inactive";
+  if (status === "0" || status === 0 || status === "Pending") return "Pending";
+  return String(status || "Pending");
+};
+
 const getStatusColor = (status) => {
-  switch (status) {
+  switch (getStatusLabel(status)) {
     case "Active":
       return "positive";
     case "Inactive":
@@ -268,6 +287,32 @@ const getStatusColor = (status) => {
   }
 };
 
+const filteredSubscribers = computed(() => {
+  const keyword = searchText.value.trim().toLowerCase();
+  const selectedStatus = statusFilter.value;
+
+  return subscribers.value.filter((sub) => {
+    const statusLabel = getStatusLabel(sub.status);
+    const valText = Array.isArray(sub.val)
+      ? sub.val.join(" ").toLowerCase()
+      : String(sub.val || "").toLowerCase();
+
+    const matchesSearch =
+      !keyword ||
+      String(sub.email || "").toLowerCase().includes(keyword) ||
+      String(sub.type || "").toLowerCase().includes(keyword) ||
+      statusLabel.toLowerCase().includes(keyword) ||
+      valText.includes(keyword);
+
+    const matchesStatus =
+      !selectedStatus ||
+      selectedStatus === "All" ||
+      statusLabel === selectedStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+});
+
 const getListSubscriber = async () => {
   loading.value = true;
 
@@ -277,11 +322,11 @@ const getListSubscriber = async () => {
       {
         id: "FP_SUBSCRIBE_POSTS",
         selectAs: {
-          idx: "id|int",
-          email: "pgm_value3|string",
-          status: "pgm_desc2|string",
-          type: "pgm_value|string",
-          subscriptionDate: "created_at|date:max",
+          idx: "id|array|grouped",
+          email: "pgm_value3|string|grouped",
+          status: "pgm_desc2|string|grouped",
+          type: "pgm_value|string|grouped",
+          subscriptionDate: "created_at|date:max|grouped",
           val: "pgm_value2|array|grouped",
         },
       },
@@ -544,6 +589,185 @@ const onClickAddSubscriber = async (data = null) => {
     });
 };
 
+const onClickEditByListCategories = async (data) => {
+  const getCategories = await getListCategories();
+  const getActiveAccountSubscribers = await getActiveAccount();
+  const getAuthors = await getListAuthor();
+  const getHashtags = await getListHashtags();
+
+  let listAccountOptions = getActiveAccountSubscribers.map((acc) => ({
+    label: acc.email + " - " + acc.pud_first_name + " " + acc.pud_last_name,
+    value: acc.email,
+  }));
+
+  let listAuthorOptions = getAuthors.map((auth) => ({
+    label: auth.name,
+    value: auth.name,
+  }));
+
+  let listHashtagsOptions = getHashtags.map((tag) => ({
+    label: tag.name + " - " + tag.desc,
+    value: tag.name,
+  }));
+
+  let listCategoriesOptions = getCategories
+    .map((cat) => ({
+      label: cat.name + " - " + cat.desc,
+      value: cat.name,
+    }))
+    .filter((cat) => data.val.includes(cat.value)); // Filter out the "_ALL" option
+
+  const getSubscriber = await postData(
+    "post",
+    {
+      id: "FP_SUBSCRIBE_POSTS",
+      selectAs: {
+        idx: "id|array|grouped",
+        email: "pgm_value3|string|grouped",
+        status: "pgm_desc2|string|grouped",
+        type: "pgm_value|string|grouped",
+        subscriptionDate: "created_at|date:max|grouped",
+        val: "pgm_value2|array|grouped",
+      },
+      filter: {
+        pgm_value2: listCategoriesOptions.map((cat) => cat.value),
+      },
+    },
+    `portal/gencode/showDetail/FP_SUBSCRIBE_POSTS`,
+    false,
+    false,
+    true
+  );
+
+  const subscriberData =
+    getSubscriber?.data.map((item) => ({
+      value: item.email,
+      label: item.email,
+    })) || null;
+
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "Manage Subscriber",
+      initialFields: [
+        {
+          name: "email",
+          label: "Select Email",
+          type: "select",
+          options: [
+            { label: "Choose All", value: "_ALL" },
+            ...listAccountOptions,
+          ],
+          multiple: true,
+          default: subscriberData ?? [],
+          rules: [(val) => !!val || "At least one tag is required"],
+        },
+        {
+          name: "status",
+          label: "Select Status",
+          type: "select",
+          options: [
+            { label: "Active", value: 1 },
+            { label: "Pending", value: 0 },
+            { label: "Inactive", value: 2 },
+          ],
+          default: parseInt(data?.status) ?? 1,
+          rules: [(val) => !!val || "Status is required"],
+        },
+        {
+          name: "type",
+          label: "Select Type",
+          type: "select",
+          options: [
+            { label: "Categories", value: "categories" },
+            { label: "Users", value: "users" },
+            { label: "Hashtags", value: "tags" },
+          ],
+          default: data?.type ?? "categories",
+          rules: [(val) => !!val || "Type is required"],
+        },
+        {
+          name: "valCategories",
+          label: "Select Category Type",
+          type: "select",
+          options: [
+            { label: "Choose All", value: "_ALL" },
+            ...listCategoriesOptions,
+          ],
+          multiple: true,
+          default: data?.val ?? [],
+          hidden: (fields) => {
+            return fields.type !== "categories";
+          },
+        },
+        {
+          name: "valAuthor",
+          label: "Select Author",
+          type: "select",
+          options: [
+            { label: "Choose All", value: "_ALL" },
+            ...listAuthorOptions,
+          ],
+          multiple: true,
+          default: data?.val ?? [],
+          hidden: (fields) => {
+            return fields.type !== "users";
+          },
+        },
+        {
+          name: "valHashtags",
+          label: "Select Hashtags",
+          type: "select",
+          options: [
+            { label: "Choose All", value: "_ALL" },
+            ...listHashtagsOptions,
+          ],
+          multiple: true,
+          default: data?.val ?? [],
+          hidden: (fields) => {
+            return fields.type !== "tags";
+          },
+        },
+      ],
+    },
+  })
+    .onOk(async (datas) => {
+      console.log("Dialog confirmed", datas);
+
+      loading.value = true;
+      try {
+        const { data } = await postData(
+          "post",
+          {
+            email: datas.email,
+            status: datas.status,
+            type: datas.type,
+            valCategories: datas.valCategories,
+            valAuthor: datas.valAuthor,
+            valHashtags: datas.valHashtags,
+          },
+          `fpmanager/saveSubscriber`,
+          false,
+          false,
+          true
+        );
+
+        if (data) {
+          $q.notify({
+            color: "positive",
+            message: "Subscriber saved successfully",
+          });
+        }
+      } finally {
+        loading.value = false;
+        getListSubscriber();
+      }
+    })
+    .onCancel(() => {
+      console.log("Dialog canceled");
+    });
+};
+
 const onDeleteSubscriber = async (data) => {
   console.log("Delete subscriber", data);
 
@@ -559,15 +783,9 @@ const onDeleteSubscriber = async (data) => {
         const { data: resData } = await postData(
           "post",
           {
-            filter: [
-              {
-                column: "id",
-                operator: "=",
-                value: data.idx,
-              },
-            ],
+            ids: data.idx,
           },
-          `portal/gencode/deleteDetail/FP_SUBSCRIBE_POSTS`,
+          `portal/gencode/deleteDetailGroup/FP_SUBSCRIBE_POSTS`,
           false,
           false,
           true

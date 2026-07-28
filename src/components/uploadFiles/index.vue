@@ -1,7 +1,25 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <q-dialog ref="dialogRef">
-    <div class="bg-white" style="min-width: 500px; min-height: 500px">
+    <div class="bg-white q-pa-md" style="min-width: 500px; min-height: 500px">
+      <div class="row">
+        <div class="col-10 q-pa-sm">
+          <div class="text-h6">{{ props.title }}</div>
+        </div>
+        <div
+          class="col-2 q-pa-sm text-right"
+          v-if="props.isDownloadTemplate && props.isDownloadTemplate.enabled"
+        >
+          <q-btn
+            dense
+            icon="download"
+            color="green"
+            @click="onClickDownloadTemplate(props.isDownloadTemplate.url)"
+          >
+            <q-tooltip>Download Template</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
       <div class="row" v-if="props.options && props.options.length > 0">
         <div
           v-for="(optionGroup, groupIndex) in props.options"
@@ -30,13 +48,10 @@
           <q-uploader
             class="full-width"
             style="min-height: 500px"
-            :factory="factoryFn"
-            :label="props.title"
+            label="Drag and drop files here or click + to select files"
             :accept="!props.accept ? '.jpg, image/*' : props.accept"
-            auto-upload
             :multiple="props.multiple"
-            @uploaded="onUploaded"
-            :loading="isUploading"
+            @added="onFilesAdded"
           />
         </div>
       </div>
@@ -57,7 +72,7 @@
   </q-dialog>
 </template>
 <script setup>
-import { defineComponent, onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useDialogPluginComponent } from "quasar";
 
 const isUploading = ref(false);
@@ -74,6 +89,17 @@ const props = defineProps({
   options: {
     type: Array,
     default: () => [],
+  },
+  isDownloadTemplate: {
+    type: Object,
+    default: () => ({
+      enabled: false,
+      url: "",
+    }),
+  },
+  isBase64: {
+    type: Boolean,
+    default: true,
   },
 });
 
@@ -99,44 +125,44 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 const result = ref([]);
 const resultFileName = ref([]);
 
-function factoryFn(val) {
-  isUploading.value = true;
-  // result.value = convertBase64(val).result;
-  // console.log(convertBase64(val));
-  // console.log(val);
-  return convertBase64(val).result;
-  return new Promise((resolve) => {
-    // simulating a delay of 2 seconds
-    setTimeout(() => {
-      resolve({
-        url: "http://localhost:4444/upload",
-        data: convertBase64(val).result,
-      });
-    }, 2000);
+const readFileAsDataURL = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Failed to read file as base64."));
+    reader.readAsDataURL(file);
   });
-}
 
-const convertBase64 = (filenya, callback) => {
-  const reader = new FileReader();
-  var hasil = "";
+const storeSelectedFiles = async (files) => {
+  const selectedFiles = Array.isArray(files) ? files : [files];
 
-  // if (multiple.value) {
-  //   reader.readAsDataURL(filenya);
-  // } else {
-  //   reader.readAsDataURL(filenya[0]);
-  // }
+  const processedFiles = props.isBase64
+    ? await Promise.all(selectedFiles.map((file) => readFileAsDataURL(file)))
+    : selectedFiles;
 
-  reader.readAsDataURL(filenya[0]);
-  reader.onload = function (readerEvt) {
-    hasil = reader.result;
-    result.value = [...result.value, reader.result];
-    resultFileName.value = [...resultFileName.value, filenya[0].name];
-  };
-  reader.onerror = function (error) {
-    return `Error: ${error}`;
-  };
+  if (props.multiple) {
+    result.value = [...result.value, ...processedFiles];
+    resultFileName.value = [
+      ...resultFileName.value,
+      ...selectedFiles.map((file) => file.name),
+    ];
+  } else {
+    result.value = processedFiles;
+    resultFileName.value = selectedFiles.map((file) => file.name);
+  }
 
-  return reader;
+  return props.multiple ? processedFiles : processedFiles[0];
+};
+
+const onFilesAdded = async (files) => {
+  isUploading.value = true;
+
+  try {
+    await storeSelectedFiles(files);
+  } finally {
+    isUploading.value = false;
+  }
 };
 
 const onOKClick = () => {
@@ -144,6 +170,7 @@ const onOKClick = () => {
   // on OK, it is REQUIRED to
   // call onDialogOK (with optional payload)
   onDialogOK({
+    dynamicOptions: dynamicOptionValues.value,
     result: props.multiple ? result.value : result.value[0],
     fileName: props.multiple ? resultFileName.value : resultFileName.value[0],
   });
@@ -153,17 +180,39 @@ const onOKClick = () => {
 
 const disabledButton = computed(() => {
   // Check if any required dynamic option is empty
+  let emptyRequiredOption = false;
   if (props.options && props.options.length > 0) {
     for (const optionGroup of props.options) {
       if (optionGroup.required) {
         const value = dynamicOptionValues.value[optionGroup.name];
         if (value === undefined || value === null || value === "") {
-          return true; // Disable button because a required option is not selected
+          emptyRequiredOption = true; // Disable button because a required option is not selected
         }
       }
     }
   }
+
+  console.log("Disabled Button Check:", {
+    resultLength: result.value.length,
+    isUploading: isUploading.value,
+    emptyRequiredOption,
+  });
   // Also disable if no file has been uploaded or if upload is in progress
-  return result.value.length === 0 || isUploading.value;
+  return result.value.length === 0 || emptyRequiredOption;
 });
+
+const onClickDownloadTemplate = (url) => {
+  if (!url) {
+    console.error("Download template URL is not provided.");
+    return;
+  }
+  // Create a temporary anchor element to trigger the download
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank"; // Open in a new tab/window
+  link.download = ""; // Let the server suggest the filename
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 </script>
