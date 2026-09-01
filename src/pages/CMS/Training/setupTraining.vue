@@ -442,7 +442,6 @@
               </q-input>
             </div>
           </div>
-        </div>
 
         <div class="row q-pt-md" v-if="props.isForm">
           <div class="col">

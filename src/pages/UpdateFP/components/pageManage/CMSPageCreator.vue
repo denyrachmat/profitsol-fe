@@ -276,53 +276,86 @@
       </div>
 
       <!-- Right: Properties Panel (only in edit mode when block selected) -->
-      <div
-        v-if="previewMode === 'edit' && selectedBlock"
-        class="props-panel bg-white shadow-1"
-        style="width: 340px; min-width: 340px"
-      >
-        <div class="q-pa-sm row items-center bg-grey-1">
-          <q-icon
-            :name="getBlockMeta(selectedBlock.type).icon"
-            :color="getBlockMeta(selectedBlock.type).color"
-            class="q-mr-sm"
+      <template v-if="previewMode === 'edit' && selectedBlock">
+        <div
+          v-if="propsPanelOpen"
+          class="props-panel bg-white shadow-1"
+          :style="{ width: propsPanelWidth + 'px', minWidth: propsPanelWidth + 'px' }"
+        >
+          <!-- Resize handle -->
+          <div
+            class="props-resize-handle"
+            @mousedown="onPropsResizeStart"
           />
-          <span class="text-subtitle2 text-weight-bold"
-            >{{ getBlockMeta(selectedBlock.type).label }} Properties</span
-          >
-          <q-space />
+          <div class="q-pa-sm row items-center bg-grey-1">
+            <q-icon
+              :name="getBlockMeta(selectedBlock.type).icon"
+              :color="getBlockMeta(selectedBlock.type).color"
+              class="q-mr-sm"
+            />
+            <span class="text-subtitle2 text-weight-bold"
+              >{{ getBlockMeta(selectedBlock.type).label }} Properties</span
+            >
+            <q-space />
+            <q-btn
+              flat
+              dense
+              round
+              icon="chevron_right"
+              size="sm"
+              @click="propsPanelOpen = false"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="close"
+              size="sm"
+              @click="selectedBlockId = null"
+            />
+          </div>
+          <q-separator />
+          <div class="props-content q-pa-sm">
+            <!-- Width -->
+            <q-select
+              v-model="selectedBlockWidth"
+              :options="widthOptions"
+              label="Column Width"
+              dense
+              outlined
+              emit-value
+              map-options
+              class="q-mb-sm"
+            />
+
+            <!-- Dynamic properties component -->
+            <component
+              :is="propertiesComponent"
+              v-if="propertiesComponent"
+              :block="selectedBlock"
+              :category-options="categoryOptions"
+            />
+          </div>
+        </div>
+
+        <!-- Collapsed panel toggle -->
+        <div
+          v-else
+          class="bg-grey-1 shadow-1 column items-center q-py-sm"
+          style="width: 36px; min-width: 36px; border-left: 1px solid #e0e0e0"
+        >
           <q-btn
             flat
             dense
             round
-            icon="close"
+            icon="chevron_left"
             size="sm"
-            @click="selectedBlockId = null"
-          />
+            @click="propsPanelOpen = true"
+          >
+            <q-tooltip>Show Properties</q-tooltip>
+          </q-btn>
         </div>
-        <q-separator />
-        <div class="props-content q-pa-sm">
-          <!-- Width -->
-          <q-select
-            v-model="selectedBlockWidth"
-            :options="widthOptions"
-            label="Column Width"
-            dense
-            outlined
-            emit-value
-            map-options
-            class="q-mb-sm"
-          />
-
-          <!-- Dynamic properties component -->
-          <component
-            :is="propertiesComponent"
-            v-if="propertiesComponent"
-            :block="selectedBlock"
-            :category-options="categoryOptions"
-          />
-        </div>
-      </div>
+      </template>
     </div>
 
     <!-- Floating Widget FAB -->
@@ -494,6 +527,8 @@ const pageContainerWidth = ref("contained");
 const pageMobileFriendly = ref(false);
 const blocks = ref([]);
 const selectedBlockId = ref(null);
+const propsPanelOpen = ref(true);
+const propsPanelWidth = ref(340);
 const previewMode = ref("edit");
 const fabOpen = ref(false);
 const previewDialog = ref(false);
@@ -569,6 +604,26 @@ const addBlock = (type) => {
 const selectBlock = (block) => {
   if (previewMode.value !== "edit") return;
   selectedBlockId.value = block.id;
+  propsPanelOpen.value = true;
+};
+
+const onPropsResizeMove = (e) => {
+  propsPanelWidth.value = Math.min(
+    560,
+    Math.max(280, window.innerWidth - e.clientX)
+  );
+};
+
+const onPropsResizeEnd = () => {
+  window.removeEventListener("mousemove", onPropsResizeMove);
+  window.removeEventListener("mouseup", onPropsResizeEnd);
+  document.body.style.userSelect = "";
+};
+
+const onPropsResizeStart = () => {
+  window.addEventListener("mousemove", onPropsResizeMove);
+  window.addEventListener("mouseup", onPropsResizeEnd);
+  document.body.style.userSelect = "none";
 };
 
 const duplicateBlock = (index) => {
@@ -956,6 +1011,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("mousemove", onPropsResizeMove);
+  window.removeEventListener("mouseup", onPropsResizeEnd);
 });
 
 const getDataTags = async () => {
@@ -1121,8 +1178,24 @@ watch(
 }
 
 .props-panel {
+  position: relative;
   overflow-y: auto;
   border-left: 1px solid #e0e0e0;
+}
+
+.props-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1;
+}
+
+.props-resize-handle:hover {
+  background: #1976d2;
 }
 
 .props-content {

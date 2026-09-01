@@ -142,7 +142,10 @@ const getRoleAppMap = computed(() => {
   }
 
   return store.getChoosedRole.role.role_app_map.filter(
-    (f) => f.apps && f.apps.am_is_drawer == 0
+    (f) =>
+      f.apps &&
+      f.apps.am_is_drawer == 0 &&
+      String(f.apps.am_app_code || "").indexOf("MBL_APP") !== 0
   );
 });
 

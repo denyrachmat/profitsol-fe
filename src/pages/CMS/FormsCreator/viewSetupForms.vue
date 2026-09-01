@@ -13,6 +13,54 @@
 
       <q-card-section class="q-pa-md q-gutter-md">
         <!-- Preview -->
+        <!-- Form Status & Year -->
+        <fieldset
+          style="
+            border: 1px dashed #ccc !important;
+            border-radius: 16px;
+            overflow: auto;
+          "
+        >
+          <legend>Form Status & Year</legend>
+          <div class="row q-pt-sm">
+            <div class="col">
+              <div class="text-bold">Form Status</div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.formStatus"
+                  val="draft"
+                  label="Draft"
+                  color="grey"
+                />
+                <q-radio
+                  v-model="formsSetup.formStatus"
+                  val="active"
+                  label="Active"
+                  color="green"
+                />
+                <q-radio
+                  v-model="formsSetup.formStatus"
+                  val="closed"
+                  label="Closed"
+                  color="red"
+                />
+              </div>
+            </div>
+            <div class="col">
+              <div class="text-bold">Year</div>
+              <q-input
+                v-model.number="formsSetup.formYear"
+                type="number"
+                label="Year (e.g. 2026)"
+                dense
+                outlined
+                :min="2000"
+                :max="2099"
+              />
+            </div>
+          </div>
+        </fieldset>
+
         <fieldset
           style="
             border: 1px dashed #ccc !important;
@@ -339,6 +387,94 @@
                   </template>
                 </q-splitter>
               </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Field Permissions -->
+        <fieldset
+          style="
+            border: 1px dashed #ccc !important;
+            border-radius: 16px;
+            overflow: auto;
+          "
+        >
+          <legend>Field Permissions & Status Control</legend>
+          <div class="row q-pt-sm">
+            <div class="col">
+              <div class="text-bold">
+                Specific users can set form status (publish / close) ?
+              </div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.specificUserSetStatus"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="formsSetup.specificUserSetStatus"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+            <div class="col" v-if="formsSetup.specificUserSetStatus">
+              <div class="text-bold">Choose specific users</div>
+              <div class="q-italic">
+                (Choosed users will be able to set form status)
+              </div>
+              <q-select
+                v-model="formsSetup.listSpecificUserSetStatus"
+                :options="optionsUsers"
+                multiple
+                label="Choose specific users"
+                emit-value
+                map-options
+                use-chips
+                dense
+                filled
+                @filter="filterFnUsers"
+                :loading="loadingUsers"
+                use-input
+                input-debounce="300"
+              />
+            </div>
+          </div>
+          <div class="row q-pt-sm">
+            <div class="col">
+              <div class="text-bold">
+                Specific users can set field-level edit permissions ?
+              </div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.specificUserSetFieldPerms"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="formsSetup.specificUserSetFieldPerms"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+            <div class="col" v-if="formsSetup.specificUserSetFieldPerms">
+              <div class="text-bold">Choose specific users / roles</div>
+              <q-select
+                v-model="formsSetup.listSpecificUserRoleFieldPerms"
+                :options="optionsUsers"
+                multiple
+                label="Choose specific users"
+                emit-value
+                map-options
+                use-chips
+                dense
+                filled
+                @filter="filterFnUsers"
+                :loading="loadingUsers"
+                use-input
+                input-debounce="300"
+              />
             </div>
           </div>
         </fieldset>
@@ -881,6 +1017,8 @@ const store = useAuthStore();
 const props = defineProps({
   setupTrainingSetup: Object,
   forms: Object,
+  formStatus: { type: String, default: "draft" },
+  formYear: { type: [String, Number], default: null },
 });
 
 const $q = useQuasar();
@@ -941,6 +1079,17 @@ onMounted(() => {
       localSetup.listSpecificUserRoleSetDeleteDataPeriod || [];
     localSetup.allowDeleteData = convertToBoolean(localSetup.allowDeleteData);
     localSetup.isEditData = convertToBoolean(localSetup.isEditData);
+    localSetup.specificUserSetStatus = convertToBoolean(
+      localSetup.specificUserSetStatus
+    );
+    localSetup.listSpecificUserSetStatus =
+      localSetup.listSpecificUserSetStatus || [];
+    localSetup.specificUserSetFieldPerms = convertToBoolean(
+      localSetup.specificUserSetFieldPerms
+    );
+    localSetup.listSpecificUserRoleFieldPerms =
+      localSetup.listSpecificUserRoleFieldPerms || [];
+    localSetup.fieldPermissions = localSetup.fieldPermissions || [];
     localSetup.isFilterByUser = convertToBoolean(localSetup.isFilterByUser);
 
     localSetup.specificUserSetFilterData =
@@ -1009,6 +1158,8 @@ onMounted(() => {
     formsSetup.value = {
       ...formsSetup.value,
       ...localSetup,
+      formStatus: props.formStatus || "draft",
+      formYear: props.formYear || null,
     };
   }
 
@@ -1061,6 +1212,13 @@ const formsSetup = ref({
   isFilterByUser: false,
   specificUserSetFilterData: "all",
   listSpecificUserRoleSetFilterDataPeriod: [],
+  formStatus: "draft",
+  formYear: null,
+  specificUserSetStatus: false,
+  listSpecificUserSetStatus: [],
+  specificUserSetFieldPerms: false,
+  listSpecificUserRoleFieldPerms: [],
+  fieldPermissions: [],
 });
 
 const splitterModel = ref(50);
@@ -1101,35 +1259,16 @@ const getUsers = async () => {
 const getDataApproval = async () => {
   loadingApproval.value = true;
 
-  const data = await postData(
-    "post",
-    {
-      filter: [
-        {
-          cols: "p_u_username",
-          param: "=",
-          value: store.authDet.username,
-        },
-        {
-          cols: "amshd_stat",
-          param: "=",
-          value: "sent",
-        },
-      ],
-    },
-    `ams/viewListSentApproval`,
-    false,
-    false,
-    true
-  );
+  const data = await postData("get", null, `ams/approval`, false, false, true);
 
   if (data) {
     loadingApproval.value = false;
 
-    return data.data.map((user) => {
+    console.log("Approval Data:", data);
+    return data.map((user) => {
       return {
-        label: user.master.ams_title,
-        value: user.master.ams_idapv,
+        label: user.ams_title,
+        value: user.ams_idapv,
       };
     });
   } else {

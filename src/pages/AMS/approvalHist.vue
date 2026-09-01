@@ -17,7 +17,7 @@
           bordered
           :rows="listData"
           :columns="columns"
-          row-key="YSPDT_INVNO"
+          row-key="id"
           color="amber"
           :loading="loading"
           title="Approval & Notification History"

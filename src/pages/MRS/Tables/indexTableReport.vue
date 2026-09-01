@@ -54,6 +54,42 @@
                 </q-item-section>
               </q-item>
             </q-list>
+            <q-list v-if="isUserCanSetStatus">
+              <q-item
+                clickable
+                v-close-popup
+                @click="onClickSetStatus"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="purple"
+                    icon="publish"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Set Form Status</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list v-if="isUserCanSetFieldPerms">
+              <q-item
+                clickable
+                v-close-popup
+                @click="onClickFieldPerms"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="deep-purple"
+                    icon="visibility"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Field Permissions</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
             <q-list>
               <q-item
                 clickable
@@ -251,6 +287,7 @@ import { useFormStore } from "stores/formStore";
 import { useAuthStore } from "stores/authStore";
 
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+import viewSetupFieldPerms from "src/pages/CMS/FormsCreator/viewSetupFieldPerms.vue";
 
 const $q = useQuasar();
 const route = useRoute();
@@ -315,10 +352,27 @@ const enableMultipleCreate = ref(false);
 const enableMultipleEditNewForm = ref(false);
 const enableMultipleDeleteNewForm = ref(false);
 const selectedRows = ref([]);
+const setupTrainingData = ref({});
 
 // Computed property to check if the report is an RPA or Approval type
 const isRPAOrApproval = computed(() => {
   return propsReports.value && (propsReports.value.includes('rpa') || propsReports.value.includes('approval'));
+});
+
+const currentUsername = computed(() => store.authDet?.username || "");
+const currentRoleId = computed(() => {
+  const role = store.getChoosedRole;
+  return role?.role?.id || null;
+});
+
+const isUserCanSetStatus = computed(() => {
+  const list = setupTrainingData.value.listSpecificUserSetStatus || [];
+  return list.includes(currentUsername.value);
+});
+
+const isUserCanSetFieldPerms = computed(() => {
+  const list = setupTrainingData.value.listSpecificUserRoleFieldPerms || [];
+  return list.includes(currentUsername.value) || list.includes(currentRoleId.value);
 });
 
 onMounted(async () => {
@@ -347,6 +401,10 @@ onMounted(async () => {
 
   getPeriodData();
   getMultipleManageData();
+
+  if (idForms.value) {
+    checkFormsByID(idForms.value);
+  }
 });
 
 socket.on("server-stxi", (data) => {
@@ -573,6 +631,7 @@ const checkFormsByID = async (id) => {
   );
 
   if (checkDatanya && checkDatanya.status === true) {
+    setupTrainingData.value = checkDatanya.data.value?.setupTraining || {};
     return checkDatanya.data;
   } else {
     $q.notify({
@@ -780,6 +839,85 @@ const onPeriodClick = () => {
 
       formPeriod.value.from = datas.rangePeriod.from;
       formPeriod.value.to = datas.rangePeriod.to;
+    }
+  });
+};
+
+const onClickSetStatus = async () => {
+  const formData = await checkFormsByID(idForms.value);
+  if (!formData) return;
+  const currentStatus = formData.value.status || "draft";
+  $q.dialog({
+    title: "Set Form Status",
+    message: `Current status: ${currentStatus}. Select new status:`,
+    options: {
+      type: "radio",
+      model: currentStatus,
+      items: [
+        { label: "Draft", value: "draft" },
+        { label: "Active", value: "active" },
+        { label: "Closed", value: "closed" },
+      ],
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (val) => {
+    const data = await postData(
+      "post",
+      { id: idForms.value, status: val },
+      "cms/updateStatus",
+      false,
+      false,
+      true
+    );
+    if (data && data.status) {
+      $q.notify({ color: "positive", message: "Status updated", icon: "check" });
+      formData.value.status = val;
+    }
+  });
+};
+
+const onClickFieldPerms = async () => {
+  const formData = await checkFormsByID(idForms.value);
+  if (!formData) return;
+
+  // Load users and roles for the select options
+  const usersData = await postData("get", null, "portal/users/ActiveOnly", false, false, true);
+  const rolesData = await postData("get", null, "portal/roles", false, false, true);
+
+  const optionsUsers = usersData?.data?.map((u) => ({
+    label: `${u.pud_first_name} ${u.pud_last_name}`.trim(),
+    value: u.username,
+  })) || [];
+
+  const optionsRoles = rolesData?.data?.map((r) => ({
+    label: r.rm_role_name,
+    value: r.id,
+  })) || [];
+
+  $q.dialog({
+    component: viewSetupFieldPerms,
+    componentProps: {
+      forms: formData.value.forms,
+      fieldPermissions: setupTrainingData.value.fieldPermissions || [],
+      optionsUsers,
+      optionsRoles,
+    },
+  }).onOk(async (perms) => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idForms.value,
+        setupTraining: { ...setupTrainingData.value, fieldPermissions: perms },
+      },
+      "cms/saveSetupTraining",
+      false,
+      false,
+      true
+    );
+    if (data && data.status) {
+      $q.notify({ color: "positive", message: "Field permissions saved", icon: "check" });
+      setupTrainingData.value.fieldPermissions = perms;
     }
   });
 };

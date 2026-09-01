@@ -488,6 +488,8 @@ defineExpose({ insertContent });
 </script>
 
 <style>
+.tox-silver-sink,
+.tox-dialog-wrap,
 .tox-dialog {
   z-index: 15000000000 !important;
 }

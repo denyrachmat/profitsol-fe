@@ -274,7 +274,7 @@ onMounted(() => {
   // }
 
   if (props.ans) {
-    modelData.value = props.ans.toString();
+    modelData.value = props.ans;
   }
 
   if (props.ansArr && props.ansArr.length > 0) {
@@ -634,11 +634,13 @@ watch(
 // JAWABAN YANG DIPILIH (SINGLE VALUE / INPUT / SELECT / RADIO)
 watch(
   () => modelData.value,
-  (val) => {
+  (val, prev) => {
     // PENGAMAN: Jika dalam mode readonly, blokir pengiriman data ke parent
     if (isReadonlyLocal.value) return;
 
-    if (modelData.value) {
+    // Kirim walau nilainya falsy (0 / '' / false), asal benar-benar berubah agar
+    // logika (mis. tampilkan komponen jika pilih nilai X) tetap terpicu.
+    if (val !== prev) {
       if (props.mode == "live-ans") {
         emit("customAnschange", val);
       } else {

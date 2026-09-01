@@ -50,9 +50,50 @@
                 >
                   <q-item-section>Share this question</q-item-section>
                 </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickReviewAllLogics"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Review All Logics</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickExportBackup"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Download Backup (.json)</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickImportBackup"
+                >
+                  <q-item-section>Restore from Backup</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickDeleteCurrentForm"
+                  :disable="!idRef"
+                >
+                  <q-item-section class="text-negative">Delete Form</q-item-section>
+                </q-item>
               </q-list>
             </q-menu>
           </q-btn>
+          <q-btn
+            color="negative"
+            icon="delete_sweep"
+            flat
+            no-caps
+            label="Trash"
+            @click="onClickTrash"
+          />
         </q-btn-group>
       </div>
     </div>
@@ -673,6 +714,7 @@ import chooseComponent from "../chooseComponent.vue";
 import addContentComponent from "../addContentComponent.vue";
 import componentViewVue from "../componentView.vue";
 import viewLogicHeaderForms from "./viewLogicsHeaderForms.vue";
+import viewLogicsAll from "./viewLogicsAll.vue";
 import openTraining from "../Training/openTraining.vue";
 import apiRequest from "src/components/apiRequest";
 import previewComponentVue from "../Forms/previewComponent.vue";
@@ -696,6 +738,8 @@ const desc = ref("");
 const idRef = ref(null);
 const forms = ref([]);
 const setupTrainingSetup = ref([]);
+const formStatus = ref("draft");
+const formYear = ref(null);
 const share = ref([]);
 const shareMainMenu = ref(false);
 const shareIsroles = ref(false);
@@ -955,6 +999,122 @@ const onClickLogics = (index, indexCol) => {
   });
 };
 
+const onClickReviewAllLogics = () => {
+  $q.dialog({
+    component: viewLogicsAll,
+    componentProps: {
+      forms: forms.value,
+    },
+  }).onOk((changes) => {
+    changes.forEach(({ rowIdx, colIdx, logics }) => {
+      const content = forms.value[rowIdx].type === "row"
+        ? forms.value[rowIdx].content
+        : [forms.value[rowIdx]];
+      if (content[colIdx]) {
+        content[colIdx].logics = logics;
+      }
+    });
+  });
+};
+
+const onClickExportBackup = () => {
+  const backup = {
+    title: title.value,
+    desc: desc.value,
+    status: formStatus.value,
+    year: formYear.value,
+    isQuiz: props.mode ?? false,
+    forms: JSON.parse(JSON.stringify(forms.value)),
+    setupTraining: JSON.parse(JSON.stringify(setupTrainingSetup.value)),
+    share: share.value,
+    shareMainMenu: shareMainMenu.value,
+    shareIsroles: shareIsroles.value,
+    selectedSharedMenu: selectedSharedMenu.value,
+    shareFormsMenuIcon: shareFormsMenuIcon.value,
+    shareFormsRoleID: shareFormsRoleID.value,
+    exportedAt: new Date().toISOString(),
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.value || "form"}-backup.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  $q.notify({ color: "positive", message: "Backup downloaded", icon: "download" });
+};
+
+const onClickImportBackup = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        title.value = data.title || "";
+        desc.value = data.desc || "";
+        formStatus.value = data.status || "draft";
+        formYear.value = data.year || null;
+        forms.value = data.forms || [];
+        setupTrainingSetup.value = data.setupTraining || {};
+        share.value = data.share || [];
+        shareMainMenu.value = data.shareMainMenu || false;
+        shareIsroles.value = data.shareIsroles || false;
+        selectedSharedMenu.value = data.selectedSharedMenu || "";
+        shareFormsMenuIcon.value = data.shareFormsMenuIcon || "";
+        shareFormsRoleID.value = data.shareFormsRoleID || "";
+        $q.notify({ color: "positive", message: "Backup restored", icon: "check" });
+      } catch (err) {
+        $q.notify({ color: "negative", message: "Invalid backup file", icon: "warning" });
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+const onClickDeleteCurrentForm = () => {
+  $q.dialog({
+    title: "Confirm Delete",
+    message: "Move this form to trash? It can be restored later.",
+    persistent: true,
+    cancel: true,
+    color: "negative",
+  }).onOk(async () => {
+    const data = await postData("delete", null, `cms/forms/${idRef.value}`, false, false, true);
+    if (data && data.status) {
+      $q.notify({ color: "positive", message: "Form moved to trash", icon: "check" });
+      title.value = "";
+      forms.value = [];
+      idRef.value = null;
+    } else {
+      $q.notify({ color: "negative", message: data?.message || "Delete failed", icon: "warning" });
+    }
+  });
+};
+
+const onClickTrash = async () => {
+  const { default: viewTrashForms } = await import("./viewTrashForms.vue");
+  const trashedData = await postData("get", null, "cms/trashed", false, false, true);
+  if (!trashedData?.data) {
+    $q.notify({ color: "negative", message: "Failed to load trash", icon: "warning" });
+    return;
+  }
+
+  $q.dialog({
+    component: viewTrashForms,
+    componentProps: {
+      forms: trashedData.data,
+    },
+  });
+};
+
 function updateRowSeqNamesInPlace(data) {
   data.forEach((row, index) => {
     if (row.type === "row") {
@@ -975,6 +1135,8 @@ const onClickOpenTraining = () => {
     setupTrainingSetup.value = val.setupTraining;
     title.value = val.title;
     idRef.value = val.id;
+    formStatus.value = val.status || "draft";
+    formYear.value = val.year || null;
     share.value = val.share;
     shareMainMenu.value = val.shareFormsIsMainMenu;
     shareIsroles.value = val.shareFormsIsRoles;
@@ -1014,6 +1176,8 @@ const onSaveQuestion = () => {
         title: title.value,
         desc: desc.value,
         isQuiz: props.mode ?? false,
+        status: formStatus.value,
+        year: formYear.value,
         setupTraining: setupTrainingSetup.value,
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
@@ -1052,9 +1216,13 @@ const onClickSetupTraining = () => {
     componentProps: {
       setupTrainingSetup: setupTrainingSetup.value,
       forms: forms.value,
+      formStatus: formStatus.value,
+      formYear: formYear.value,
     },
   }).onOk(async (val) => {
     setupTrainingSetup.value = val;
+    formStatus.value = val.formStatus || "draft";
+    formYear.value = val.formYear || null;
   });
 };
 
@@ -1085,6 +1253,8 @@ watch(
     title,
     forms,
     setupTrainingSetup,
+    formStatus,
+    formYear,
     share,
     shareMainMenu,
     shareIsroles,
@@ -1097,6 +1267,8 @@ watch(
       newTitle,
       newForms,
       newSetup,
+      newStatus,
+      newYear,
       newShare,
       newMainMenu,
       newIsroles,
@@ -1108,6 +1280,8 @@ watch(
       oldTitle,
       oldForms,
       oldSetup,
+      oldStatus,
+      oldYear,
       oldShare,
       oldMainMenu,
       oldIsroles,
@@ -1120,6 +1294,8 @@ watch(
       title: [oldTitle, newTitle],
       forms: [oldForms, newForms],
       setupTrainingSetup: [oldSetup, newSetup],
+      formStatus: [oldStatus, newStatus],
+      formYear: [oldYear, newYear],
       share: [oldShare, newShare],
       shareMainMenu: [oldMainMenu, newMainMenu],
       shareIsroles: [oldIsroles, newIsroles],
@@ -1132,6 +1308,8 @@ watch(
         title: [oldTitle, newTitle],
         forms: [oldForms, newForms],
         setupTrainingSetup: [oldSetup, newSetup],
+        formStatus: [oldStatus, newStatus],
+        formYear: [oldYear, newYear],
         share: [oldShare, newShare],
         shareMainMenu: [oldMainMenu, newMainMenu],
         shareIsroles: [oldIsroles, newIsroles],

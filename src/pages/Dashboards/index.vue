@@ -4,7 +4,7 @@
     <div class="row">
       <div class="col-12 col-md-4 q-pa-sm">
         <q-card class="my-card" v-if="store.getDetail">
-          <q-img src="~assets/sumitronics_OGP.png" height="36vh">
+          <q-img src="~assets/Logo_STXI 1.png" height="36vh">
             <div class="text-center full-width full-height">
               <q-avatar
                 size="150px"

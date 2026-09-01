@@ -25,7 +25,7 @@
         <div class="row" v-if="datas.token && datas.token.selected_hist">
           <div
             class="col"
-            v-for="(attch, idx) in datas.token.selected_hist[1].attch"
+            v-for="(attch, idx) in datas.token.selected_hist[1]?.attch || []"
             :key="idx"
           >
             <q-btn-dropdown
@@ -211,15 +211,20 @@ const actionApprove = (stat) => {
   })
     .onOk(async (dataRemarks) => {
       loading.value = true;
+      const selHist =
+        (datas.value.token && datas.value.token.selected_hist) || [];
+      const senderHist =
+        selHist.find((h) => h.amshd_stat !== "receive") || selHist[0];
+
       const data = await postData(
         "post",
         {
-          username: datas.value.token.selected_hist[0].amshd_username_apprv,
-          amsm_id: datas.value.token.selected_hist[0].amsm_id,
+          username: senderHist.amshd_username_apprv,
+          amsm_id: senderHist.amsm_id,
           stat: stat,
           remarks: dataRemarks,
-          token: datas.value.token.selected_hist[1].amshd_token,
-          ...JSON.parse(datas.value.token.selected_hist[0].amshd_paramstore),
+          token: senderHist.amshd_token,
+          ...JSON.parse(senderHist.amshd_paramstore),
         },
         `ams/approveAction`,
         false,
@@ -278,12 +283,10 @@ const actionApprove = (stat) => {
 };
 
 const getIcon = (filename) => {
-  const splitter = filename.split(".");
-  const getfileIcon = extList.filter(
-    (fil) => fil.ext === splitter[splitter.length - 1]
-  );
-
-  return getfileIcon[0];
+  const splitter = String(filename).split(".");
+  const ext = (splitter[splitter.length - 1] || "").toLowerCase();
+  const found = extList.find((fil) => fil.ext === ext);
+  return found || { icon: "insert_drive_file", color: "grey" };
 };
 
 const onDownloadAttachment = async (dataAttch, open = false) => {

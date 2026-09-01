@@ -12,14 +12,6 @@
       <div class="text-caption text-grey-5 q-mt-sm">Loading posts...</div>
     </div>
 
-    <div
-      v-else-if="!postsList.length"
-      class="bg-grey-2 rounded q-pa-md text-center text-grey-5"
-    >
-      <q-icon name="post_add" size="32px" />
-      <div class="text-caption q-mt-xs">No posts found</div>
-    </div>
-
     <template v-else>
       <!-- Search box -->
       <q-input
@@ -37,127 +29,134 @@
 
       <!-- No results -->
       <div
-        v-if="!paginatedPosts.length"
+        v-if="!postsList.length"
         class="bg-grey-2 rounded q-pa-md text-center text-grey-5"
       >
-        <q-icon name="search_off" size="32px" />
-        <div class="text-caption q-mt-xs">No posts match your search</div>
+        <q-icon
+          :name="searchQuery ? 'search_off' : 'post_add'"
+          size="32px"
+        />
+        <div class="text-caption q-mt-xs">
+          {{ searchQuery ? "No posts match your search" : "No posts found" }}
+        </div>
       </div>
 
-      <!-- List layout -->
-      <div v-if="block.content.layout !== 'grid'" class="q-gutter-md">
-        <q-card
-          v-for="post in paginatedPosts"
-          :key="post.id"
-          flat
-          bordered
-          class="cursor-pointer"
-          @click="navigateToPost(post)"
-        >
-          <q-card-section horizontal>
-            <q-img
-              v-if="post.image"
-              :src="post.image"
-              class="col-4"
-              style="max-height: 140px"
-            />
-            <div
-              v-else
-              class="col-4 flex flex-center bg-grey-3 text-grey-7 text-caption text-weight-medium"
-              style="max-height: 140px; min-height: 140px"
-            >
-              No Photo
-            </div>
-            <q-card-section>
-              <div class="text-weight-bold">
-                {{ post.title || post.cfmt_title || post.label || "Untitled" }}
-              </div>
+      <template v-else>
+        <!-- List layout -->
+        <div v-if="block.content.layout !== 'grid'" class="q-gutter-md">
+          <q-card
+            v-for="post in postsList"
+            :key="post.id"
+            flat
+            bordered
+            class="cursor-pointer"
+            @click="navigateToPost(post)"
+          >
+            <q-card-section horizontal>
+              <q-img
+                v-if="post.image"
+                :src="post.image"
+                class="col-4"
+                style="max-height: 140px"
+              />
               <div
-                v-if="post.bodyPreview"
-                class="text-caption text-grey-7 q-mt-xs"
+                v-else
+                class="col-4 flex flex-center bg-grey-3 text-grey-7 text-caption text-weight-medium"
+                style="max-height: 140px; min-height: 140px"
               >
-                {{ post.bodyPreview }}
+                No Photo
               </div>
-              <div class="text-caption text-grey-5 q-mt-sm">
-                {{ formatDate(post.created_at) }}
-              </div>
-            </q-card-section>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Grid layout as carousel -->
-      <q-carousel
-        v-else-if="paginatedGridSlides.length"
-        v-model="currentSlide"
-        transition-prev="scale"
-        transition-next="scale"
-        swipeable
-        animated
-        control-color="white"
-        navigation
-        padding
-        arrows
-        height="100%"
-        class="bg-primary shadow-1 rounded-borders"
-      >
-        <q-carousel-slide
-          v-for="(slide, si) in paginatedGridSlides"
-          :name="si"
-          :key="si"
-        >
-          <div class="row q-col-gutter-sm">
-            <div
-              v-for="post in slide"
-              :key="post.id"
-              :class="`col-${Math.floor(12 / (block.content.perSlide || 1))}`"
-            >
-              <q-card
-                flat
-                bordered
-                class="full-height cursor-pointer"
-                @click="navigateToPost(post)"
-              >
-                <q-img
-                  v-if="post.image"
-                  :src="post.image"
-                  ratio="16/9"
-                  style="height: 200px; object-fit: cover"
-                />
-                <div
-                  v-else
-                  class="flex flex-center bg-grey-3 text-grey-7 text-caption text-weight-medium"
-                  style="height: 200px"
-                >
-                  No Photo provided
+              <q-card-section>
+                <div class="text-weight-bold">
+                  {{ post.title || post.cfmt_title || post.label || "Untitled" }}
                 </div>
-                <q-card-section>
-                  <div class="text-subtitle2 text-weight-bold">
-                    {{
-                      post.title || post.cfmt_title || post.label || "Untitled"
-                    }}
-                  </div>
+                <div
+                  v-if="post.bodyPreview"
+                  class="text-caption text-grey-7 q-mt-xs"
+                >
+                  {{ post.bodyPreview }}
+                </div>
+                <div class="text-caption text-grey-5 q-mt-sm">
+                  {{ formatDate(post.created_at) }}
+                </div>
+              </q-card-section>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Grid layout as carousel -->
+        <q-carousel
+          v-else
+          v-model="currentSlide"
+          transition-prev="scale"
+          transition-next="scale"
+          swipeable
+          animated
+          control-color="white"
+          navigation
+          padding
+          arrows
+          height="100%"
+          class="bg-primary shadow-1 rounded-borders"
+        >
+          <q-carousel-slide
+            v-for="(slide, si) in gridSlides"
+            :name="si"
+            :key="si"
+          >
+            <div class="row q-col-gutter-sm">
+              <div
+                v-for="post in slide"
+                :key="post.id"
+                :class="`col-${Math.floor(12 / (block.content.perSlide || 1))}`"
+              >
+                <q-card
+                  flat
+                  bordered
+                  class="full-height cursor-pointer"
+                  @click="navigateToPost(post)"
+                >
+                  <q-img
+                    v-if="post.image"
+                    :src="post.image"
+                    ratio="16/9"
+                    style="height: 200px; object-fit: cover"
+                  />
                   <div
-                    v-if="post.bodyPreview"
-                    class="text-caption text-grey-7 q-mt-xs"
+                    v-else
+                    class="flex flex-center bg-grey-3 text-grey-7 text-caption text-weight-medium"
+                    style="height: 200px"
                   >
-                    {{ post.bodyPreview }}
+                    No Photo provided
                   </div>
-                </q-card-section>
-              </q-card>
+                  <q-card-section>
+                    <div class="text-subtitle2 text-weight-bold">
+                      {{
+                        post.title || post.cfmt_title || post.label || "Untitled"
+                      }}
+                    </div>
+                    <div
+                      v-if="post.bodyPreview"
+                      class="text-caption text-grey-7 q-mt-xs"
+                    >
+                      {{ post.bodyPreview }}
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
-          </div>
-        </q-carousel-slide>
-      </q-carousel>
+          </q-carousel-slide>
+        </q-carousel>
+      </template>
 
       <!-- Pagination -->
       <div
-        v-if="totalPages > 1"
+        v-if="pagination.last_page > 1"
         class="row justify-center q-mt-md"
       >
         <q-pagination
-          v-model="currentPage"
-          :max="totalPages"
+          v-model="pagination.page"
+          :max="pagination.last_page"
           :max-pages="7"
           boundary-links
           boundary-numbers
@@ -170,7 +169,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+} from "vue";
 import { useRouter } from "vue-router";
 import apiRequest from "src/components/apiRequest";
 
@@ -190,49 +195,54 @@ const postsList = ref([]);
 const loading = ref(false);
 const currentSlide = ref(0);
 const searchQuery = ref("");
-const currentPage = ref(1);
-
-const pageSize = computed(() => props.block.content.pageSize || 5);
-
-const filteredPosts = computed(() => {
-  if (!searchQuery.value.trim()) return postsList.value;
-  const q = searchQuery.value.toLowerCase();
-  return postsList.value.filter((p) => {
-    const title = (p.title || p.cfmt_title || p.label || "").toLowerCase();
-    const body = (p.bodyPreview || "").toLowerCase();
-    return title.includes(q) || body.includes(q);
-  });
+const pagination = ref({
+  page: 1,
+  rowsPerPage: props.block.content.pageSize || props.block.content.maxShow || 5,
+  last_page: 1,
+  rowsNumber: 0,
 });
 
-const totalPages = computed(() => Math.ceil(filteredPosts.value.length / pageSize.value));
+const pageSize = computed(
+  () => props.block.content.pageSize || props.block.content.maxShow || 5
+);
 
-const paginatedPosts = computed(() => {
-  if (props.block.content.layout !== "list") return filteredPosts.value;
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredPosts.value.slice(start, start + pageSize.value);
-});
-
-const allGridSlides = computed(() => {
+const gridSlides = computed(() => {
   if (props.block.content.layout !== "grid") return [];
   const perSlide = props.block.content.perSlide || 1;
   const chunked = [];
-  for (let i = 0; i < filteredPosts.value.length; i += perSlide) {
-    chunked.push(filteredPosts.value.slice(i, i + perSlide));
+  for (let i = 0; i < postsList.value.length; i += perSlide) {
+    chunked.push(postsList.value.slice(i, i + perSlide));
   }
   return chunked;
 });
 
-const paginatedGridSlides = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return allGridSlides.value.slice(start, end);
-});
-
-const gridSlides = computed(() => allGridSlides.value);
+let searchDebounce = null;
 
 watch(searchQuery, () => {
-  currentPage.value = 1;
-  currentSlide.value = 0;
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    currentSlide.value = 0;
+    if (pagination.value.page === 1) {
+      fetchPosts();
+    } else {
+      pagination.value.page = 1;
+    }
+  }, 400);
+});
+
+watch(
+  () => pagination.value.page,
+  () => {
+    currentSlide.value = 0;
+    fetchPosts();
+  }
+);
+
+watch(pageSize, () => {
+  pagination.value.rowsPerPage = pageSize.value;
+  const wasFirstPage = pagination.value.page === 1;
+  pagination.value.page = 1;
+  if (wasFirstPage) fetchPosts();
 });
 
 watch(
@@ -243,6 +253,13 @@ watch(
     }
   }
 );
+
+onBeforeUnmount(() => {
+  if (searchDebounce) {
+    clearTimeout(searchDebounce);
+    searchDebounce = null;
+  }
+});
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -287,12 +304,70 @@ const truncateToWords = (text, wordCount = 20) => {
   return words.slice(0, wordCount).join(" ") + "...";
 };
 
+const loadPostDetails = async () => {
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  for (let i = 0; i < postsList.value.length; i++) {
+    const post = postsList.value[i];
+    try {
+      const detail = await postData(
+        "get",
+        null,
+        `cms/viewByID/${post.id}`,
+        false,
+        false,
+        true
+      );
+
+      const postDataVal = detail?.data?.value;
+      if (!postDataVal) continue;
+
+      const forms = postDataVal.forms || [];
+      const firstBlock = forms[0];
+      let html = "";
+
+      if (firstBlock) {
+        if (typeof firstBlock.content === "string") {
+          html = firstBlock.content;
+        } else if (firstBlock.content?.body) {
+          html = firstBlock.content.body;
+        } else if (Array.isArray(firstBlock.content)) {
+          html = firstBlock.content[0]?.content || "";
+        }
+      }
+
+      const image = extractPostImage(html);
+      const bodyPreview = truncateToWords(extractPostDesc(html));
+      if (image || bodyPreview) {
+        const updated = { ...post };
+        if (image) updated.image = image;
+        if (bodyPreview) updated.bodyPreview = bodyPreview;
+        postsList.value[i] = updated;
+      }
+    } catch (err) {
+      console.error("Failed to fetch image for post:", post.id, err);
+    }
+    if (i < postsList.value.length - 1) {
+      await delay(300);
+    }
+  }
+};
+
 const fetchPosts = async () => {
+  if (props.editMode && !props.preview) return;
   const content = props.block.content;
   loading.value = true;
-  postsList.value = [];
 
   try {
+    const filter = [];
+    if (searchQuery.value.trim()) {
+      filter.push({
+        cols: "cfmt_title",
+        param: "like",
+        value: `%${searchQuery.value.trim()}%`,
+      });
+    }
+
     const response = await postData(
       "post",
       {
@@ -301,79 +376,38 @@ const fetchPosts = async () => {
         orderBy: [
           { [content.orderBy || "created_at"]: content.order || "desc" },
         ],
-        limit: content.maxShow || 5,
+        limit: pageSize.value,
+        page: pagination.value.page,
+        isPaginated: true,
         isPublisedOnly: 1,
+        filter,
       },
       "cms/formsDetail"
     );
 
-    if (!response) {
+    if (!response || !response.data) {
+      postsList.value = [];
       loading.value = false;
       return;
     }
 
-    let filtered = response.filter((item) => item.is_published === 1);
+    pagination.value = {
+      ...pagination.value,
+      ...response.pagination,
+      page: response.pagination.current_page,
+    };
 
-    postsList.value = filtered.map((post, idx) => ({
+    postsList.value = response.data.map((post) => ({
       ...post,
       title: post.title || post.cfmt_title || post.label || "Untitled",
       postUrl: post.url || String(post.id),
       bodyPreview: truncateToWords(post.desc || ""),
       image: null,
-      currentPost: content.mode === "last" && idx === 0 ? post : undefined,
     }));
 
     loading.value = false;
 
-    const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-    for (let i = 0; i < filtered.length; i++) {
-      const post = filtered[i];
-      try {
-        const detail = await postData(
-          "get",
-          null,
-          `cms/viewByID/${post.id}`,
-          false,
-          false,
-          true
-        );
-
-        const postDataVal = detail?.data?.value;
-        if (!postDataVal) continue;
-
-        const forms = postDataVal.forms || [];
-        const firstBlock = forms[0];
-        let html = "";
-
-        if (firstBlock) {
-          if (typeof firstBlock.content === "string") {
-            html = firstBlock.content;
-          } else if (firstBlock.content?.body) {
-            html = firstBlock.content.body;
-          } else if (Array.isArray(firstBlock.content)) {
-            html = firstBlock.content[0]?.content || "";
-          }
-        }
-
-        const image = extractPostImage(html);
-        const bodyPreview = truncateToWords(extractPostDesc(html));
-        if (image || bodyPreview) {
-          const idx = postsList.value.findIndex((p) => p.id === post.id);
-          if (idx !== -1) {
-            const updated = { ...postsList.value[idx] };
-            if (image) updated.image = image;
-            if (bodyPreview) updated.bodyPreview = bodyPreview;
-            postsList.value[idx] = updated;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch image for post:", post.id, err);
-      }
-      if (i < filtered.length - 1) {
-        await delay(300);
-      }
-    }
+    await loadPostDetails();
   } catch (err) {
     console.error("Failed to fetch posts:", err);
     loading.value = false;

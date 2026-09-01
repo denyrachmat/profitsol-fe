@@ -154,18 +154,8 @@
             />
             <q-btn
               color="green"
-              :label="
-                nowSeq === groupedFormsByPage.length - 1 &&
-                formsSeq === groupedFormsByPage[nowSeq].length - 1
-                  ? 'Submit'
-                  : 'Next'
-              "
-              @click="
-                nowSeq === groupedFormsByPage.length - 1 &&
-                formsSeq === groupedFormsByPage[nowSeq].length - 1
-                  ? onClickSubmit(props.idDet)
-                  : onClickNext()
-              "
+              :label="isSubmit ? 'Submit' : 'Next'"
+              @click="isSubmit ? onClickSubmit(props.idDet) : onClickNext()"
               :disable="
                 getNowData &&
                 getNowData.type === 'html' &&
@@ -235,17 +225,24 @@ onMounted(async () => {
   await setTimerForQuiz();
 
   if (props.setup) {
-    if (props.setup.randomizeQuestion) {
-      const formsOnly = getFormsOnly.value;
-      const [shuffledForms] = shuffle([...formsOnly]);
+    const parsedMaxQuestion = parseInt(props.setup.maxQuestionCount);
+    const hasValidLimit =
+      Number.isFinite(parsedMaxQuestion) && parsedMaxQuestion > 0;
 
-      const parsedMaxQuestion = parseInt(props.setup.maxQuestionCount);
-      const hasValidLimit =
-        Number.isFinite(parsedMaxQuestion) && parsedMaxQuestion > 0;
+    if (props.setup.randomizeQuestion || hasValidLimit) {
+      // console.log(props.setup);
+      let formsOnly = getFormsOnly.value;
 
+      // Shuffle if randomizeQuestion is enabled
+      if (props.setup.randomizeQuestion) {
+        const [shuffledForms] = shuffle([...formsOnly]);
+        formsOnly = shuffledForms;
+      }
+
+      // Apply maxQuestionCount limit
       const selectedForms = hasValidLimit
-        ? shuffledForms.slice(0, parsedMaxQuestion)
-        : shuffledForms;
+        ? formsOnly.slice(0, parsedMaxQuestion)
+        : formsOnly;
 
       // Keep original page slots, but only fill up to selectedForms length.
       let formIndex = 0;
@@ -257,13 +254,52 @@ onMounted(async () => {
           formIndex,
           formIndex + pageFormCount
         );
-        formIndex += pageFormCount;
+        formIndex += nextPageForms.length;
         return nextPageForms;
       });
+
+      const hadEmptyPages = groupedFormsByPage.value.some(
+        (p) => !p || p.length === 0
+      );
+
+      if (hadEmptyPages) {
+        const survivingFormIds = new Set(
+          groupedFormsByPage.value.flat().map((f) => f.id)
+        );
+
+        // Group all original data by page number so HTML-only pages are kept.
+        const bySeq = {};
+        props.data.forEach((item) => {
+          const seq = item.seq_name || 1;
+          if (!bySeq[seq]) bySeq[seq] = { forms: [], html: [] };
+          if (item.type === "html") bySeq[seq].html.push(item);
+          else if (item.type === "form" && survivingFormIds.has(item.id))
+            bySeq[seq].forms.push(item);
+        });
+
+        // Keep pages that still have questions OR still have HTML material.
+        const keptSeqs = Object.keys(bySeq)
+          .map(Number)
+          .sort((a, b) => a - b)
+          .filter(
+            (seq) => bySeq[seq].forms.length > 0 || bySeq[seq].html.length > 0
+          );
+
+        groupedFormsByPage.value = keptSeqs.map((seq) => bySeq[seq].forms);
+        groupedHTMLByPage.value = keptSeqs.map((seq) => bySeq[seq].html);
+      }
+
+      // Trim store answers to match limited question count
+      if (hasValidLimit && store.getUsersAnswer?.length > parsedMaxQuestion) {
+        store.setUserAnswerAtIndex(
+          parsedMaxQuestion - 1,
+          store.getUsersAnswer[parsedMaxQuestion - 1]
+        );
+      }
     }
   }
 
-  console.log(groupedHTMLByPage.value);
+  // console.log(groupedHTMLByPage.value);
 });
 
 const getFormsOnly = computed(() =>
@@ -335,7 +371,7 @@ const setTimerForQuiz = () => {
       parseInt(props.setup.secTimer) > 0 ? parseInt(props.setup.secTimer) : 0;
   }
 
-  console.log(store.timeData);
+  // console.log(store.timeData);
 
   if (!store.getStartTimeState) store.startCountDown();
 };
@@ -372,6 +408,14 @@ const getNowData = computed(() => {
   return formsInPage[formsSeq.value] || null;
 });
 
+const isSubmit = computed(() => {
+  const lastPage = groupedFormsByPage.value.length - 1;
+  const lastIndexOnPage = groupedFormsByPage.value[nowSeq.value]
+    ? groupedFormsByPage.value[nowSeq.value].length - 1
+    : -1;
+  return nowSeq.value === lastPage && formsSeq.value >= lastIndexOnPage;
+});
+
 const setVideoContainerRef = (el, index) => {
   if (el) videoContainers.value[index] = el;
 };
@@ -393,6 +437,14 @@ const onClickPrev = () => {
 };
 
 const onClickNext = () => {
+  // console.log("Next clicked", [
+  //   nowSeq.value,
+  //   formsSeq.value,
+  //   groupedFormsByPage.value.length,
+  //   groupedFormsByPage.value[nowSeq.value].length,
+  //   nowFormIndex.value,
+  //   getFormAnswers.value[nowFormIndex.value],
+  // ]);
   if (
     groupedFormsByPage.value[nowSeq.value].length > 0 &&
     !getFormAnswers.value[nowFormIndex.value]

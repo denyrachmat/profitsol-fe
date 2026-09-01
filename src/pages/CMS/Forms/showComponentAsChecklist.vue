@@ -162,13 +162,22 @@
 <script setup>
 import { computed, defineProps, defineEmits, watch, ref, onMounted } from "vue";
 import { useFormStore } from "stores/formStore";
+import { useAuthStore } from "stores/authStore";
 import componentViewVue from "../componentView.vue";
+
+const authStore = useAuthStore();
+const currentUsername = computed(() => authStore.authDet?.username || "");
+const currentUserRoles = computed(() => {
+  const role = authStore.getChoosedRole;
+  return role?.role?.id ? [role.role.id] : [];
+});
 
 const props = defineProps({
   data: { type: Array, default: () => [] },
   isMultipleMode: { type: Boolean, default: false },
   enableDeleteInstance: { type: Boolean, default: false },
   maxInstances: { type: Number, default: 10 },
+  setup: { type: Object, default: () => ({}) },
 });
 
 onMounted(() => {
@@ -309,7 +318,24 @@ const isColumnVisible = (col) => {
     }
   }
   if (typeof hidden === "number") return hidden === 0;
-  return !hidden;
+
+  // Check field-level permissions
+  const fieldPerms = props.setup?.fieldPermissions;
+  if (fieldPerms && fieldPerms.length > 0 && col.id) {
+    const rule = fieldPerms.find((p) => String(p.fieldId) === String(col.id));
+    if (rule) {
+      // If field has restrictions, check if current user is allowed
+      const isUserAllowed = rule.users?.includes(currentUsername.value);
+      const isRoleAllowed = rule.roles?.some((r) =>
+        currentUserRoles.value.includes(r)
+      );
+      if (!isUserAllowed && !isRoleAllowed) {
+        return false; // hide column for users without permission
+      }
+    }
+  }
+
+  return true;
 };
 
 // Pantau perubahan data jawaban di store secara mendalam

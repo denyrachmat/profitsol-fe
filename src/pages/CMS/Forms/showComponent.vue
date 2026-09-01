@@ -27,6 +27,7 @@
       <div class="col">
         <showComponentAsChecklistVue
           :data="forms"
+          :setup="props.setup"
           :is-multiple-mode="multipleFormSetup"
           :enable-delete-instance="
             convertToBoolean(props.setup?.enableMultipleDelete || true)
@@ -1527,25 +1528,39 @@ const getQuizData = (data, key = 0, hasil = []) => {
 };
 
 /**
- * Get required form fields and their answers for current page.
+ * True when an answer contains an actual value (not empty/missing).
  */
-const getRequiredForm = (data, key = 0, rows = 0, hasil = []) => {
-  if (data?.[key]) {
-    if (data[key].type == "form" && data[key].required === true) {
-      hasil.push({
-        data: data[key],
-        answers: getUserAnswers.value?.[rows]?.[key] ?? "",
-      });
-    } else {
-      if (data[key].type === "row") {
-        getRequiredForm(data[key].content, 0, key, hasil);
-      } else {
-        getRequiredForm(data, key + 1, rows, hasil);
-      }
-    }
+const isAnswerFilled = (val) => {
+  if (val === null || val === undefined || val === "") return false;
+  if (Array.isArray(val)) return val.length > 0;
+  if (typeof val === "object" && !(val instanceof File))
+    return Object.keys(val).length > 0;
+  // File and all other truthy scalars (strings, numbers, booleans)
+  return true;
+};
 
-    if (data[key + 1]) getRequiredForm(data, key + 1, rows, hasil);
-  }
+/**
+ * Get required form fields and their answers for current page.
+ * Answers are keyed by col.id (see onAnswerChange), never column index.
+ */
+const getRequiredForm = (data, hasil = []) => {
+  (data || []).forEach((item, rows) => {
+    const cols =
+      item?.type === "row"
+        ? Array.isArray(item.content)
+          ? item.content
+          : [item]
+        : [item];
+
+    cols.forEach((col) => {
+      if (col?.type === "form" && col.required === true) {
+        hasil.push({
+          data: col,
+          answers: getUserAnswers.value?.[rows]?.[col.id] ?? "",
+        });
+      }
+    });
+  });
   return hasil;
 };
 
@@ -1604,12 +1619,10 @@ const onSubmitData = () => {
     (val) => val.required === true && val.type === "form"
   );
 
-  // Flatten answers into a single object: { [fieldId]: answer }
-  const flattenedAnswers = Object.assign({}, ...(getUserAnswers.value || []));
-
-  // Detect missing required answers by field id existence
-  const missing = requiredFields.filter(
-    (field) => !(field.id in flattenedAnswers)
+  // Detect required answers whose current value is actually empty (across all rows)
+  const allRows = getUserAnswers.value || [];
+  const missing = requiredFields.filter((field) =>
+    !allRows.some((row) => row && isAnswerFilled(row[field.id]))
   );
 
   if (missing.length > 0) {
@@ -1631,11 +1644,36 @@ const onSubmitData = () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
+    // Map live col IDs → canonical cfmd_id via setup.historyTableList,
+    // matched by field label (stable across definition, ids can drift).
+    const historyFields = props.setup?.historyTableList || [];
+    const liveAnsRows = getUserAnswers.value || [];
+
+    const resolveCanonical = (liveId) => {
+      const liveCol = formItems.value.find((c) => String(c.id) === String(liveId));
+      const liveLabel = String(liveCol?.content?.label ?? liveCol?.label ?? "").trim();
+      if (!liveLabel) return liveId;
+      const match = historyFields.find(
+        (h) =>
+          String(h.forms?.content?.label ?? h.label ?? "").trim() === liveLabel
+      );
+      return match ? String(match.forms?.id) : String(liveId);
+    };
+
+    const mappedAnswers = liveAnsRows.map((rowAns) => {
+      if (!rowAns || typeof rowAns !== "object") return rowAns;
+      const mappedRow = {};
+      Object.keys(rowAns).forEach((liveId) => {
+        mappedRow[resolveCanonical(liveId)] = rowAns[liveId];
+      });
+      return mappedRow;
+    });
+
     const data = await postData(
       "post",
       {
         id: props.id,
-        ans: getUserAnswers.value,
+        ans: mappedAnswers,
         batch_id: props.batchID,
       },
       "cms/storeAnswers",
@@ -1720,6 +1758,7 @@ const logicsChecker = (triggerName, id = "") => {
   list.forEach((ruleSet) => {
     let logicResult = false;
     let lastOperation = "||";
+    let hasTrigger = false; // true when a matching trigger fired
     let pendingResultAction = null; // Penampung aksi result sementara
 
     ruleSet.data?.forEach((valLogic) => {
@@ -1729,6 +1768,7 @@ const logicsChecker = (triggerName, id = "") => {
         valLogic.cfld_opr_ctrl === triggerName
       ) {
         logicResult = true;
+        hasTrigger = true;
         if (triggerName === "onMounted") {
           isMountedTriggered.value = true;
         }
@@ -1741,6 +1781,14 @@ const logicsChecker = (triggerName, id = "") => {
         // Jika ini pengecekan user (whitelist), dia harus mendominasi hasil akhir
         if (valLogic.cfld_opr_ctrl === "user") {
           logicResult = isConditionMatch; // Override total berdasarkan hak akses user
+        } else if (hasTrigger) {
+          // Kondisi nilai harus "AND" dengan trigger agar dijalankan hanya
+          // jika nilainya memang cocok (mis: tampilkan jika pilih nilai tertentu).
+          const combine = new Function("a", "b", `return a && b`);
+          logicResult = combine(logicResult, isConditionMatch);
+          // Setelah satu kondisi "AND" dengan trigger, kondisi berikutnya
+          // boleh memakai operator logika yang sudah dipilih (logic_only).
+          hasTrigger = false;
         } else {
           const combine = new Function("a", "b", `return a ${lastOperation} b`);
           logicResult = combine(logicResult, isConditionMatch);
@@ -1931,12 +1979,39 @@ const logicsConditionalChecker = (idComp, data) => {
 
   let valueComparation;
   if (data.cfld_opr_ctrl === "value") {
-    valueComparation = data.cfld_val;
+    // cfld_val mungkin tersimpan sebagai JSON ganda (mis. "\"1\"" alih-alih "1")
+    // akibat JSON.stringify berlebih saat disimpan di DB. Decode jika perlu.
+    let rawVal = data.cfld_val;
+    try {
+      // Jika string dimulai dengan tanda kutip, coba parse sebagai JSON
+      if (typeof rawVal === "string" && /^".*"$/.test(rawVal)) {
+        rawVal = JSON.parse(rawVal);
+      }
+    } catch (e) {
+      // Jika parse gagal, gunakan raw value apa adanya
+    }
+    valueComparation = rawVal;
   } else {
     valueComparation = getUserAnswers.value.find(
       (val) => val?.[data.cfld_val] !== undefined
     );
   }
+
+  // Normalkan tipe agar perbandingan nilai radio/select dengan cfld_val tahan
+  // terhadap beda string-vs-number (mis. option value 1 disimpan "1").
+  const normalizeForCompare = (v) => {
+    if (v === null || v === undefined) return v;
+    if (typeof v === "boolean") return v;
+    // Angka asli atau string numerik -> pakai number agar 1 == "1"
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) {
+      return Number(v);
+    }
+    return v;
+  };
+
+  const a = normalizeForCompare(getAnswersofComp);
+  const b = normalizeForCompare(valueComparation);
 
   // Bungkus perbandingan dengan pengaman string/tipe data jika diperlukan
   const compare = new Function("a", "b", `return a ${data.cfld_opr} b`);
@@ -1944,10 +2019,10 @@ const logicsConditionalChecker = (idComp, data) => {
   console.log(
     `Logic check for comp ${idComp}: compare ${getAnswersofComp} with ${valueComparation} using operator ${
       data.cfld_opr
-    } result: ${compare(getAnswersofComp, valueComparation)}`
+    } result: ${compare(a, b)}`
   );
 
-  return compare(getAnswersofComp, valueComparation);
+  return compare(a, b);
 };
 
 /**
@@ -1958,33 +2033,7 @@ const logicsConditionalChecker = (idComp, data) => {
  * Also updates forms.value so Vue reactivity can refresh UI.
  */
 const modifyComponent = (idComp, modifData, targetModifID = 0) => {
-  // 1. Update state utama di formItems
-  formItems.value = formItems.value.map((item) => {
-    let updatedItem = { ...item };
-
-    // JIKA AKSI BERLAKU UNTUK DIRI SENDIRI
-    if (item.id == idComp) {
-      if (modifData === "hide_this_comp") updatedItem.hidden = true;
-      if (modifData === "show_this_comp") updatedItem.hidden = false;
-      if (modifData === "readonly_comp") updatedItem.readonly = true; // Tambahan pengaman self-readonly
-      if (modifData === "readonly_comp_disabled") updatedItem.readonly = false;
-      if (modifData === "required_comp") updatedItem.required = true;
-      if (modifData === "required_comp_disabled") updatedItem.required = false;
-    }
-
-    // JIKA AKSI BERLAKU UNTUK TARGET KOMPONEN LAIN
-    if (targetModifID && item.id == targetModifID) {
-      if (modifData === "hide_comp") updatedItem.hidden = true;
-      if (modifData === "show_comp") updatedItem.hidden = false;
-      if (modifData === "readonly_comp") updatedItem.readonly = true;
-      if (modifData === "readonly_comp_disabled") updatedItem.readonly = false;
-      if (modifData === "required_comp") updatedItem.required = true;
-      if (modifData === "required_comp_disabled") updatedItem.required = false;
-    }
-    return updatedItem;
-  });
-
-  // 2. Paksa update ke dalam forms.value agar getNowData (computed) terpicu secara reaktif di HTML
+  // 2. Update forms.value agar getNowData (computed) terpicu secara reaktif di HTML
   forms.value = forms.value.map((row) => {
     if (Array.isArray(row.content)) {
       return {
