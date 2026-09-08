@@ -79,6 +79,15 @@ export const ratioOptions = [
   { label: "4:3", value: "4:3" },
   { label: "1:1", value: "1:1" },
   { label: "21:9", value: "21:9" },
+  { label: "Custom (use height)", value: "custom" },
+];
+
+export const objectFitOptions = [
+  { label: "Cover", value: "cover" },
+  { label: "Contain", value: "contain" },
+  { label: "Fill", value: "fill" },
+  { label: "None", value: "none" },
+  { label: "Scale-down", value: "scale-down" },
 ];
 
 export const countdownThemeOptions = [

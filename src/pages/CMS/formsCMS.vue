@@ -243,11 +243,11 @@ const setupTrainingSetup = ref({
   endQuiz: "",
   rowsPageMethods: "multi-page",
 });
-const shareMainMenu = ref(0);
-const shareIsroles = ref(0);
+const shareMainMenu = ref(false);
+const shareIsroles = ref(false);
 const selectedSharedMenu = ref("");
 const shareFormsMenuIcon = ref("");
-const selectedTableRoles = ref("");
+const selectedTableRoles = ref([]);
 const logicsFields = ref([]);
 const formEvents = ref([]);
 const formStatus = ref("draft");
@@ -379,6 +379,7 @@ const onClickSave = () => {
         shareFormsIsRoles: shareIsroles.value,
         selectedSharedMenu: selectedSharedMenu.value,
         shareFormsMenuIcon: shareFormsMenuIcon.value,
+        shareFormsRoleID: selectedTableRoles.value,
         logicsFields: logicsFields.value,
         formEvents: formEvents.value,
       },
@@ -479,6 +480,7 @@ const onClickShare = () => {
     shareIsroles.value = val.isRoles;
     selectedSharedMenu.value = val.selectedSharedMenu;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedTableRoles.value = val.selectedTableRoles || [];
   });
 };
 

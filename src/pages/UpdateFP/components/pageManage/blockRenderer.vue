@@ -10,6 +10,7 @@
       @select-block="$emit('select-block', $event)"
       @update:children="$emit('update:children', $event)"
       @delete-child="$emit('delete-child', $event)"
+      @duplicate-child="$emit('duplicate-child', $event)"
     />
     <div v-else class="bg-grey-2 rounded q-pa-md text-center text-grey-5">
       <q-icon name="help_outline" size="32px" />
@@ -29,7 +30,7 @@ const props = defineProps({
   selectedBlockId: { type: String, default: null },
 });
 
-defineEmits(["select-block", "update:children", "delete-child"]);
+defineEmits(["select-block", "update:children", "delete-child", "duplicate-child"]);
 
 const rendererComponent = computed(() =>
   widgetRegistry[props.block.type]?.RendererComponent || null

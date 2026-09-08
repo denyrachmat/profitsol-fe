@@ -1,6 +1,30 @@
 <template>
   <div class="q-pa-md">
+    <div v-if="!isUserCanViewReport" class="text-center q-py-xl text-grey">
+      <template v-if="loadingOwnData">
+        <q-spinner-dots size="48px" color="primary" />
+        <div class="text-h6 q-mt-sm">Loading your data...</div>
+        <div class="text-caption">Please wait while the form is populated.</div>
+      </template>
+      <template v-else>
+        <q-icon name="lock" size="48px" color="orange" />
+        <div class="text-h6 q-mt-sm">{{ accessDeniedReason }}</div>
+        <template v-if="idForms && isOwnDataEditAllowed">
+          <div class="text-caption">Use the form to manage your data instead.</div>
+          <q-btn
+            class="q-mt-md"
+            color="primary"
+            icon="edit"
+            label="Open Form (My Data)"
+            no-caps
+            outline
+            @click="openFormWithAllData()"
+          />
+        </template>
+      </template>
+    </div>
     <q-table
+      v-else
       :title="TableTitle"
       :rows="rows"
       :columns="columns"
@@ -26,6 +50,7 @@
             @click="onExportExcel()"
           />
           <q-btn
+            v-if="props.canFilter"
             color="primary"
             icon-right="search"
             label="Filter"
@@ -55,17 +80,9 @@
               </q-item>
             </q-list>
             <q-list v-if="isUserCanSetStatus">
-              <q-item
-                clickable
-                v-close-popup
-                @click="onClickSetStatus"
-              >
+              <q-item clickable v-close-popup @click="onClickSetStatus">
                 <q-item-section avatar>
-                  <q-avatar
-                    color="purple"
-                    icon="publish"
-                    text-color="white"
-                  />
+                  <q-avatar color="purple" icon="publish" text-color="white" />
                 </q-item-section>
                 <q-item-section>
                   <q-item-label>Set Form Status</q-item-label>
@@ -73,11 +90,7 @@
               </q-item>
             </q-list>
             <q-list v-if="isUserCanSetFieldPerms">
-              <q-item
-                clickable
-                v-close-popup
-                @click="onClickFieldPerms"
-              >
+              <q-item clickable v-close-popup @click="onClickFieldPerms">
                 <q-item-section avatar>
                   <q-avatar
                     color="deep-purple"
@@ -135,7 +148,13 @@
               </q-item>
             </q-list>
           </q-btn-dropdown>
-          <q-btn color="red" icon-right="delete" no-caps @click="clearFilter">
+          <q-btn
+            v-if="props.canFilter && !isFilterReadOnly"
+            color="red"
+            icon-right="delete"
+            no-caps
+            @click="clearFilter"
+          >
             <q-tooltip>Reset Filter</q-tooltip>
           </q-btn>
           <q-btn color="orange" icon-right="refresh" no-caps @click="onRefresh">
@@ -157,7 +176,7 @@
             v-if="selectedRows.length > 0"
             color="orange"
             icon="edit_note"
-            label="Bulk Edit Terpilih"
+            label="Bulk Edit"
             no-caps
             @click="onBulkEditSelected"
           />
@@ -223,11 +242,11 @@
                 <q-btn
                   :color="
                     !props.canEdit &&
-                    (isRPAOrApproval &&
-                      !(
-                        parseInt(props.row.prh_flag) > 0 &&
-                        parseInt(props.row.prh_flag) < 3
-                      ))
+                    isRPAOrApproval &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
                       ? 'grey'
                       : 'orange'
                   "
@@ -237,18 +256,18 @@
                   outline
                   :disabled="
                     !props.canEdit &&
-                    (isRPAOrApproval &&
-                      !(
-                        parseInt(props.row.prh_flag) > 0 &&
-                        parseInt(props.row.prh_flag) < 3
-                      ))
+                    isRPAOrApproval &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
                   "
                 />
                 <q-btn
                   :color="
-                    (isRPAOrApproval &&
-                      (parseInt(props.row.prh_flag) > 0 &&
-                        parseInt(props.row.prh_flag) < 3)) &&
+                    isRPAOrApproval &&
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canDelete
                       ? 'grey'
                       : 'red'
@@ -258,9 +277,9 @@
                   @click="onDelete(props.row)"
                   outline
                   :disabled="
-                    (isRPAOrApproval &&
-                      (parseInt(props.row.prh_flag) > 0 &&
-                        parseInt(props.row.prh_flag) < 3)) &&
+                    isRPAOrApproval &&
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
                     !props.canDelete
                   "
                 />
@@ -295,9 +314,9 @@ const { postData } = apiRequest();
 const store = useAuthStore();
 
 const props = defineProps({
-  idReport: String,
+  idReport: [String, Number],
   TableTitle: String,
-  idForms: String,
+  idForms: [String, Number],
   isAPIExport: {
     type: Boolean,
     default: false,
@@ -321,6 +340,18 @@ const props = defineProps({
   canDelete: {
     type: Boolean,
     default: false,
+  },
+  canFilter: {
+    type: Boolean,
+    default: true,
+  },
+  readOnlyFilter: {
+    type: Boolean,
+    default: false,
+  },
+  defaultFilter: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -353,10 +384,16 @@ const enableMultipleEditNewForm = ref(false);
 const enableMultipleDeleteNewForm = ref(false);
 const selectedRows = ref([]);
 const setupTrainingData = ref({});
+const formInfo = ref({});
+const loadingOwnData = ref(false);
 
 // Computed property to check if the report is an RPA or Approval type
 const isRPAOrApproval = computed(() => {
-  return propsReports.value && (propsReports.value.includes('rpa') || propsReports.value.includes('approval'));
+  return (
+    propsReports.value &&
+    (propsReports.value.includes("rpa") ||
+      propsReports.value.includes("approval"))
+  );
 });
 
 const currentUsername = computed(() => store.authDet?.username || "");
@@ -365,14 +402,91 @@ const currentRoleId = computed(() => {
   return role?.role?.id || null;
 });
 
+const isSetupFlagOn = (val) =>
+  val === true || val === 1 || val === "1" || val === "true";
+
 const isUserCanSetStatus = computed(() => {
   const list = setupTrainingData.value.listSpecificUserSetStatus || [];
   return list.includes(currentUsername.value);
 });
 
+const isUserCanViewHistory = computed(() => {
+  if (!isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return true;
+  }
+  const list = setupTrainingData.value.listSpecificUserRoleSetViewHistory || [];
+  if (setupTrainingData.value.userView === "role") {
+    const roleId = currentRoleId.value;
+    return list.some((r) => String(r) === String(roleId ?? ""));
+  }
+  const username = String(currentUsername.value || "").trim().toLowerCase();
+  if (!username) return false;
+  return list.some(
+    (u) => String(u || "").trim().toLowerCase() === username
+  );
+});
+
+const rawFormStatusRestricted = computed(() => {
+  const status =
+    formInfo.value.status ||
+    formInfo.value.cfmt_status ||
+    setupTrainingData.value?.formStatus;
+  return status === "draft" || status === "closed";
+});
+
+const rawOutsidePeriod = computed(() => {
+  if (!formPeriod.value.from && !formPeriod.value.to) return false;
+  const today = new Date();
+  const fromDate = new Date(formPeriod.value.from);
+  const toDate = new Date(formPeriod.value.to + " 23:59:59");
+  return today < fromDate || today > toDate;
+});
+
+const isFormStatusRestricted = computed(() => {
+  if (isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return false;
+  }
+  return rawFormStatusRestricted.value;
+});
+
+const isOutsidePeriod = computed(() => {
+  if (isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return false;
+  }
+  return rawOutsidePeriod.value;
+});
+
+const isUserCanViewReport = computed(
+  () =>
+    isUserCanViewHistory.value &&
+    !isFormStatusRestricted.value &&
+    !isOutsidePeriod.value
+);
+
+const isOwnDataEditAllowed = computed(
+  () => !rawFormStatusRestricted.value && !rawOutsidePeriod.value
+);
+
+const accessDeniedReason = computed(() => {
+  if (!isUserCanViewHistory.value)
+    return "You don't have access to view this report history";
+  if (isFormStatusRestricted.value) {
+    const s =
+      formInfo.value.status ||
+      formInfo.value.cfmt_status ||
+      setupTrainingData.value?.formStatus ||
+      "draft";
+    return `This form is ${s} and not available`;
+  }
+  if (isOutsidePeriod.value) return "This form is outside the active period";
+  return "You don't have access to view this report history";
+});
+
 const isUserCanSetFieldPerms = computed(() => {
   const list = setupTrainingData.value.listSpecificUserRoleFieldPerms || [];
-  return list.includes(currentUsername.value) || list.includes(currentRoleId.value);
+  return (
+    list.includes(currentUsername.value) || list.includes(currentRoleId.value)
+  );
 });
 
 onMounted(async () => {
@@ -385,33 +499,51 @@ onMounted(async () => {
 
   const colsnya = await getCols(idNya.value);
 
+  try {
+    await getPeriodData();
+  } catch (e) {
+    console.log("period load skipped", e);
+  }
+
+  if (idForms.value) {
+    await checkFormsByID(idForms.value);
+  }
+
   if (colsnya) {
-    if (isFilterFirst.value) {
-      filterDatas();
-    } else {
-      if (propsReports.value !== "sp") {
-        tableRef.value.requestServerInteraction();
-      } else {
-        filterDatas();
+    const defFilter = resolveDefaultFilter();
+    if (defFilter.length > 0) {
+      filter.value = defFilter;
+    }
+    if (!isUserCanViewReport.value) {
+      loading.value = false;
+      if (idForms.value && isOwnDataEditAllowed.value) {
+        openFormWithAllData();
       }
+    } else if (props.canFilter) {
+      if (isFilterFirst.value) {
+        filterDatas();
+      } else {
+        if (propsReports.value !== "sp") {
+          tableRef.value.requestServerInteraction();
+        } else {
+          filterDatas();
+        }
+      }
+    } else {
+      tableRef.value.requestServerInteraction();
     }
   }
 
   console.log("propsReports", propsReports.value);
 
-  getPeriodData();
   getMultipleManageData();
-
-  if (idForms.value) {
-    checkFormsByID(idForms.value);
-  }
 });
 
 socket.on("server-stxi", (data) => {
   console.log(data);
   if (data.app === "rpa") {
-    if (propsReports.value === "rpa") {
-      tableRef.value.requestServerInteraction();
+    if (propsReports.value === "rpa" && isUserCanViewReport.value) {
+      tableRef.value?.requestServerInteraction();
     }
     // console.log("Received data from server-stxi", data);
   }
@@ -436,6 +568,7 @@ const getCols = async (id) => {
     columns.value = checkDatanya.data.cols;
     propsReports.value = checkDatanya.data.props;
     isFilterFirst.value = checkDatanya.data.filterFirst;
+    idForms.value = checkDatanya.data.idForms || idForms.value;
 
     if (checkDatanya.data.props === "sp") {
       columnFilter.value = checkDatanya.data.colsParam;
@@ -449,6 +582,8 @@ const getCols = async (id) => {
 };
 
 const onRequest = async (propsTab) => {
+  if (!isUserCanViewReport.value) return;
+
   const { page, rowsPerPage, sortBy, descending } = propsTab.pagination;
 
   loading.value = true;
@@ -492,6 +627,7 @@ const filterDatas = () => {
       filtered: filter.value,
       propsReports: propsReports.value,
       isAPIOpt: props.isAPIExport,
+      readOnly: isFilterReadOnly.value,
     },
   }).onOk(async (val) => {
     filter.value = val.data;
@@ -504,8 +640,25 @@ const filterDatas = () => {
   });
 };
 
+const resolveDefaultFilter = () => {
+  if (props.defaultFilter && props.defaultFilter.length > 0) {
+    return JSON.parse(JSON.stringify(props.defaultFilter));
+  }
+  const fromSetup = setupTrainingData.value.defaultFilterData;
+  if (Array.isArray(fromSetup) && fromSetup.length > 0) {
+    return JSON.parse(JSON.stringify(fromSetup));
+  }
+  return [];
+};
+
+const isFilterReadOnly = computed(
+  () =>
+    props.readOnlyFilter ||
+    isSetupFlagOn(setupTrainingData.value.defaultFilterReadOnly)
+);
+
 const clearFilter = () => {
-  filter.value = [];
+  filter.value = resolveDefaultFilter();
   tableRef.value.requestServerInteraction();
 };
 
@@ -570,30 +723,28 @@ const onExportExcel = async (bypass = false) => {
 };
 
 const onOpenForms = async (isEdit = false, keyValue = "") => {
-  if (formPeriod.value.from || formPeriod.value.to) {
-    const today = new Date();
-    const fromDate = new Date(formPeriod.value.from);
-    const toDate = new Date(formPeriod.value.to + " 23:59:59");
-
-    if (today < fromDate || today > toDate) {
-      $q.notify({
-        color: "negative",
-        message:
-          "The form is not active, it will available from " +
-          fromDate.toLocaleDateString() +
-          " to " +
-          toDate.toLocaleDateString(),
-        icon: "warning",
-      });
-      return;
-    }
-  }
+  // Bypass period check for authorized add via indexTableReport - per user request (authorized only)
+  // if (formPeriod.value.from || formPeriod.value.to) {
+  //   const today = new Date();
+  //   const fromDate = new Date(formPeriod.value.from);
+  //   const toDate = new Date(formPeriod.value.to + " 23:59:59");
+  //   if (today < fromDate || today > toDate) {
+  //     $q.notify({ color: "negative", message: "The form is not active, it will available from " + fromDate.toLocaleDateString() + " to " + toDate.toLocaleDateString(), icon: "warning" });
+  //     return;
+  //   }
+  // }
 
   if (enableMultipleCreate.value) {
   }
 
   const checkDatanya = await checkFormsByID(idForms.value);
   if (checkDatanya) {
+    const setupWithStatus = {
+      ...(checkDatanya.value.setupTraining || {}),
+      formStatus: "active",
+      status: "active",
+      __bypassPeriod: true,
+    };
     $q.dialog({
       component: previewComponent,
       componentProps: {
@@ -601,7 +752,7 @@ const onOpenForms = async (isEdit = false, keyValue = "") => {
         mode: "form",
         id: idForms.value,
         isShowFormOnly: true,
-        setup: checkDatanya.value.setupTraining,
+        setup: setupWithStatus,
         showFormOnly: true,
         preventClear: isEdit,
         answersKey: isEdit ? keyValue : "",
@@ -610,10 +761,14 @@ const onOpenForms = async (isEdit = false, keyValue = "") => {
     })
       .onOk(async (val) => {
         console.log(val);
-        tableRef.value.requestServerInteraction();
+        if (isUserCanViewReport.value && tableRef.value) {
+          tableRef.value.requestServerInteraction();
+        }
       })
       .onDismiss(() => {
-        tableRef.value.requestServerInteraction();
+        if (isUserCanViewReport.value && tableRef.value) {
+          tableRef.value.requestServerInteraction();
+        }
       });
   } else {
     return;
@@ -631,7 +786,15 @@ const checkFormsByID = async (id) => {
   );
 
   if (checkDatanya && checkDatanya.status === true) {
+    formInfo.value = checkDatanya.data.value || {};
     setupTrainingData.value = checkDatanya.data.value?.setupTraining || {};
+    console.log("view-history gate data:", {
+      flag: setupTrainingData.value.specificUserSetViewHistory,
+      userView: setupTrainingData.value.userView,
+      list: setupTrainingData.value.listSpecificUserRoleSetViewHistory,
+      username: currentUsername.value,
+      roleId: currentRoleId.value,
+    });
     return checkDatanya.data;
   } else {
     $q.notify({
@@ -749,6 +912,72 @@ const onEditData = (row) => {
   onOpenForms(true, row.batch_id);
 };
 
+const openFormWithAllData = async () => {
+  formStore.restoreDefault();
+  loadingOwnData.value = true;
+
+  let dataRows = [];
+  try {
+    const res = await postData(
+      "post",
+      {
+        pagination: {
+          sortBy: columns.value[0]?.name || "",
+          descending: false,
+          page: 1,
+          rowsPerPage: 0,
+          rowsNumber: 0,
+        },
+        filter: [
+          ...resolveDefaultFilter(),
+          {
+            cols: { value: "created_by", label: "Created By", type: "text" },
+            value: [currentUsername.value],
+            type: "text",
+            opr: "=",
+            conmet: "and",
+          },
+        ],
+      },
+      `mrs/runningReport/${idNya.value}`,
+      false,
+      false,
+      true
+    );
+    if (!res || res.status !== true) {
+      $q.notify({
+        color: "negative",
+        message: res?.message || "You don't have access to this data",
+        icon: "warning",
+      });
+      return;
+    }
+
+    dataRows = res?.data?.data || [];
+
+    dataRows.forEach((row, targetRowIdx) => {
+      for (let index = 0; index < Object.keys(row).length; index++) {
+        const idx = Object.keys(row)[index];
+
+        if (idx.includes("CMS_REPORT_POS")) {
+          const idxParts = idx.split("_");
+          const fieldId = idxParts[idxParts.length - 1];
+          const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+
+          if (ans !== undefined && ans !== null) {
+            formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+          }
+        }
+      }
+    });
+  } finally {
+    loadingOwnData.value = false;
+  }
+
+  const referenceBatchId = dataRows[0]?.batch_id || null;
+  onOpenForms(true, referenceBatchId);
+};
+
 const onDelete = (row) => {
   console.log("onDelete", row);
   $q.dialog({
@@ -816,7 +1045,7 @@ const onPeriodClick = () => {
       const payload = {
         data: {
           pgm_code: "MRS_FORM_PERIOD",
-          pgm_value: props.idReport,
+          pgm_value: idNya.value || props.idReport,
           pgm_value2: store.authDet.username,
           pgm_value3: JSON.stringify(datas.rangePeriod),
           pgm_desc: `Period from ${datas.rangePeriod.from} to ${datas.rangePeriod.to}`,
@@ -824,7 +1053,7 @@ const onPeriodClick = () => {
         },
         keys: {
           pgm_code: "MRS_FORM_PERIOD",
-          pgm_value: props.idReport,
+          pgm_value: idNya.value || props.idReport,
           pgm_value2: store.authDet.username,
         },
       };
@@ -846,7 +1075,12 @@ const onPeriodClick = () => {
 const onClickSetStatus = async () => {
   const formData = await checkFormsByID(idForms.value);
   if (!formData) return;
-  const currentStatus = formData.value.status || "draft";
+  const currentStatus =
+    formData.value.status ||
+    formData.value.cfmt_status ||
+    formData.value.setupTraining?.formStatus ||
+    setupTrainingData.value?.formStatus ||
+    "draft";
   $q.dialog({
     title: "Set Form Status",
     message: `Current status: ${currentStatus}. Select new status:`,
@@ -871,8 +1105,18 @@ const onClickSetStatus = async () => {
       true
     );
     if (data && data.status) {
-      $q.notify({ color: "positive", message: "Status updated", icon: "check" });
-      formData.value.status = val;
+      $q.notify({
+        color: "positive",
+        message: "Status updated",
+        icon: "check",
+      });
+      await checkFormsByID(idForms.value);
+    } else {
+      $q.notify({
+        color: "negative",
+        message: data?.message || "Failed to update status",
+        icon: "warning",
+      });
     }
   });
 };
@@ -882,18 +1126,34 @@ const onClickFieldPerms = async () => {
   if (!formData) return;
 
   // Load users and roles for the select options
-  const usersData = await postData("get", null, "portal/users/ActiveOnly", false, false, true);
-  const rolesData = await postData("get", null, "portal/roles", false, false, true);
+  const usersData = await postData(
+    "get",
+    null,
+    "portal/users/ActiveOnly",
+    false,
+    false,
+    true
+  );
+  const rolesData = await postData(
+    "get",
+    null,
+    "portal/roles",
+    false,
+    false,
+    true
+  );
 
-  const optionsUsers = usersData?.data?.map((u) => ({
-    label: `${u.pud_first_name} ${u.pud_last_name}`.trim(),
-    value: u.username,
-  })) || [];
+  const optionsUsers =
+    usersData?.data?.map((u) => ({
+      label: `${u.pud_first_name} ${u.pud_last_name}`.trim(),
+      value: u.username,
+    })) || [];
 
-  const optionsRoles = rolesData?.data?.map((r) => ({
-    label: r.rm_role_name,
-    value: r.id,
-  })) || [];
+  const optionsRoles =
+    rolesData?.data?.map((r) => ({
+      label: r.rm_role_name,
+      value: r.id,
+    })) || [];
 
   $q.dialog({
     component: viewSetupFieldPerms,
@@ -916,7 +1176,11 @@ const onClickFieldPerms = async () => {
       true
     );
     if (data && data.status) {
-      $q.notify({ color: "positive", message: "Field permissions saved", icon: "check" });
+      $q.notify({
+        color: "positive",
+        message: "Field permissions saved",
+        icon: "check",
+      });
       setupTrainingData.value.fieldPermissions = perms;
     }
   });
@@ -931,7 +1195,7 @@ const getPeriodData = async () => {
       periodOpt: "pgm_value3",
     },
     {
-      pgm_value: props.idReport,
+      pgm_value: idNya.value || props.idReport,
       pgm_value2: store.authDet.username,
     },
     true

@@ -11,7 +11,8 @@
         <div class="text-h6">Setup Field Permissions</div>
         <div class="text-caption q-mt-sm">
           Define which users/roles can edit each field. Unlisted users will see
-          the field as read-only. Fields not listed are editable by everyone.
+          restricted fields as read-only or hidden (Restricted Method). Fields
+          not listed are editable by everyone.
         </div>
       </q-card-section>
 
@@ -45,6 +46,19 @@
               @update:model-value="onBulkAssign"
             />
           </div>
+          <div class="col" style="max-width: 160px">
+            <q-select
+              v-model="bulkMethod"
+              :options="methodOptions"
+              label="Bulk method"
+              emit-value
+              map-options
+              dense
+              outlined
+              clearable
+              @update:model-value="onBulkMethod"
+            />
+          </div>
           <q-btn
             icon="clear"
             flat
@@ -68,6 +82,7 @@
           <div class="col-3">Field</div>
           <div class="col">{{ assignMode === "users" ? "Users" : "Roles" }}</div>
           <div class="col-auto" style="width: 100px">Status</div>
+          <div class="col-auto" style="width: 140px">Restricted Method</div>
         </div>
         <q-separator />
         <div
@@ -135,6 +150,18 @@
               }}
             </q-badge>
           </div>
+          <div class="col-auto" style="width: 140px">
+            <q-select
+              v-model="localPerms[idx].method"
+              :options="methodOptions"
+              label="Method"
+              emit-value
+              map-options
+              dense
+              outlined
+              :disable="isEveryone(localPerms[idx])"
+            />
+          </div>
         </div>
       </q-card-section>
 
@@ -169,6 +196,15 @@ const filteredRoles = ref([]);
 const selectedFields = ref(new Set());
 const selectAll = ref(false);
 const bulkValue = ref([]);
+const bulkMethod = ref(null);
+
+const methodOptions = [
+  { label: "Readonly", value: "readonly" },
+  { label: "Hidden", value: "hidden" },
+];
+
+const isEveryone = (p) =>
+  (p?.users?.length || 0) === 0 && (p?.roles?.length || 0) === 0;
 
 onMounted(() => {
   filteredUsers.value = [...props.optionsUsers];
@@ -199,6 +235,7 @@ onMounted(() => {
       fieldId: f.id,
       users: existing?.users || [],
       roles: existing?.roles || [],
+      method: existing?.method || "readonly",
     };
   });
 });
@@ -259,10 +296,21 @@ const onBulkAssign = (vals) => {
   });
 };
 
+const onBulkMethod = (val) => {
+  if (!val || selectedFields.value.size === 0) return;
+  localPerms.value = localPerms.value.map((p) => {
+    if (selectedFields.value.has(p.fieldId)) {
+      return { ...p, method: val };
+    }
+    return p;
+  });
+  bulkMethod.value = null;
+};
+
 const onBulkClear = () => {
   localPerms.value = localPerms.value.map((p) => {
     if (selectedFields.value.has(p.fieldId)) {
-      return { ...p, users: [], roles: [] };
+      return { ...p, users: [], roles: [], method: "readonly" };
     }
     return p;
   });

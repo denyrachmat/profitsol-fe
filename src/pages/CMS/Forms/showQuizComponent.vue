@@ -437,14 +437,6 @@ const onClickPrev = () => {
 };
 
 const onClickNext = () => {
-  // console.log("Next clicked", [
-  //   nowSeq.value,
-  //   formsSeq.value,
-  //   groupedFormsByPage.value.length,
-  //   groupedFormsByPage.value[nowSeq.value].length,
-  //   nowFormIndex.value,
-  //   getFormAnswers.value[nowFormIndex.value],
-  // ]);
   if (
     groupedFormsByPage.value[nowSeq.value].length > 0 &&
     !getFormAnswers.value[nowFormIndex.value]

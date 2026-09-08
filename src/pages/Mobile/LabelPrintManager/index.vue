@@ -103,7 +103,10 @@ const getData = async () => {
   rows.value = res?.data || [];
 };
 
+const resolveRowId = (row) => row?.id ?? row?.ID ?? row?._id ?? row?.pk ?? null;
+
 const onEditLabel = (data = null) => {
+  const originalId = resolveRowId(data);
   $q.dialog({
     component: editLabel,
     componentProps: {
@@ -111,30 +114,45 @@ const onEditLabel = (data = null) => {
       dataProps: data,
     },
   }).onOk(async (val) => {
+    // val.value.id may be null if editLabel.vue didn't map ID correctly, fallback to original
+    const dialogId = val.value?.id ?? val.value?.ID ?? null;
+    const effectiveId = dialogId ?? originalId;
+    const isUpdate = !!effectiveId;
     const payload = {
-      id: val.value.id,
+      ...(isUpdate ? { id: effectiveId } : {}),
       name: val.value.name,
       language: val.value.language,
       description: val.value.description,
       template: val.value.template,
       config: val.value.config,
     };
-    const res = await postData(
-      payload.id ? "patch" : "post",
-      payload,
-      payload.id ? `labelManager/${payload.id}` : "labelManager",
-      false,
-      false,
-      true
-    );
+    // Backend may expect PATCH or PUT - try PATCH first, fallback to PUT on failure
+    let res = null;
+    if (isUpdate) {
+      res = await postData("patch", payload, `labelManager/${effectiveId}`, false, false, true);
+      if (!res?.status) {
+        // fallback to PUT if PATCH not supported
+        res = await postData("put", payload, `labelManager/${effectiveId}`, false, false, true);
+      }
+    } else {
+      res = await postData("post", payload, "labelManager", false, false, true);
+    }
     if (res?.status) {
       $q.notify({ type: "positive", message: res.message || "Saved" });
       getData();
+    } else if (res === false) {
+      // postData returns false on error and already notified via apiRequest
+      console.warn("Save failed, response false", payload);
     }
   });
 };
 
 const onDelete = (row) => {
+  const delId = resolveRowId(row);
+  if (!delId) {
+    $q.notify({ type: "negative", message: "Cannot delete: missing id" });
+    return;
+  }
   $q.dialog({
     title: "Confirm Delete",
     message: `Delete template "${row.name}"?`,
@@ -142,17 +160,12 @@ const onDelete = (row) => {
     cancel: true,
     color: "negative",
   }).onOk(async () => {
-    const res = await postData(
-      "delete",
-      null,
-      `labelManager/${row.id}`,
-      false,
-      false,
-      true
-    );
+    const res = await postData("delete", null, `labelManager/${delId}`, false, false, true);
     if (res?.status) {
       $q.notify({ type: "positive", message: "Deleted" });
       getData();
+    } else if (res === false) {
+      console.warn("Delete failed for id", delId);
     }
   });
 };

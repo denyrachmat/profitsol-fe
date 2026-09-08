@@ -232,6 +232,35 @@
           "
         >
           <legend>Setup Target Submited</legend>
+          <div class="row q-mb-sm">
+            <div class="col">
+              <div class="text-bold">
+                Bulk submission handling (multiple rows / bulk upload)
+              </div>
+              <div class="text-caption">
+                Choose how Approval / RPA / API behave when N rows submitted at
+                once
+              </div>
+              <div class="q-gutter-sm q-mt-xs">
+                <q-radio
+                  v-model="formsSetup.bulkMode"
+                  val="once"
+                  label="Once per submission"
+                />
+                <q-radio
+                  v-model="formsSetup.bulkMode"
+                  val="perRow"
+                  label="Per row"
+                />
+                <q-radio
+                  v-model="formsSetup.bulkMode"
+                  val="skip"
+                  label="Skip for bulk"
+                />
+              </div>
+            </div>
+          </div>
+          <q-separator class="q-my-sm" />
           <div class="row">
             <div class="col">
               <div class="text-bold">
@@ -251,12 +280,14 @@
               </div>
             </div>
             <div class="col" v-if="formsSetup.isApproval">
-              <div class="text-bold">Choose Approval Code</div>
+              <div class="text-bold">
+                Choose Approval Code (From Approval Management System)
+              </div>
               <div class="q-gutter-sm">
                 <q-select
                   v-model="formsSetup.approvalCode"
                   :options="optionsApproval"
-                  label="Choose Approval Code"
+                  label="Choose Approval Code (default)"
                   emit-value
                   map-options
                   dense
@@ -266,6 +297,42 @@
                   use-input
                   input-debounce="300"
                 />
+                <div class="text-caption">Used when no conditional rule matches</div>
+              </div>
+            </div>
+          </div>
+          <div class="row q-mt-sm" v-if="formsSetup.isApproval">
+            <div class="col">
+              <div class="text-bold">Conditional approval by field value (optional)</div>
+              <div class="text-caption">e.g., Dept = IT → AMS1, Dept = QC → AMS2. Uses filter field or chosen field.</div>
+              <div class="row q-gutter-sm q-mt-xs items-center">
+                <div class="col-5">
+                  <q-select
+                    v-model="formsSetup.approvalConditionField"
+                    :options="approvalFieldOptions"
+                    label="Field for condition"
+                    emit-value
+                    map-options
+                    dense
+                    filled
+                    clearable
+                    hint="Defaults to defaultFilter field"
+                  />
+                </div>
+                <div class="col-auto">
+                  <q-btn icon="add" color="primary" dense label="Add rule" @click="addApprovalCondition" />
+                </div>
+              </div>
+              <div v-for="(cond, idx) in formsSetup.approvalConditions" :key="idx" class="row q-gutter-sm q-mt-sm items-center">
+                <div class="col-4">
+                  <q-input v-model="cond.value" dense outlined label="Field value (e.g., IT)" />
+                </div>
+                <div class="col-5">
+                  <q-select v-model="cond.approvalCode" :options="optionsApproval" label="Approval Code" emit-value map-options dense filled />
+                </div>
+                <div class="col-auto">
+                  <q-btn icon="delete" color="negative" flat dense @click="formsSetup.approvalConditions.splice(idx,1)" />
+                </div>
               </div>
             </div>
           </div>
@@ -507,6 +574,91 @@
               </div>
             </div>
           </div>
+
+          <div class="row q-pt-sm" v-if="formsSetup.isHistory">
+            <div class="col">
+              <div class="text-bold">
+                Specific users / role to view history ? (Only choosed
+                users/roles can view the form history)
+              </div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.specificUserSetViewHistory"
+                  :val="true"
+                  label="Yes"
+                />
+                <q-radio
+                  v-model="formsSetup.specificUserSetViewHistory"
+                  :val="false"
+                  label="No"
+                />
+              </div>
+            </div>
+            <div class="col" v-if="formsSetup.specificUserSetViewHistory">
+              <div class="text-bold">Choose type filtered</div>
+              <div class="q-gutter-sm">
+                <q-radio
+                  v-model="formsSetup.userView"
+                  val="user"
+                  label="Users (default)"
+                />
+                <q-radio
+                  v-model="formsSetup.userView"
+                  val="role"
+                  label="Role"
+                />
+              </div>
+            </div>
+            <div
+              class="col q-pl-sm"
+              v-if="
+                formsSetup.specificUserSetViewHistory &&
+                formsSetup.userView === 'user'
+              "
+            >
+              <div class="text-bold">Users that can view history</div>
+              <q-select
+                v-model="formsSetup.listSpecificUserRoleSetViewHistory"
+                :options="optionsUsers"
+                multiple
+                label="Choose specific users"
+                emit-value
+                map-options
+                use-chips
+                dense
+                filled
+                @filter="filterFnUsers"
+                :loading="loadingUsers"
+                use-input
+                input-debounce="300"
+              />
+            </div>
+            <div
+              class="col q-pl-sm"
+              v-if="
+                formsSetup.specificUserSetViewHistory &&
+                formsSetup.userView === 'role'
+              "
+            >
+              <div class="text-bold">Roles that can view history</div>
+              <q-select
+                v-model="formsSetup.listSpecificUserRoleSetViewHistory"
+                :options="optionsRoles"
+                multiple
+                label="Choose specific roles"
+                emit-value
+                map-options
+                use-chips
+                dense
+                filled
+                @filter="filterFnRoles"
+                :loading="loadingRoles"
+                use-input
+                input-debounce="300"
+              />
+            </div>
+          </div>
+
           <div class="row" v-if="formsSetup.isHistory">
             <div class="col">
               <div class="text-bold">
@@ -961,9 +1113,9 @@
                 >
                   <q-badge color="red" floating>{{
                     formsSetup.isFilterByUser &&
-                    formsSetup.defaultFilterData &&
-                    Object.keys(formsSetup.defaultFilterData).length > 0
-                      ? Object.keys(formsSetup.defaultFilterData).length
+                    Array.isArray(formsSetup.defaultFilterData) &&
+                    formsSetup.defaultFilterData.length > 0
+                      ? formsSetup.defaultFilterData.length
                       : 0
                   }}</q-badge>
                 </q-btn>
@@ -1068,6 +1220,12 @@ onMounted(() => {
     localSetup.listSpecificUserSetPeriod =
       localSetup.listSpecificUserSetPeriod || [];
     localSetup.exceptionUsers = localSetup.exceptionUsers || [];
+    localSetup.specificUserSetViewHistory = convertToBoolean(
+      localSetup.specificUserSetViewHistory
+    );
+    localSetup.userView = localSetup.userView || "user";
+    localSetup.listSpecificUserRoleSetViewHistory =
+      localSetup.listSpecificUserRoleSetViewHistory || [];
     localSetup.listSpecificUserRoleSetEditDataPeriod =
       localSetup.listSpecificUserRoleSetEditDataPeriod || [];
 
@@ -1094,6 +1252,14 @@ onMounted(() => {
 
     localSetup.specificUserSetFilterData =
       localSetup.specificUserSetFilterData || "all";
+    if (typeof localSetup.defaultFilterData === "string") {
+      try { localSetup.defaultFilterData = JSON.parse(localSetup.defaultFilterData); } catch { localSetup.defaultFilterData = []; }
+    }
+    localSetup.defaultFilterData = Array.isArray(localSetup.defaultFilterData) ? localSetup.defaultFilterData : [];
+    localSetup.defaultFilterReadOnly = localSetup.defaultFilterReadOnly ?? false;
+    localSetup.approvalConditionField = localSetup.approvalConditionField || null;
+    localSetup.approvalConditions = Array.isArray(localSetup.approvalConditions) ? localSetup.approvalConditions : [];
+    localSetup.bulkMode = localSetup.bulkMode || "once";
 
     if (localSetup.isRPA && localSetup.rpaId) {
       console.log("Fetching RPA data for setup");
@@ -1191,6 +1357,9 @@ const formsSetup = ref({
   isShowOwnHistory: false,
   exceptionUsers: [],
   isHistory: false,
+  specificUserSetViewHistory: false,
+  userView: "user",
+  listSpecificUserRoleSetViewHistory: [],
   historyTable: "",
   historyTableList: [],
   historyTableIsExport: false,
@@ -1219,7 +1388,29 @@ const formsSetup = ref({
   specificUserSetFieldPerms: false,
   listSpecificUserRoleFieldPerms: [],
   fieldPermissions: [],
+  bulkMode: "once",
+  approvalConditionField: null,
+  approvalConditions: [],
+  defaultFilterData: [],
+  defaultFilterReadOnly: false,
 });
+
+const approvalFieldOptions = computed(() => {
+  const fromForms = (props.forms || [])
+    .flatMap((f) => (f.type === "row" ? f.content : [f]))
+    .filter((c) => c.type === "form")
+    .map((c) => ({ label: c.content?.label || `Field ${c.id}`, value: String(c.id) }));
+  const fromFilter = (formsSetup.value.defaultFilterData || []).map((d) => ({
+    label: `${d.cols?.label || d.cols?.value} (filter)`,
+    value: String(d.cols?.value || "").replace("CMS_REPORT_", ""),
+  }));
+  const uniq = new Map();
+  ;[...fromForms, ...fromFilter].forEach((o) => { if (o.value && !uniq.has(o.value)) uniq.set(o.value, o); });
+  return [...uniq.values()];
+});
+const addApprovalCondition = () => {
+  formsSetup.value.approvalConditions.push({ value: "", approvalCode: "" });
+};
 
 const splitterModel = ref(50);
 const optionsUsers = ref([]);
@@ -1594,35 +1785,30 @@ const onClickSetDefaultFilterData = () => {
     component: multiplePromptDialog,
     componentProps: {
       title: "Setup Default Filter Data",
+      headerFields: [
+        {
+          label: `Select ${
+            formsSetup.value.specificUserSetFilterData === "user"
+              ? "users"
+              : formsSetup.value.specificUserSetFilterData === "role"
+              ? "roles"
+              : "users/roles"
+          } to be applied`,
+          default:
+            formsSetup.value.listSpecificUserRoleSetFilterDataPeriod || [],
+          type: "select",
+          name: "users",
+          options:
+            formsSetup.value.specificUserSetFilterData === "user"
+              ? optionsUsers.value
+              : formsSetup.value.specificUserSetFilterData === "role"
+              ? optionsRoles.value
+              : [...optionsUsers.value, ...optionsRoles.value],
+          multiple: true,
+        },
+      ],
       initialFields: [
         [
-          {
-            label: `Select ${
-              formsSetup.value.specificUserSetFilterData === "user"
-                ? "users"
-                : formsSetup.value.specificUserSetFilterData === "role"
-                ? "roles"
-                : "users/roles"
-            } to be applied`,
-            default:
-              formsSetup.value.specificUserSetFilterData === "user"
-                ? formsSetup.value.listSpecificUserRoleSetFilterDataPeriod ||
-                  null
-                : formsSetup.value.specificUserSetFilterData === "role"
-                ? formsSetup.value.listSpecificUserRoleSetFilterDataPeriod ||
-                  null
-                : formsSetup.value.listSpecificUserRoleSetFilterDataPeriod ||
-                  [],
-            type: "select",
-            name: "cols",
-            options:
-              formsSetup.value.specificUserSetFilterData === "user"
-                ? optionsUsers.value
-                : formsSetup.value.specificUserSetFilterData === "role"
-                ? optionsRoles.value
-                : [...optionsUsers.value, ...optionsRoles.value],
-            multiple: true,
-          },
           {
             label: `Select columns to filter`,
             default: listForms.value.length > 0 ? listForms.value[0].field : "",
@@ -1666,17 +1852,37 @@ const onClickSetDefaultFilterData = () => {
     persistent: true,
   })
     .onOk(async (val) => {
-      try {
-        const parsed = val;
-        formsSetup.value.defaultFilterData = parsed;
-        console.log("Default Filter Data set to:", parsed);
-      } catch (e) {
-        console.error("Invalid JSON input for Default Filter Data:", e);
-        $q.notify({
-          type: "negative",
-          message: "Invalid JSON format. Please enter valid JSON.",
-        });
-      }
+      formsSetup.value.listSpecificUserRoleSetFilterDataPeriod =
+        val.users || [];
+
+      const selectedField = props.forms
+        .flatMap((form) => (form.type === "row" ? form.content : form))
+        .find(
+          (form) => form.type === "form" && `CMS_REPORT_${form.id}` === val.cols
+        );
+      const colType = selectedField?.content?.component?.value?.type || "";
+
+      formsSetup.value.defaultFilterData =
+        val.defaultValue && val.filterValue
+          ? [
+              {
+                cols: {
+                  value: val.cols,
+                  label: selectedField?.content?.label || val.cols,
+                  type: colType,
+                },
+                value: [val.filterValue],
+                type: colType,
+                opr: "=",
+                conmet: "and",
+              },
+            ]
+          : [];
+      formsSetup.value.defaultFilterReadOnly = val.disableFilter === true;
+      console.log(
+        "Default Filter Data set to:",
+        formsSetup.value.defaultFilterData
+      );
     })
     .onDismiss(() => {
       // Handle dismiss if needed

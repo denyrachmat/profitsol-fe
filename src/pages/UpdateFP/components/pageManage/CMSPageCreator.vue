@@ -172,7 +172,7 @@
           <draggable
             tag="div"
             v-model="blocks"
-            group="widgets"
+            :group="{ name: 'widgets', pull: true, put: true }"
             item-key="id"
             handle=".drag-handle"
             ghost-class="ghost-block"
@@ -267,6 +267,7 @@
                     @select-block="selectBlock"
                     @update:children="onUpdateColumnChildren"
                     @delete-child="onDeleteColumnChild"
+                    @duplicate-child="onDuplicateNestedChild"
                   />
                 </div>
               </div>
@@ -493,7 +494,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, toRaw } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useQuasar } from "quasar";
 import draggable from "vuedraggable";
 import apiRequest from "src/components/apiRequest";
@@ -510,7 +511,7 @@ const emit = defineEmits(["save"]);
 
 const props = defineProps({
   mode: String,
-  pageId: String,
+  pageId: [String, Number],
   dataPage: Object,
 });
 
@@ -552,6 +553,14 @@ const findBlockById = (id, blockList) => {
         }
       }
     }
+    if (b.type === "carousel" && b.content.slides) {
+      for (const slide of b.content.slides) {
+        if (slide.children?.length) {
+          const found = findBlockById(id, slide.children);
+          if (found) return found;
+        }
+      }
+    }
   }
   return null;
 };
@@ -564,7 +573,7 @@ const selectedBlock = computed(() => {
 const selectedBlockWidth = computed({
   get: () => selectedBlock.value?.width ?? 12,
   set: (val) => {
-    if (selectedBlock.value) toRaw(selectedBlock.value).width = val;
+    if (selectedBlock.value) selectedBlock.value.width = val;
   },
 });
 
@@ -655,9 +664,14 @@ const onUpdateColumnChildren = ({ colIndex, slideIndex, children, blockId }) => 
   if (!parentBlock) return;
 
   if (parentBlock.type === "columns" && colIndex !== undefined) {
-    parentBlock.content.columns[colIndex].children = children;
+    // guard: :list in ColumnsRenderer mutates in-place, avoid double-set that breaks Sortable's domElement
+    if (parentBlock.content.columns[colIndex].children !== children) {
+      parentBlock.content.columns[colIndex].children = children;
+    }
   } else if (parentBlock.type === "carousel" && slideIndex !== undefined) {
-    parentBlock.content.slides[slideIndex].children = children;
+    if (parentBlock.content.slides[slideIndex].children !== children) {
+      parentBlock.content.slides[slideIndex].children = children;
+    }
   }
 };
 
@@ -683,7 +697,28 @@ const findColumnsBlockContainingChild = (blockId) => {
 
 const onDeleteColumnChild = ({ colIndex, slideIndex, blockId }) => {
   const parentColumnsBlock = findColumnsBlockContainingChild(blockId);
-  if (!parentColumnsBlock) return;
+  if (!parentColumnsBlock) {
+    // fallback to deep search for nested columns inside columns
+    const deep = findParentForChild(blockId, blocks.value);
+    if (!deep) return;
+    if (deep.column) {
+      const idx = deep.column.children.findIndex((b) => b.id === blockId);
+      if (idx !== -1) {
+        if (selectedBlockId.value === blockId) selectedBlockId.value = null;
+        deep.column.children.splice(idx, 1);
+      }
+      return;
+    }
+    if (deep.slide) {
+      const idx = deep.slide.children.findIndex((b) => b.id === blockId);
+      if (idx !== -1) {
+        if (selectedBlockId.value === blockId) selectedBlockId.value = null;
+        deep.slide.children.splice(idx, 1);
+      }
+      return;
+    }
+    return;
+  }
 
   if (parentColumnsBlock.type === "columns") {
     const col = parentColumnsBlock.content.columns[colIndex];
@@ -702,6 +737,97 @@ const onDeleteColumnChild = ({ colIndex, slideIndex, blockId }) => {
       if (selectedBlockId.value === blockId) selectedBlockId.value = null;
       slide.children.splice(childIdx, 1);
     }
+  }
+};
+
+const cloneBlockWithNewIds = (block) => {
+  const clone = JSON.parse(JSON.stringify(block));
+  const regenerate = (b) => {
+    b.id = generateBlockId();
+    b._dbId = null;
+    if (b.type === "columns" && b.content?.columns) {
+      b.content.columns.forEach((col) => {
+        if (col.children) col.children.forEach(regenerate);
+      });
+    } else if (b.type === "carousel" && b.content?.slides) {
+      b.content.slides.forEach((slide) => {
+        if (slide.children) slide.children.forEach(regenerate);
+      });
+    }
+  };
+  regenerate(clone);
+  return clone;
+};
+
+const findParentForChild = (targetId, list) => {
+  for (const block of list) {
+    if (block.type === "columns" && block.content.columns) {
+      for (let ci = 0; ci < block.content.columns.length; ci++) {
+        const col = block.content.columns[ci];
+        if (col.children) {
+          const idx = col.children.findIndex((c) => c.id === targetId);
+          if (idx !== -1) return { parentBlock: block, colIndex: ci, childIndex: idx, column: col, slide: null };
+          const deeper = findParentForChild(targetId, col.children);
+          if (deeper) return deeper;
+        }
+      }
+    }
+    if (block.type === "carousel" && block.content.slides) {
+      for (let si = 0; si < block.content.slides.length; si++) {
+        const slide = block.content.slides[si];
+        if (slide.children) {
+          const idx = slide.children.findIndex((c) => c.id === targetId);
+          if (idx !== -1) return { parentBlock: block, slideIndex: si, childIndex: idx, column: null, slide };
+          const deeper = findParentForChild(targetId, slide.children);
+          if (deeper) return deeper;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const onDuplicateNestedChild = ({ colIndex, slideIndex, blockId }) => {
+  // Try direct parent first
+  let parentInfo = findParentForChild(blockId, blocks.value);
+  if (!parentInfo) {
+    const p = findColumnsBlockContainingChild(blockId);
+    if (!p) return;
+    if (p.type === "columns") {
+      const col = p.content.columns[colIndex];
+      if (!col?.children) return;
+      const idx = col.children.findIndex((b) => b.id === blockId);
+      if (idx === -1) return;
+      const clone = cloneBlockWithNewIds(col.children[idx]);
+      col.children.splice(idx + 1, 0, clone);
+      selectedBlockId.value = clone.id;
+      return;
+    }
+    if (p.type === "carousel") {
+      const idx = slideIndex ?? colIndex;
+      const slide = p.content.slides[idx];
+      if (!slide?.children) return;
+      const childIdx = slide.children.findIndex((b) => b.id === blockId);
+      if (childIdx === -1) return;
+      const clone = cloneBlockWithNewIds(slide.children[childIdx]);
+      slide.children.splice(childIdx + 1, 0, clone);
+      selectedBlockId.value = clone.id;
+      return;
+    }
+    return;
+  }
+
+  // Use deep-found parent (supports nested columns inside columns)
+  if (parentInfo.column) {
+    const idx = parentInfo.childIndex;
+    const clone = cloneBlockWithNewIds(parentInfo.column.children[idx]);
+    parentInfo.column.children.splice(idx + 1, 0, clone);
+    selectedBlockId.value = clone.id;
+  } else if (parentInfo.slide) {
+    const idx = parentInfo.childIndex;
+    const clone = cloneBlockWithNewIds(parentInfo.slide.children[idx]);
+    parentInfo.slide.children.splice(idx + 1, 0, clone);
+    selectedBlockId.value = clone.id;
   }
 };
 

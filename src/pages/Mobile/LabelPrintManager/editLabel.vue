@@ -258,6 +258,83 @@
                 />
               </div>
             </div>
+
+            <q-separator class="q-my-md" />
+            <div class="text-subtitle2 q-mb-sm">Label Marking & History</div>
+
+            <div class="row q-col-gutter-md q-mb-sm">
+              <div class="col-12 col-md-4">
+                <q-select
+                  outlined
+                  dense
+                  v-model="dataHasil.config.markPrinted"
+                  :options="yesNoOpts"
+                  label="Mark printed label ?"
+                  emit-value
+                  map-options
+                />
+              </div>
+              <div
+                v-if="isYes(dataHasil.config.markPrinted)"
+                class="col-12 col-md-4"
+              >
+                <q-select
+                  outlined
+                  dense
+                  v-model="dataHasil.config.showPrintCount"
+                  :options="yesNoOpts"
+                  label="Show count printed ?"
+                  emit-value
+                  map-options
+                />
+              </div>
+              <div
+                v-if="isYes(dataHasil.config.markPrinted)"
+                class="col-12 col-md-4"
+              >
+                <q-input
+                  outlined
+                  dense
+                  v-model="dataHasil.config.markedColor"
+                  label="Marked printed color"
+                >
+                  <template v-slot:append>
+                    <q-icon name="color_lens" class="cursor-pointer">
+                      <q-popup-proxy
+                        cover
+                        transition-show="scale"
+                        transition-hide="scale"
+                      >
+                        <q-color v-model="dataHasil.config.markedColor" />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-4">
+                <q-select
+                  outlined
+                  dense
+                  v-model="dataHasil.config.enableHistory"
+                  :options="yesNoOpts"
+                  label="Enable Print History ?"
+                  emit-value
+                  map-options
+                  hint="If Yes, prints are stored for re-print via eye button"
+                />
+              </div>
+            </div>
+            <div
+              v-if="isYes(dataHasil.config.enableHistory)"
+              class="text-caption text-grey-7 q-mt-xs"
+            >
+              When enabled, each print is stored locally (and optionally on server
+              <code>mbl_label_hist</code>). Accessible via the eye button in the mobile
+              app's template list.
+            </div>
           </q-tab-panel>
         </q-tab-panels>
       </q-card-section>
@@ -292,6 +369,12 @@ const dpmm = ref("8");
 
 const sampleValues = ref({});
 
+const yesNoOpts = [
+  { label: "Yes", value: true },
+  { label: "No", value: false },
+];
+const isYes = (v) => v === true || v === "Yes" || v === "yes" || v === "YES" || v === 1 || v === "1";
+
 const baseContract = () => ({
   apiUrl: "",
   method: "POST",
@@ -300,24 +383,59 @@ const baseContract = () => ({
   useConfirmation: true,
   confirmationMessage: "Are you sure you want to print?",
   confirmationSendValue: [],
+  // Mark printed label (controls floating red badge behaviour)
+  markPrinted: false,
+  showPrintCount: true,
+  markedColor: "#ef4444",
+  // Print history (stores each print for re-print via eye button)
+  enableHistory: false,
 });
 
+const normalizeBool = (v, def = false) => {
+  if (v === true || v === false) return v;
+  if (typeof v === "string") {
+    const s = v.toLowerCase();
+    if (s === "yes" || s === "true" || s === "1") return true;
+    if (s === "no" || s === "false" || s === "0") return false;
+  }
+  if (v === 1) return true;
+  if (v === 0) return false;
+  return def;
+};
+
+const rawCfg = props.dataProps?.config || {};
+const mergedCfg = Object.assign(baseContract(), rawCfg, {
+  filters: Array.isArray(rawCfg.filters) ? rawCfg.filters : [],
+  confirmationSendValue: Array.isArray(rawCfg.confirmationSendValue)
+    ? rawCfg.confirmationSendValue
+    : [],
+});
+// Normalize legacy values (string "Yes"/"No" -> boolean)
+mergedCfg.markPrinted = normalizeBool(
+  rawCfg.markPrinted ?? rawCfg.mark_printed ?? mergedCfg.markPrinted,
+  false
+);
+mergedCfg.showPrintCount = normalizeBool(
+  rawCfg.showPrintCount ?? rawCfg.show_count_printed ?? mergedCfg.showPrintCount,
+  true
+);
+mergedCfg.enableHistory = normalizeBool(
+  rawCfg.enableHistory ?? rawCfg.historyEnabled ?? rawCfg.enable_history ?? mergedCfg.enableHistory,
+  false
+);
+mergedCfg.markedColor = rawCfg.markedColor || rawCfg.printedMarkColor || rawCfg.marked_color || mergedCfg.markedColor || "#ef4444";
+// Keep alias for mobile compatibility
+mergedCfg.historyEnabled = mergedCfg.enableHistory;
+mergedCfg.printedMarkColor = mergedCfg.markedColor;
+
+const resolveId = (o) => o?.id ?? o?.ID ?? o?._id ?? o?.pk ?? o?.code ?? null;
 const dataHasil = ref({
-  id: props.dataProps?.id || null,
+  id: resolveId(props.dataProps),
   name: props.dataProps?.name || "",
   language: props.dataProps?.language || props.dataProps?.contract || "ZPL",
   description: props.dataProps?.description || "",
   template: props.dataProps?.template || "",
-  config: Object.assign(baseContract(), props.dataProps?.config || {}, {
-    filters: Array.isArray(props.dataProps?.config?.filters)
-      ? props.dataProps.config.filters
-      : [],
-    confirmationSendValue: Array.isArray(
-      props.dataProps?.config?.confirmationSendValue
-    )
-      ? props.dataProps.config.confirmationSendValue
-      : [],
-  }),
+  config: mergedCfg,
 });
 
 const availableVars = computed(() => {
@@ -381,7 +499,13 @@ const addConfirmField = () =>
     readonly: false,
   });
 
-const onOKClick = () => onDialogOK({ value: dataHasil.value });
+const onOKClick = () => {
+  // keep dual keys for backward compat with mobile app
+  const cfg = dataHasil.value.config;
+  cfg.historyEnabled = cfg.enableHistory;
+  cfg.printedMarkColor = cfg.markedColor;
+  onDialogOK({ value: dataHasil.value });
+};
 
 onMounted(() => {
   sampleValues.value = {};

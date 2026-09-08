@@ -13,7 +13,7 @@
   </div>
 </template>
 <script setup>
-import { toRef, toRaw } from "vue";
+import { toRef, watch } from "vue";
 import { useBlockField } from "../useBlockField.js";
 
 const props = defineProps({ block: { type: Object, required: true } });
@@ -43,20 +43,18 @@ const transitionOptions = [
 let _lastCount = props.block.content.slideCount || 2;
 slideCount.value = _lastCount;
 
-import { watch } from "vue";
-watch(slideCount, (newCount, oldCount) => {
-  const raw = toRaw(props.block);
-  if (!raw.content.slides) raw.content.slides = [];
-  const current = raw.content.slides.length;
+watch(slideCount, (newCount) => {
+  if (!props.block.content.slides) props.block.content.slides = [];
+  const current = props.block.content.slides.length;
   if (newCount > current) {
     for (let i = current; i < newCount; i++) {
-      raw.content.slides.push({ children: [] });
+      props.block.content.slides.push({ children: [] });
     }
   } else if (newCount < current) {
-    raw.content.slides.splice(newCount);
+    props.block.content.slides.splice(newCount);
   }
-  if (raw.content._currentSlide >= newCount) {
-    raw.content._currentSlide = Math.max(0, newCount - 1);
+  if (props.block.content._currentSlide >= newCount) {
+    props.block.content._currentSlide = Math.max(0, newCount - 1);
   }
 });
 </script>

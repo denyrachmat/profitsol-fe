@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="position: relative">
     <!-- =========================================================
       1) HISTORY MODE (MRS report)
       ========================================================= -->
@@ -16,6 +16,9 @@
           :activate-multiple-create="multipleFormSetup"
           :can-edit="canEditTable"
           :can-delete="props.setup?.allowDeleteData || false"
+          :can-filter="props.setup?.allowFilterData || true"
+          :read-only-filter="props.setup?.readOnlyFilter || false"
+          :default-filter="props.setup?.defaultFilter || []"
         />
       </div>
     </div>
@@ -25,9 +28,11 @@
       class="row q-gutter-md"
     >
       <div class="col">
+        {{ checklistBlockedReason }}
         <showComponentAsChecklistVue
           :data="forms"
           :setup="props.setup"
+          :blocked-reason="checklistBlockedReason"
           :is-multiple-mode="multipleFormSetup"
           :enable-delete-instance="
             convertToBoolean(props.setup?.enableMultipleDelete || true)
@@ -338,7 +343,9 @@
                       :ans="getAnswer(rowIdx, col.id)"
                       :ansArr="getAnswerArr(rowIdx, col.id)"
                       :apiOpt="col.content.component.apiOpt"
-                      :readonly="col.readonly"
+                      :readonly="
+                        col.readonly || restrictionMethodFor(col) === 'readonly'
+                      "
                     />
 
                     <!-- ========= POSTS BLOCK ========= -->
@@ -857,6 +864,9 @@
         </div>
       </div>
     </template>
+    <q-inner-loading :showing="loadingOwnData">
+      <q-spinner-dots size="50px" color="primary" />
+    </q-inner-loading>
   </div>
 </template>
 
@@ -1114,13 +1124,60 @@ const normalizeBlocksForPreview = (blocks) => {
 /**
  * Determine whether we should show MRS report in history mode.
  */
+const isSetupFlagOn = (val) =>
+  val === true || val === 1 || val === "1" || val === "true";
+
+const isUserCanViewHistory = computed(() => {
+  if (!isSetupFlagOn(props.setup?.specificUserSetViewHistory)) {
+    return true;
+  }
+  const list = props.setup?.listSpecificUserRoleSetViewHistory || [];
+  if (props.setup?.userView === "role") {
+    const roleId = authStore.getChoosedRole?.role?.id ?? null;
+    return list.some((r) => String(r) === String(roleId ?? ""));
+  }
+  const currentUsername =
+    authStore.authDet?.username || authStore.getDetails?.username || "";
+  const username = String(currentUsername || "")
+    .trim()
+    .toLowerCase();
+  if (!username) return false;
+  return list.some(
+    (u) =>
+      String(u || "")
+        .trim()
+        .toLowerCase() === username
+  );
+});
+
 const shouldShowHistoryReport = computed(() => {
   return (
     props.setup &&
     props.setup.isHistory == 1 &&
     connectedMRSVal.value &&
-    !isShowFormOnly.value
+    !isShowFormOnly.value &&
+    isUserCanViewHistory.value
   );
+});
+
+const formPeriodWindow = ref(null);
+
+const checklistBlockedReason = computed(() => {
+  if (props.setup?.__bypassPeriod) return "";
+  const raw = props.setup?.formStatus ?? props.setup?.status ?? "";
+  const status = String(raw).toLowerCase();
+  if (status === "draft") return "This form is still in draft mode.";
+  if (status === "closed") return "This form is closed.";
+  const w = formPeriodWindow.value;
+  if (w && w.from && w.to) {
+    const nowD = new Date();
+    const fromD = new Date(w.from);
+    const toD = new Date(w.to.length <= 10 ? w.to + " 23:59:59" : w.to);
+    if (nowD < fromD || nowD > toD) {
+      return "This form is outside the active period.";
+    }
+  }
+  return "";
 });
 
 /**
@@ -1220,8 +1277,11 @@ const authorSubscribeColor = computed(() =>
   !isAuthorSubscribed.value ? "primary" : "grey"
 );
 
+const loadingOwnData = ref(false);
+
 const isComponentLoading = computed(
-  () => selfLoading.value || nestedLoadingCount.value > 0
+  () =>
+    selfLoading.value || nestedLoadingCount.value > 0 || loadingOwnData.value
 );
 
 watch(
@@ -1290,15 +1350,65 @@ onMounted(async () => {
     }
 
     // 5) history mode: fetch connected MRS data
+    let deniedHistoryPrefill = false;
     if (props.setup && props.setup.isHistory == 1) {
       isShowFormOnly.value = !!props.showFormOnly;
       await getConnectedMRS(props.id);
+      deniedHistoryPrefill =
+        !!connectedMRSVal.value &&
+        !isUserCanViewHistory.value &&
+        !preventClears.value;
+      console.log("view-history gate (form page):", {
+        flag: props.setup.specificUserSetViewHistory,
+        userView: props.setup.userView,
+        list: props.setup.listSpecificUserRoleSetViewHistory,
+        username: authStore.authDet?.username || authStore.getDetails?.username,
+        roleId: authStore.getChoosedRole?.role?.id,
+        connectedMRS: !!connectedMRSVal.value,
+        isUserCanViewHistory: isUserCanViewHistory.value,
+        shouldShowHistoryReport: shouldShowHistoryReport.value,
+      });
+
+      if (connectedMRSVal.value?.id) {
+        try {
+          const res = await postData(
+            "post",
+            {
+              id: "MRS_FORM_PERIOD",
+              selectAs: { periodOpt: "pgm_value3" },
+              filter: {
+                pgm_value: connectedMRSVal.value.id,
+                pgm_value2:
+                  authStore.authDet?.username ||
+                  authStore.getDetails?.username ||
+                  "",
+              },
+              firstSelect: true,
+            },
+            `portal/gencode/showDetail/MRS_FORM_PERIOD`,
+            false,
+            false,
+            false
+          );
+          const raw = res?.data?.periodOpt;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.from && parsed?.to) {
+              formPeriodWindow.value = parsed;
+            }
+          }
+        } catch (e) {
+          console.log("form period window skipped", e);
+        }
+      }
     } else {
       connectedMRSVal.value = null;
     }
 
     // 6) restore default answers unless prevented
-    if (!preventClears.value) {
+    if (deniedHistoryPrefill) {
+      await loadUserOwnAnswers();
+    } else if (!preventClears.value) {
       store.restoreDefault();
     } else {
       // 🟢 KHUSUS MODE EDIT: Paksa UI refreshedPosts berkedip agar watch di anak langsung membaca data store lama
@@ -1368,7 +1478,39 @@ const getRowColumns = (row) => {
   return [];
 };
 
-const isColumnVisible = (col) => !convertToBoolean(col?.hidden);
+const fieldPermUsername = computed(
+  () => authStore.authDet?.username || authStore.getDetails?.username || ""
+);
+const fieldPermRoles = computed(() => {
+  const role = authStore.getChoosedRole;
+  return role?.role?.id ? [role.role.id] : [];
+});
+
+const fieldRuleFor = (col) => {
+  const fieldPerms = props.setup?.fieldPermissions;
+  if (!fieldPerms || fieldPerms.length === 0 || !col?.id) return null;
+  return fieldPerms.find((p) => String(p.fieldId) === String(col.id)) || null;
+};
+
+const isFieldPermAllowed = (rule) => {
+  if (!rule) return true;
+  const isUserAllowed = rule.users?.includes(fieldPermUsername.value);
+  const isRoleAllowed = rule.roles?.some((r) =>
+    fieldPermRoles.value.includes(r)
+  );
+  return isUserAllowed || isRoleAllowed;
+};
+
+const restrictionMethodFor = (col) => {
+  const rule = fieldRuleFor(col);
+  if (!rule || isFieldPermAllowed(rule)) return null;
+  return rule.method === "hidden" ? "hidden" : "readonly";
+};
+
+const isColumnVisible = (col) => {
+  if (convertToBoolean(col?.hidden)) return false;
+  return restrictionMethodFor(col) !== "hidden";
+};
 
 /**
  * Time-ago label for header
@@ -1615,14 +1757,22 @@ const prevPage = () => {
  * Validate required fields across the whole form and submit answers.
  */
 const onSubmitData = () => {
+  if (checklistBlockedReason.value) {
+    $q.notify({
+      message: checklistBlockedReason.value,
+      color: "orange",
+      icon: "lock",
+    });
+    return;
+  }
   const requiredFields = formItems.value.filter(
     (val) => val.required === true && val.type === "form"
   );
 
   // Detect required answers whose current value is actually empty (across all rows)
   const allRows = getUserAnswers.value || [];
-  const missing = requiredFields.filter((field) =>
-    !allRows.some((row) => row && isAnswerFilled(row[field.id]))
+  const missing = requiredFields.filter(
+    (field) => !allRows.some((row) => row && isAnswerFilled(row[field.id]))
   );
 
   if (missing.length > 0) {
@@ -1650,8 +1800,12 @@ const onSubmitData = () => {
     const liveAnsRows = getUserAnswers.value || [];
 
     const resolveCanonical = (liveId) => {
-      const liveCol = formItems.value.find((c) => String(c.id) === String(liveId));
-      const liveLabel = String(liveCol?.content?.label ?? liveCol?.label ?? "").trim();
+      const liveCol = formItems.value.find(
+        (c) => String(c.id) === String(liveId)
+      );
+      const liveLabel = String(
+        liveCol?.content?.label ?? liveCol?.label ?? ""
+      ).trim();
       if (!liveLabel) return liveId;
       const match = historyFields.find(
         (h) =>
@@ -2083,6 +2237,70 @@ const getConnectedMRS = async (id) => {
     true
   );
   if (data) connectedMRSVal.value = data;
+};
+
+const loadUserOwnAnswers = async () => {
+  if (!connectedMRSVal.value?.id) return;
+  loadingOwnData.value = true;
+  try {
+    store.restoreDefault();
+
+    const currentUsername =
+      authStore.authDet?.username || authStore.getDetails?.username || "";
+    const defaultFilter = Array.isArray(props.setup?.defaultFilterData)
+      ? props.setup.defaultFilterData
+      : [];
+
+    const res = await postData(
+      "post",
+      {
+        pagination: {
+          sortBy: "",
+          descending: false,
+          page: 1,
+          rowsPerPage: 0,
+          rowsNumber: 0,
+        },
+        filter: [
+          ...defaultFilter,
+          {
+            cols: { value: "created_by", label: "Created By", type: "text" },
+            value: [currentUsername],
+            type: "text",
+            opr: "=",
+            conmet: "and",
+          },
+        ],
+      },
+      `mrs/runningReport/${connectedMRSVal.value.id}`,
+      false,
+      false,
+      true
+    );
+
+    const dataRows = res?.data?.data || [];
+    dataRows.forEach((row, targetRowIdx) => {
+      for (let index = 0; index < Object.keys(row).length; index++) {
+        const idx = Object.keys(row)[index];
+
+        if (idx.includes("CMS_REPORT_POS")) {
+          const idxParts = idx.split("_");
+          const fieldId = idxParts[idxParts.length - 1];
+          const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+
+          if (ans !== undefined && ans !== null) {
+            store.addAnswersForm(targetRowIdx, fieldId, ans);
+          }
+        }
+      }
+    });
+
+    setTimeout(() => {
+      refreshedPosts.value += 1;
+    }, 100);
+  } finally {
+    loadingOwnData.value = false;
+  }
 };
 
 /**

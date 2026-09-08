@@ -54,6 +54,9 @@ const apiRequest = ($qParam) => {
           authorization: `Bearer ${isMSToken ? store.msTokenDet.accessToken : store.authDet.token
             }`,
           username: store.authDet.username,
+          ...(store.getChoosedRole?.role?.id
+            ? { roleid: store.getChoosedRole.role.id }
+            : null),
           'X-Requested-With': 'XMLHttpRequest',
           ...(blob
             ? {
@@ -69,6 +72,9 @@ const apiRequest = ($qParam) => {
         responseType: blob ? "arraybuffer" : "json",
         headers: {
           username: store.authDet.username,
+          ...(store.getChoosedRole?.role?.id
+            ? { roleid: store.getChoosedRole.role.id }
+            : null),
           ...(blob
             ? {
               "Content-Type":

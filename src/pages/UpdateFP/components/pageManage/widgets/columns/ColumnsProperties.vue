@@ -31,19 +31,18 @@
   </div>
 </template>
 <script setup>
-import { toRef, toRaw } from "vue";
+import { toRef } from "vue";
 import { useBlockField } from "../useBlockField.js";
 const props = defineProps({ block: { type: Object, required: true } });
 const blockRef = toRef(props, "block");
 const count = useBlockField(blockRef, "count");
 const columns = useBlockField(blockRef, "columns");
 const equalizeColumns = () => {
-  const raw = toRaw(props.block);
-  const colCount = raw.content.count;
+  const colCount = props.block.content.count;
   const width = Math.floor(12 / colCount);
-  raw.content.columns = Array.from({ length: colCount }, (_, i) => ({
+  props.block.content.columns = Array.from({ length: colCount }, (_, i) => ({
     width: i === colCount - 1 ? 12 - width * (colCount - 1) : width,
-    children: raw.content.columns?.[i]?.children || [],
+    children: props.block.content.columns?.[i]?.children || [],
   }));
 };
 </script>

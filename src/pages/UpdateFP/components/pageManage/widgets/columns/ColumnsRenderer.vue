@@ -9,20 +9,14 @@
     >
       <draggable
         tag="div"
-        v-model="col.children"
-        group="widgets"
+        :list="col.children"
+        :group="{ name: 'widgets', pull: true, put: true }"
         item-key="id"
         ghost-class="ghost-block"
         animation="200"
+        handle=".drag-handle-nested"
         :class="editMode ? 'column-drop-zone rounded column-drop-zone--edit' : ''"
         :disabled="!editMode"
-        @update:model-value="
-          $emit('update:children', {
-            colIndex: ci,
-            children: $event,
-            blockId: block.id,
-          })
-        "
       >
         <template #item="{ element: childBlock }">
           <div
@@ -37,6 +31,11 @@
               class="nested-block-toolbar row items-center no-wrap q-gutter-xs"
             >
               <q-icon
+                name="drag_indicator"
+                class="drag-handle-nested cursor-move text-grey-6"
+                size="xs"
+              />
+              <q-icon
                 :name="getBlockMeta(childBlock.type).icon"
                 size="xs"
                 :color="getBlockMeta(childBlock.type).color"
@@ -45,6 +44,22 @@
                 getBlockMeta(childBlock.type).label
               }}</span>
               <q-space />
+              <q-btn
+                flat
+                dense
+                round
+                icon="content_copy"
+                size="xs"
+                color="grey-7"
+                @click.stop="
+                  $emit('duplicate-child', {
+                    colIndex: ci,
+                    blockId: childBlock.id,
+                  })
+                "
+              >
+                <q-tooltip>Duplicate</q-tooltip>
+              </q-btn>
               <q-btn
                 flat
                 dense
@@ -68,6 +83,7 @@
               @select-block="$emit('select-block', $event)"
               @update:children="$emit('update:children', $event)"
               @delete-child="$emit('delete-child', $event)"
+              @duplicate-child="$emit('duplicate-child', $event)"
             />
           </div>
         </template>
@@ -98,5 +114,5 @@ defineProps({
   editMode: Boolean,
   selectedBlockId: String,
 });
-defineEmits(["select-block", "update:children", "delete-child"]);
+defineEmits(["select-block", "update:children", "delete-child", "duplicate-child"]);
 </script>

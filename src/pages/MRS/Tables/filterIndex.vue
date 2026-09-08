@@ -24,7 +24,7 @@
                 map-options
                 emit-value
                 @update:model-value="list.value.splice(1, 1)"
-                :disable="props.propsReports === 'sp'"
+                :disable="props.propsReports === 'sp' || props.readOnly"
               ></q-select>
             </div>
             <div class="col">
@@ -35,6 +35,7 @@
                 dense
                 label="Columns need to filtered"
                 @update:model-value="list.value.splice(1, 1)"
+                :disable="props.readOnly"
               ></q-select>
             </div>
             <div class="col q-pl-md">
@@ -50,7 +51,7 @@
                   list.value.splice(1, 1);
                   list.value[0] = '';
                 "
-                :disable="props.propsReports === 'sp'"
+                :disable="props.propsReports === 'sp' || props.readOnly"
               ></q-select>
             </div>
             <template v-if="!['isnull', 'isnotnull'].includes(list.opr)">
@@ -61,13 +62,17 @@
                   filled
                   dense
                   :readonly="
-                    list.cols.type === 'date' || list.cols.type === 'datetime'
+                    props.readOnly ||
+                    list.cols.type === 'date' ||
+                    list.cols.type === 'datetime'
                   "
                 >
                   <template
                     v-slot:prepend
                     v-if="
-                      list.cols.type === 'date' || list.cols.type === 'datetime'
+                      !props.readOnly &&
+                      (list.cols.type === 'date' ||
+                        list.cols.type === 'datetime')
                     "
                   >
                     <q-icon name="event" class="cursor-pointer">
@@ -97,7 +102,10 @@
                     </q-icon>
                   </template>
 
-                  <template v-slot:append v-if="list.cols.type === 'datetime'">
+                  <template
+                    v-slot:append
+                    v-if="!props.readOnly && list.cols.type === 'datetime'"
+                  >
                     <q-icon name="access_time" class="cursor-pointer">
                       <q-popup-proxy
                         cover
@@ -131,6 +139,7 @@
                   dense
                   label="Columns need to filtered"
                   @update:model-value="list.value.splice(1, 1)"
+                  :disable="props.readOnly"
                 ></q-select>
               </div>
               <div class="col q-pl-md" v-if="list.opr == 'between'">
@@ -140,13 +149,17 @@
                   filled
                   dense
                   :readonly="
-                    list.cols.type === 'date' || list.cols.type === 'datetime'
+                    props.readOnly ||
+                    list.cols.type === 'date' ||
+                    list.cols.type === 'datetime'
                   "
                 >
                   <template
                     v-slot:prepend
                     v-if="
-                      list.cols.type === 'date' || list.cols.type === 'datetime'
+                      !props.readOnly &&
+                      (list.cols.type === 'date' ||
+                        list.cols.type === 'datetime')
                     "
                   >
                     <q-icon name="event" class="cursor-pointer">
@@ -176,7 +189,10 @@
                     </q-icon>
                   </template>
 
-                  <template v-slot:append v-if="list.cols.type === 'datetime'">
+                  <template
+                    v-slot:append
+                    v-if="!props.readOnly && list.cols.type === 'datetime'"
+                  >
                     <q-icon name="access_time" class="cursor-pointer">
                       <q-popup-proxy
                         cover
@@ -203,7 +219,7 @@
                 </q-input>
               </div>
             </template>
-            <div class="col-1 q-pl-md">
+            <div class="col-1 q-pl-md" v-if="!props.readOnly">
               <q-btn
                 :icon="idx === 0 ? 'add' : 'delete'"
                 :color="idx === 0 ? 'green' : 'red'"
@@ -249,6 +265,10 @@ const props = defineProps({
   colsData: Array,
   filtered: Array,
   propsReports: String,
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
   isAPIOpt: {
     type: Boolean,
     default: false,

@@ -15,10 +15,10 @@
       </q-card-section>
 
       <q-card-section class="q-pa-md" style="max-height: 65vh; overflow-y: auto">
-        <template v-if="groupedLogics.length > 0">
+        <template v-if="visibleGroups.length > 0">
           <div
-            v-for="(group, gIdx) in groupedLogics"
-            :key="gIdx"
+            v-for="group in visibleGroups"
+            :key="`${group.rowIdx}-${group.colIdx}`"
             class="q-mb-lg"
           >
             <div class="text-h6 text-primary q-mb-sm">
@@ -53,7 +53,7 @@
                 <q-btn
                   color="orange"
                   icon="edit"
-                  @click="onEditLogic(gIdx, lIdx)"
+                  @click="onEditLogic(group, lIdx)"
                   outline
                   dense
                 >
@@ -62,7 +62,7 @@
                 <q-btn
                   color="red"
                   icon="delete"
-                  @click="onDeleteLogic(gIdx, lIdx)"
+                  @click="onDeleteLogic(group, lIdx)"
                   outline
                   dense
                   class="q-ml-sm"
@@ -83,6 +83,16 @@
       </q-card-section>
 
       <q-card-actions class="q-pa-md">
+        <q-btn
+          @click="onClearAll"
+          color="negative"
+          label="Clear All"
+          outline
+          :disable="groupedLogics.length === 0"
+        >
+          <q-tooltip>Remove all logics from all fields (applied on Save Changes)</q-tooltip>
+        </q-btn>
+        <q-space />
         <q-btn @click="onSubmit" color="primary" label="Save Changes" />
         <q-btn @click="onDialogCancel" color="secondary" label="Close" flat />
       </q-card-actions>
@@ -91,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import viewLogicForms from "./viewLogicForms.vue";
 
@@ -104,6 +114,10 @@ const props = defineProps({
 });
 
 const groupedLogics = ref([]);
+
+const visibleGroups = computed(() =>
+  groupedLogics.value.filter((g) => g.logics.length > 0)
+);
 
 onMounted(() => {
   buildGroupedLogics();
@@ -132,8 +146,7 @@ const buildGroupedLogics = () => {
   groupedLogics.value = groups;
 };
 
-const onEditLogic = (gIdx, lIdx) => {
-  const group = groupedLogics.value[gIdx];
+const onEditLogic = (group, lIdx) => {
   const logic = group.logics[lIdx];
 
   const content = props.forms[group.rowIdx].type === "row"
@@ -154,17 +167,28 @@ const onEditLogic = (gIdx, lIdx) => {
   });
 };
 
-const onDeleteLogic = (gIdx, lIdx) => {
+const onDeleteLogic = (group, lIdx) => {
   $q.dialog({
     title: "Confirm Delete",
     message: "Are you sure you want to delete this logic?",
     persistent: true,
     cancel: true,
   }).onOk(() => {
-    groupedLogics.value[gIdx].logics.splice(lIdx, 1);
-    if (groupedLogics.value[gIdx].logics.length === 0) {
-      groupedLogics.value.splice(gIdx, 1);
-    }
+    group.logics.splice(lIdx, 1);
+  });
+};
+
+const onClearAll = () => {
+  $q.dialog({
+    title: "Confirm Clear All",
+    message:
+      "This will remove ALL logics from ALL fields after you click Save Changes. Continue?",
+    persistent: true,
+    cancel: true,
+  }).onOk(() => {
+    groupedLogics.value.forEach((g) => {
+      g.logics = [];
+    });
   });
 };
 

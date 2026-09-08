@@ -38,6 +38,27 @@
         </div>
       </q-card-section>
 
+      <q-card-section v-if="headerFields.length > 0" class="q-pb-none">
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="(hf, hIdx) in headerFields"
+            :key="'header-field-' + hIdx"
+            :class="
+              hf.colLength && hf.colLength <= 12 ? `col-${hf.colLength}` : 'col'
+            "
+          >
+            <multiplePromptDialog
+              :initialFields="[hf]"
+              @ok="onChildFieldUpdate"
+              @change="onChildFieldUpdate"
+              :isDialog="false"
+            >
+            </multiplePromptDialog>
+          </div>
+        </div>
+        <q-separator class="q-mt-md" />
+      </q-card-section>
+
       <q-card-section>
         <!-- Dynamic Input Fields -->
         <div v-for="(field, index) in fields" :key="index" class="q-mb-sm">
@@ -471,6 +492,10 @@ const props = defineProps({
       },
     ],
   },
+  headerFields: {
+    type: Array,
+    default: () => [],
+  },
   addable: {
     type: Boolean,
     default: false, // Disabled since you commented out the button
@@ -503,12 +528,15 @@ const fields = ref([]);
 const currentField = ref([]);
 
 const fieldValues = ref(
-  flattenFields(props.initialFields).reduce((acc, field) => {
-    if (field?.name) {
-      acc[field.name] = getDefaultFieldValue(field);
-    }
-    return acc;
-  }, {})
+  flattenFields([...props.headerFields, ...props.initialFields]).reduce(
+    (acc, field) => {
+      if (field?.name) {
+        acc[field.name] = getDefaultFieldValue(field);
+      }
+      return acc;
+    },
+    {}
+  )
 );
 
 const onChildFieldUpdate = (data) => {
@@ -557,7 +585,8 @@ const isFieldVisible = (field) => {
 
 const onSubmit = () => {
   // Validate before submitting
-  const isValid = fields.value.every((field) => {
+  const allFields = flattenFields([...props.headerFields, ...fields.value]);
+  const isValid = allFields.every((field) => {
     if (field.rules) {
       return field.rules.every(
         (rule) => rule(fieldValues.value[field.name]) === true

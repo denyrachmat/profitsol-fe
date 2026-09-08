@@ -1031,7 +1031,7 @@ const onClickExportBackup = () => {
     shareIsroles: shareIsroles.value,
     selectedSharedMenu: selectedSharedMenu.value,
     shareFormsMenuIcon: shareFormsMenuIcon.value,
-    shareFormsRoleID: shareFormsRoleID.value,
+    shareFormsRoleID: selectedTableRoles.value,
     exportedAt: new Date().toISOString(),
   };
 
@@ -1184,6 +1184,7 @@ const onSaveQuestion = () => {
         shareFormsIsRoles: shareIsroles.value,
         selectedSharedMenu: selectedSharedMenu.value,
         shareFormsMenuIcon: shareFormsMenuIcon.value,
+        shareFormsRoleID: selectedTableRoles.value,
       },
       `cms/forms`,
       false,
@@ -1245,6 +1246,7 @@ const onClickShare = () => {
     shareIsroles.value = val.isRoles;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
     selectedSharedMenu.value = val.selectedSharedMenu;
+    selectedTableRoles.value = val.selectedTableRoles || [];
   });
 };
 

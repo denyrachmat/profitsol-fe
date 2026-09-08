@@ -38,7 +38,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 const props = defineProps({
-  idForm: String,
+  idForm: [String, Number],
 });
 
 const isLoaded = ref(false);

@@ -679,9 +679,18 @@ const onClickCopyForm = (id, row) => {
       }
 
       // console.log("Get Forms Data:", getForms);
+      const formsCopy = JSON.parse(JSON.stringify(getForms.value.forms || []));
+      formsCopy.forEach((form) => {
+        delete form.id;
+        if (Array.isArray(form.content)) {
+          form.content.forEach((item) => {
+            delete item.id;
+          });
+        }
+      });
       const posts = {
         idRef: "", // Add idRef if needed, or set to actual value
-        forms: getForms.value.forms,
+        forms: formsCopy,
         title: getForms.value.title,
         desc: getForms.value.desc,
         isQuiz: 3, // Set as needed

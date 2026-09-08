@@ -94,7 +94,7 @@ export default {
   },
   embed: {
     meta: { label: "Embed", icon: "picture_in_picture", color: "red" },
-    defaultContent: () => ({ url: "", ratio: "16:9" }),
+    defaultContent: () => ({ url: "", ratio: "16:9", height: "", objectFit: "cover", borderRadius: "8px", customCss: "", customClass: "" }),
     PropertiesComponent: defineAsyncComponent(() => import("./embed/EmbedProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./embed/EmbedRenderer.vue")),
   },

@@ -1,19 +1,10 @@
-import { toRaw, ref, watch } from "vue";
+import { computed } from "vue";
 
 export function useBlockField(blockRef, field) {
-  const local = ref(blockRef.value?.content?.[field]);
-
-  watch(
-    () => blockRef.value?.content?.[field],
-    (newVal) => {
-      local.value = newVal;
-    }
-  );
-
-  watch(local, (newVal) => {
-    const raw = toRaw(blockRef.value);
-    if (raw?.content) raw.content[field] = newVal;
+  return computed({
+    get: () => blockRef.value?.content?.[field],
+    set: (val) => {
+      if (blockRef.value?.content) blockRef.value.content[field] = val;
+    },
   });
-
-  return local;
 }

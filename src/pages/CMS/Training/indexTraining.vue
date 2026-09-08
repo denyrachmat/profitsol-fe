@@ -289,9 +289,10 @@ const setupTrainingSetup = ref({
   endQuiz: "",
 });
 const share = ref([]);
-const shareMainMenu = ref(0);
-const shareIsroles = ref(0);
+const shareMainMenu = ref(false);
+const shareIsroles = ref(false);
 const shareFormsMenuIcon = ref("");
+const selectedSharedMenu = ref("");
 const loadingUpload = ref(false);
 
 const valueSubmited = ref([]);
@@ -638,12 +639,18 @@ const onClickShare = () => {
     componentProps: {
       id: idRef.value,
       shared: share.value,
+      shareMainMenu: shareMainMenu.value,
+      shareIsroles: shareIsroles.value,
+      selectedSharedMenu: selectedSharedMenu.value,
+      shareFormsMenuIcon: shareFormsMenuIcon.value,
+      selectedTableRoles: [],
     },
   }).onOk(async (val) => {
     share.value = val.emails;
     shareMainMenu.value = val.isMainMenu;
     shareIsroles.value = val.isRoles;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedSharedMenu.value = val.selectedSharedMenu;
   });
 };
 
@@ -678,6 +685,8 @@ const onSaveQuestion = () => {
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
         shareFormsIsRoles: shareIsroles.value,
+        selectedSharedMenu: selectedSharedMenu.value,
+        shareFormsMenuIcon: shareFormsMenuIcon.value,
       },
       `cms/forms`,
       false,

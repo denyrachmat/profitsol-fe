@@ -37,35 +37,54 @@
           </div>
         </div>
 
-        <q-select
+        <q-input
           outlined
-          v-model="choosedData"
-          :options="filteredOptions"
-          label="Choose Data"
-          emit-value
-          map-options
-          :loading="loading"
-          use-input
-          input-debounce="300"
-          @filter="onFilter"
+          dense
+          debounce="300"
+          v-model="searchText"
+          placeholder="Search title"
+          clearable
+          class="q-mb-sm"
         >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>{{ scope.opt.label }}</q-item-label>
-                <q-item-label caption>
-                  <q-badge
-                    :color="statusColor(scope.opt.status)"
-                    class="q-mr-sm"
-                  >
-                    {{ scope.opt.status || "draft" }}
-                  </q-badge>
-                  <span v-if="scope.opt.year">Year: {{ scope.opt.year }}</span>
-                </q-item-label>
-              </q-item-section>
-            </q-item>
+          <template v-slot:append>
+            <q-icon name="search" />
           </template>
-        </q-select>
+        </q-input>
+
+        <q-table
+          :rows="filteredOptions"
+          :columns="columns"
+          row-key="label"
+          :loading="loading"
+          :pagination="pagination"
+          dense
+          flat
+          bordered
+          :rows-per-page-options="[5, 10, 20, 0]"
+          @row-click="(evt, row) => { choosedData = row.value }"
+          no-data-label="No forms found"
+        >
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              :class="String(choosedData?.id) === String(props.row.value?.id) ? 'bg-blue-1' : ''"
+              @click="choosedData = props.row.value"
+              style="cursor: pointer"
+            >
+              <q-td key="label" :props="props">
+                <div class="text-weight-medium">{{ props.row.label }}</div>
+                <div class="text-caption text-grey">{{ props.row.value?.id }}</div>
+              </q-td>
+              <q-td key="status" :props="props" class="text-center">
+                <q-badge :color="statusColor(props.row.status)">{{ props.row.status || "draft" }}</q-badge>
+              </q-td>
+              <q-td key="created_at" :props="props" class="text-center">
+                {{ props.row.created_at ? new Date(props.row.created_at).toLocaleString() : "-" }}
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+        <div v-if="choosedData" class="q-mt-sm text-caption text-grey">Selected: {{ choosedData?.title || listData.find(o=>String(o.value?.id)===String(choosedData?.id))?.label }}</div>
       </q-card-section>
 
       <q-card-actions align="between">
@@ -101,6 +120,19 @@ const cloning = ref(false);
 const filterStatus = ref(null);
 const filterYear = ref(null);
 const searchText = ref("");
+const columns = ref([
+  { name: "label", label: "Title", field: "label", align: "left", sortable: true },
+  { name: "status", label: "Status", field: "status", align: "center", sortable: true },
+  {
+    name: "created_at",
+    label: "Created At",
+    field: "created_at",
+    align: "center",
+    sortable: true,
+    format: (val) => (val ? new Date(val).toLocaleDateString() : "-"),
+  },
+]);
+const pagination = ref({ page: 1, rowsPerPage: 10, sortBy: "label", descending: false });
 
 const props = defineProps({
   type: String,
@@ -130,9 +162,12 @@ const filteredOptions = computed(() => {
     opts = opts.filter((o) => (o.status || "draft") === filterStatus.value);
   }
   if (filterYear.value) {
-    opts = opts.filter(
-      (o) => String(o.year) === String(filterYear.value)
-    );
+    const target = String(filterYear.value);
+    opts = opts.filter((o) => {
+      const createdYear = o.created_at ? String(new Date(o.created_at).getFullYear()) : "";
+      const fallbackYear = String(o.year || "");
+      return (createdYear || fallbackYear) === target;
+    });
   }
   if (searchText.value) {
     const s = searchText.value.toLowerCase();
@@ -163,6 +198,7 @@ const getData = async () => {
       ...item,
       status: item.value?.status || "draft",
       year: item.value?.year || null,
+      created_at: item.value?.created_at || item.created_at || null,
     }));
   } else {
     loading.value = false;
@@ -170,10 +206,13 @@ const getData = async () => {
 };
 
 const onClone = async () => {
-  if (!choosedData.value) return;
+  if (!choosedData.value?.id) return;
 
-  const sourceItem = listData.value.find((o) => o.value?.id === choosedData.value?.id);
-  if (!sourceItem) return;
+  const sourceItem = listData.value.find((o) => String(o.value?.id) === String(choosedData.value?.id));
+  if (!sourceItem) {
+    $q.notify({ type: "negative", message: "Source not found" });
+    return;
+  }
 
   $q.dialog({
     title: "Clone Form",

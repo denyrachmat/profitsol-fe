@@ -1,6 +1,14 @@
 <template>
   <div class="show-component-checklist q-py-sm">
     <div
+      v-if="blockedReason"
+      class="q-pa-md bg-orange-1 text-orange-10 rounded-borders q-mb-sm text-center"
+    >
+      <q-icon name="lock" size="32px" />
+      <div class="text-subtitle1 text-weight-bold">{{ blockedReason }}</div>
+      <div class="text-caption">Editing is disabled for now.</div>
+    </div>
+    <div
       v-if="props.data.length > 0"
       class="table-container shadow-2 rounded-borders"
     >
@@ -22,7 +30,7 @@
             </th>
 
             <th
-              v-if="props.enableDeleteInstance"
+              v-if="props.enableDeleteInstance && !blockedReason"
               style="width: 70px"
               class="text-center text-subtitle2"
             >
@@ -56,24 +64,40 @@
             >
               <div class="cell-wrapper">
                 <!-- Cari bagian componentViewVue di dalam tbody showComponentAsChecklist.vue -->
-                <componentViewVue
+                <template
                   v-if="flatCol.type === 'form' && flatCol.content?.component"
-                  :type="flatCol.content?.component?.category"
-                  :type-input="flatCol.content?.component?.value?.type"
-                  :comp="flatCol.content?.component?.value?.comp"
-                  :label="''"
-                  :detail="flatCol.content?.detail_data"
-                  :is-required="flatCol.required"
-                  mode="live"
-                  class="full-width compact-input"
-                  @customChange="
-                    (val) => emitAnswerChange(instanceIdx - 1, flatCol.id, val)
-                  "
-                  :ans="getAnswerData(instanceIdx - 1, flatCol.id)"
-                  :ansArr="getAnswerArrData(instanceIdx - 1, flatCol.id)"
-                  :apiOpt="flatCol.content?.component?.apiOpt"
-                  :readonly="flatCol.readonly"
-                />
+                >
+                  <componentViewVue
+                    v-if="!blockedReason"
+                    :type="flatCol.content?.component?.category"
+                    :type-input="flatCol.content?.component?.value?.type"
+                    :comp="flatCol.content?.component?.value?.comp"
+                    :label="''"
+                    :detail="flatCol.content?.detail_data"
+                    :is-required="flatCol.required"
+                    mode="live"
+                    class="full-width compact-input"
+                    @customChange="
+                      (val) => emitAnswerChange(instanceIdx - 1, flatCol.id, val)
+                    "
+                    :ans="getAnswerData(instanceIdx - 1, flatCol.id)"
+                    :ansArr="getAnswerArrData(instanceIdx - 1, flatCol.id)"
+                    :apiOpt="flatCol.content?.component?.apiOpt"
+                    :readonly="
+                      !!blockedReason ||
+                      flatCol.readonly ||
+                      restrictionMethodFor(flatCol) === 'readonly'
+                    "
+                  />
+
+                  <div
+                    v-else
+                    class="full-width text-left"
+                    style="word-break: break-word; white-space: pre-wrap"
+                  >
+                    {{ displayCellValue(instanceIdx - 1, flatCol) || "—" }}
+                  </div>
+                </template>
 
                 <div
                   v-else-if="flatCol.type === 'html'"
@@ -84,7 +108,10 @@
               </div>
             </td>
 
-            <td v-if="props.enableDeleteInstance" class="text-center bg-grey-1">
+            <td
+              v-if="props.enableDeleteInstance && !blockedReason"
+              class="text-center bg-grey-1"
+            >
               <q-btn
                 icon="delete"
                 color="negative"
@@ -128,13 +155,13 @@
           / {{ props.maxInstances }}
         </div>
 
-        <div class="q-gutter-x-sm">
+        <div class="q-gutter-x-sm" v-if="!blockedReason">
           <q-btn
             color="primary"
             outline
             icon="add"
             label="TAMBAH FORM BARU"
-            :disable="totalInstances >= props.maxInstances"
+            :disable="totalInstances >= props.maxInstances || !!blockedReason"
             @click="emitAddRow"
           />
 
@@ -143,6 +170,7 @@
             unelevated
             icon="save"
             label="SUBMIT DATA"
+            :disable="!!blockedReason"
             @click="emit('submitData')"
           />
         </div>
@@ -178,6 +206,7 @@ const props = defineProps({
   enableDeleteInstance: { type: Boolean, default: false },
   maxInstances: { type: Number, default: 10 },
   setup: { type: Object, default: () => ({}) },
+  blockedReason: { type: String, default: "" },
 });
 
 onMounted(() => {
@@ -296,6 +325,21 @@ const getAnswerArrData = (rowIdx, fieldId) => {
   return Array.isArray(val) ? normalizeAnswer(val) : "";
 };
 
+const displayCellValue = (rowIdx, col) => {
+  const arr = getAnswerArrData(rowIdx, col.id);
+  let val;
+  if (Array.isArray(arr)) {
+    val = arr
+      .filter((x) => x !== "" && x !== null && x !== undefined)
+      .join(", ");
+  } else {
+    val = getAnswerData(rowIdx, col.id);
+  }
+  const s = String(val ?? "").trim();
+  if (s.startsWith("data:")) return "📎 Attachment";
+  return s;
+};
+
 const emitAnswerChange = (rowIdx, fieldId, value) => {
   emit("answerChange", { rowIdx, fieldId, value });
 };
@@ -319,23 +363,28 @@ const isColumnVisible = (col) => {
   }
   if (typeof hidden === "number") return hidden === 0;
 
-  // Check field-level permissions
-  const fieldPerms = props.setup?.fieldPermissions;
-  if (fieldPerms && fieldPerms.length > 0 && col.id) {
-    const rule = fieldPerms.find((p) => String(p.fieldId) === String(col.id));
-    if (rule) {
-      // If field has restrictions, check if current user is allowed
-      const isUserAllowed = rule.users?.includes(currentUsername.value);
-      const isRoleAllowed = rule.roles?.some((r) =>
-        currentUserRoles.value.includes(r)
-      );
-      if (!isUserAllowed && !isRoleAllowed) {
-        return false; // hide column for users without permission
-      }
-    }
-  }
+  return restrictionMethodFor(col) !== "hidden";
+};
 
-  return true;
+const fieldRuleFor = (col) => {
+  const fieldPerms = props.setup?.fieldPermissions;
+  if (!fieldPerms || fieldPerms.length === 0 || !col?.id) return null;
+  return fieldPerms.find((p) => String(p.fieldId) === String(col.id)) || null;
+};
+
+const isFieldPermAllowed = (rule) => {
+  if (!rule) return true;
+  const isUserAllowed = rule.users?.includes(currentUsername.value);
+  const isRoleAllowed = rule.roles?.some((r) =>
+    currentUserRoles.value.includes(r)
+  );
+  return isUserAllowed || isRoleAllowed;
+};
+
+const restrictionMethodFor = (col) => {
+  const rule = fieldRuleFor(col);
+  if (!rule || isFieldPermAllowed(rule)) return null;
+  return rule.method === "hidden" ? "hidden" : "readonly";
 };
 
 // Pantau perubahan data jawaban di store secara mendalam

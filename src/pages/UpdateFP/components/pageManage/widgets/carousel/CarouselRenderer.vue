@@ -23,74 +23,97 @@
         class="carousel-edit-slide rounded-borders"
         :style="{ minHeight: block.content.height || '300px', ...slideStyle }"
       >
-        <!-- Rendered blocks (no draggable wrapping) -->
-        <div
-          v-for="childBlock in currentSlideChildren"
-          :key="childBlock.id"
-          class="nested-block-wrapper"
-          :class="{
-            'nested-block-selected': selectedBlockId === childBlock.id,
-          }"
-          @click.stop="$emit('select-block', childBlock)"
-        >
-          <div
-            class="nested-block-toolbar row items-center no-wrap q-gutter-xs"
-          >
-            <q-icon
-              :name="getBlockMeta(childBlock.type).icon"
-              size="xs"
-              :color="getBlockMeta(childBlock.type).color"
-            />
-            <span class="text-caption">{{
-              getBlockMeta(childBlock.type).label
-            }}</span>
-            <q-space />
-            <q-btn
-              flat
-              dense
-              round
-              icon="delete_outline"
-              size="xs"
-              color="red"
-              @click.stop="
-                $emit('delete-child', {
-                  slideIndex: currentSlide,
-                  blockId: childBlock.id,
-                })
-              "
-            />
-          </div>
-          <div class="carousel-block-content" @click.stop="$emit('select-block', childBlock)">
-            <blockRenderer
-              :block="childBlock"
-              :preview="true"
-              :edit-mode="false"
-              :selected-block-id="selectedBlockId"
-            />
-          </div>
-        </div>
-
-        <!-- Empty hint -->
-        <div
-          v-if="!currentSlideChildren.length"
-          class="carousel-empty-hint text-center text-grey-5 text-caption q-pa-md"
-        >
-          <q-icon name="add" size="18px" />
-          <div>Drop widgets here</div>
-        </div>
-
-        <!-- Drop zone: receives new widgets from outside -->
         <draggable
           tag="div"
-          :list="dropZoneList"
-          group="widgets"
+          :list="currentSlideChildrenList"
+          :group="{ name: 'widgets', pull: true, put: true }"
           item-key="id"
           ghost-class="ghost-block"
           animation="200"
-          class="carousel-drop-target"
-          @add="onDrop"
+          handle=".drag-handle-nested"
+          class="carousel-drop-target column-drop-zone"
+          :class="editMode ? 'column-drop-zone--edit' : ''"
+          :disabled="!editMode"
         >
-          <template #item><div /></template>
+          <template #item="{ element: childBlock }">
+            <div
+              class="nested-block-wrapper"
+              :class="{
+                'nested-block-selected': selectedBlockId === childBlock.id,
+              }"
+              @click.stop="$emit('select-block', childBlock)"
+            >
+              <div
+                class="nested-block-toolbar row items-center no-wrap q-gutter-xs"
+              >
+                <q-icon
+                  name="drag_indicator"
+                  class="drag-handle-nested cursor-move text-grey-6"
+                  size="xs"
+                />
+                <q-icon
+                  :name="getBlockMeta(childBlock.type).icon"
+                  size="xs"
+                  :color="getBlockMeta(childBlock.type).color"
+                />
+                <span class="text-caption">{{
+                  getBlockMeta(childBlock.type).label
+                }}</span>
+                <q-space />
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="content_copy"
+                  size="xs"
+                  color="grey-7"
+                  @click.stop="
+                    $emit('duplicate-child', {
+                      slideIndex: currentSlide,
+                      blockId: childBlock.id,
+                    })
+                  "
+                >
+                  <q-tooltip>Duplicate</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="delete_outline"
+                  size="xs"
+                  color="red"
+                  @click.stop="
+                    $emit('delete-child', {
+                      slideIndex: currentSlide,
+                      blockId: childBlock.id,
+                    })
+                  "
+                />
+              </div>
+              <div class="carousel-block-content" @click.stop="$emit('select-block', childBlock)">
+                <blockRenderer
+                  :block="childBlock"
+                  :preview="true"
+                  :edit-mode="false"
+                  :selected-block-id="selectedBlockId"
+                  @select-block="$emit('select-block', $event)"
+                  @update:children="$emit('update:children', $event)"
+                  @delete-child="$emit('delete-child', $event)"
+                  @duplicate-child="$emit('duplicate-child', $event)"
+                />
+              </div>
+            </div>
+          </template>
+          <template #footer>
+            <div
+              v-if="!currentSlideChildren.length"
+              class="carousel-empty-hint text-center text-grey-5 text-caption q-pa-md"
+            >
+              <q-icon name="add" size="18px" />
+              <div>Drop widgets here</div>
+            </div>
+          </template>
         </draggable>
       </div>
     </div>
@@ -148,7 +171,7 @@ const props = defineProps({
   selectedBlockId: String,
 });
 
-const emit = defineEmits(["select-block", "update:children", "delete-child"]);
+const emit = defineEmits(["select-block", "update:children", "delete-child", "duplicate-child"]);
 
 const currentSlide = computed({
   get: () => props.block.content._currentSlide || 0,
@@ -161,40 +184,19 @@ const slides = computed(() => props.block.content.slides || []);
 
 const currentSlideChildren = computed(() => slides.value[currentSlide.value]?.children || []);
 
-const dropZoneList = ref([]);
+// Direct reference to the active slide's children array for :list (mutated in-place by vuedraggable)
+const currentSlideChildrenList = computed(() => {
+  const slide = slides.value[currentSlide.value];
+  if (!slide) return [];
+  if (!slide.children) slide.children = [];
+  return slide.children;
+});
 
 const slideStyle = computed(() => {
   const bg = props.block.content.slideBackground;
   if (!bg) return {};
   return { backgroundColor: bg };
 });
-
-const onDrop = () => {
-  const dropped = [...dropZoneList.value];
-  dropZoneList.value = [];
-  if (!dropped.length) return;
-
-  const slide = props.block.content.slides[currentSlide.value];
-  if (!slide) return;
-  if (!slide.children) slide.children = [];
-
-  for (const item of dropped) {
-    slide.children.push(item);
-  }
-  emit("update:children", {
-    slideIndex: currentSlide.value,
-    children: [...slide.children],
-    blockId: props.block.id,
-  });
-};
-
-const onSlideUpdate = (slideIndex, newChildren) => {
-  emit("update:children", {
-    slideIndex,
-    children: newChildren,
-    blockId: props.block.id,
-  });
-};
 
 const addSlide = () => {
   props.block.content.slides.push({ children: [] });
