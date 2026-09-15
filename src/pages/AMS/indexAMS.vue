@@ -6,7 +6,7 @@
       title="Approval List"
       :rows="rows"
       :columns="columns"
-      row-key="name"
+      row-key="id"
       :filter="filter"
       :loading="loading"
     >
@@ -153,7 +153,7 @@ const openMappingMaintenance = (datas = null) => {
     });
 };
 
-const deleteData = () => {
+const deleteData = (id) => {
   $q.dialog({
     title: "Alert",
     message: `Are you sure want to delete this approval ? This action cannot reversed !`,
@@ -163,7 +163,7 @@ const deleteData = () => {
     const data = await postData(
       "delete",
       null,
-      `ams/approval`,
+      `ams/approval/${id}`,
       false,
       false,
       true

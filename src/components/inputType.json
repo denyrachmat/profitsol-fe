@@ -80,6 +80,30 @@
           "type": "multiple-radio",
           "comp": "q-radio"
         }
+      },
+      {
+        "label": "Table Select (Single choice, tabular)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-table",
+          "comp": "q-table"
+        }
+      },
+      {
+        "label": "Table Select (Multiple choice, tabular)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-table-multi",
+          "comp": "q-table"
+        }
+      },
+      {
+        "label": "DMS Folder Picker (Multiple choice)",
+        "category": "multiple",
+        "value": {
+          "type": "multiple-dms",
+          "comp": "q-dms"
+        }
       }
     ]
   }

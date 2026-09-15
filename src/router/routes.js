@@ -2,12 +2,12 @@
 const routes = [
   {
     path: "/login",
-    component: () => import("pages/Auth"),
+    component: () => import("pages/Auth/index.vue"),
     children: [{ path: "", component: () => import("pages/Auth/index.vue"), name: 'login' }],
   },
   {
     path: "/reset-password/:token",
-    component: () => import("pages/Auth"),
+    component: () => import("pages/Auth/index.vue"),
     children: [{ path: "", component: () => import("pages/Auth/resetPassword.vue"), name: 'reset' }],
   },
   {

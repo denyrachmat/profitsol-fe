@@ -1,0 +1,80 @@
+[
+  {
+    "element": "#btn-toggle-menu",
+    "popover": {
+      "title": "Toggle Navigation Menu",
+      "description": "Click this menu icon to open or close the navigation menu.",
+      "side": "bottom",
+      "align": "start"
+    }
+  },
+  {
+    "element": "#drawer-menu",
+    "popover": {
+      "title": "Navigation Menu",
+      "description": "This is the navigation menu where you can access different sections of the site.",
+      "side": "right"
+    }
+  },
+  {
+    "element": "#btn-settings",
+    "popover": {
+      "title": "Show Account Settings",
+      "description": "Click this button to view account settings, logout, and other options. Please click it now to explore the menu.",
+      "side": "bottom",
+      "disableButtons": ["next"]
+    },
+    "meta": {
+      "type": "settings-step"
+    }
+  },
+  {
+    "element": "#btn-portal",
+    "popover": {
+      "title": "Go to Portal",
+      "description": "Click this button to navigate to your portal where you can access your personalized dashboard and settings.",
+      "side": "top"
+    }
+  },
+  {
+    "element": "#btn-edit-profile",
+    "popover": {
+      "title": "Edit Your Profile",
+      "description": "Click this button to access and edit your user profile information.",
+      "side": "top"
+    }
+  },
+  {
+    "element": "#btn-logout",
+    "popover": {
+      "title": "Logout from Account",
+      "description": "Click this button to safely logout from your account when you're done.",
+      "side": "top"
+    }
+  },
+  {
+    "element": "#btn-subscribe",
+    "popover": {
+      "title": "Subscribe to Notifications",
+      "description": "Click this bell icon to enable or disable notifications for important updates.",
+      "side": "top"
+    }
+  },
+  {
+    "element": "#btn-help-tour",
+    "popover": {
+      "title": "Help Tour Button",
+      "description": "Click this to start the help tour.",
+      "side": "top"
+    }
+  },
+  {
+    "popover": {
+      "title": "Tutorial is done 🎉",
+      "description": "Congratulations! You have completed the front page tutorial. If you have any questions, feel free to explore the app further or reach out to IT for support."
+    },
+    "meta": {
+      "type": "finish-step"
+    }
+  }
+]

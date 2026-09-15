@@ -195,107 +195,253 @@
         <div class="text-bold">
           {{ props.isForm ? "Form Active Setup" : "Quiz Active Setup" }}
         </div>
-        <div class="row q-pt-md">
+
+        <div class="row q-pt-md" v-if="props.isForm">
           <div class="col q-pr-md">
-            <q-input
-              v-model="startQuiz"
+            <q-select
+              v-model="formStatus"
+              :options="formStatusOptions"
               outlined
               dense
-              label="Start Date & Time"
-            >
-              <template v-slot:prepend>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy
-                    cover
-                    transition-show="scale"
-                    transition-hide="scale"
-                  >
-                    <q-date v-model="startQuiz" mask="YYYY-MM-DD HH:mm">
-                      <div class="row items-center justify-end">
-                        <q-btn
-                          v-close-popup
-                          label="Close"
-                          color="primary"
-                          flat
-                        />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-
-              <template v-slot:append>
-                <q-icon name="access_time" class="cursor-pointer">
-                  <q-popup-proxy
-                    cover
-                    transition-show="scale"
-                    transition-hide="scale"
-                  >
-                    <q-time
-                      v-model="startQuiz"
-                      mask="YYYY-MM-DD HH:mm"
-                      format24h
-                    >
-                      <div class="row items-center justify-end">
-                        <q-btn
-                          v-close-popup
-                          label="Close"
-                          color="primary"
-                          flat
-                        />
-                      </div>
-                    </q-time>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+              label="Form Status"
+              emit-value
+              map-options
+            />
           </div>
           <div class="col">
-            <q-input v-model="endQuiz" outlined dense label="End Date & Time">
-              <template v-slot:prepend>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy
-                    cover
-                    transition-show="scale"
-                    transition-hide="scale"
-                  >
-                    <q-date v-model="endQuiz" mask="YYYY-MM-DD HH:mm">
-                      <div class="row items-center justify-end">
-                        <q-btn
-                          v-close-popup
-                          label="Close"
-                          color="primary"
-                          flat
-                        />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-
-              <template v-slot:append>
-                <q-icon name="access_time" class="cursor-pointer">
-                  <q-popup-proxy
-                    cover
-                    transition-show="scale"
-                    transition-hide="scale"
-                  >
-                    <q-time v-model="endQuiz" mask="YYYY-MM-DD HH:mm" format24h>
-                      <div class="row items-center justify-end">
-                        <q-btn
-                          v-close-popup
-                          label="Close"
-                          color="primary"
-                          flat
-                        />
-                      </div>
-                    </q-time>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+            <q-input
+              v-model="formYear"
+              outlined
+              dense
+              label="Year (e.g. 2025)"
+              type="number"
+            />
           </div>
         </div>
+
+        <div class="row q-pt-md" v-if="props.isForm">
+          <div class="col q-pr-md">
+            <div class="text-bold">Enable Period ?</div>
+            <div class="q-gutter-sm">
+              <q-radio v-model="addPeriod" :val="true" label="Yes" />
+              <q-radio v-model="addPeriod" :val="false" label="No" />
+            </div>
+          </div>
+          <div class="col" v-if="addPeriod">
+            <div class="text-bold">Send notification when period starts ?</div>
+            <div class="q-gutter-sm">
+              <q-radio v-model="sendNotifOnPeriod" :val="true" label="Yes" />
+              <q-radio v-model="sendNotifOnPeriod" :val="false" label="No" />
+            </div>
+          </div>
+        </div>
+
+        <div class="text-bold q-mt-md" v-if="props.isForm && addPeriod">
+          Period Start &amp; End
+        </div>
+        <div class="row q-pt-md" v-if="props.isForm && addPeriod">
+            <div class="col q-pr-md">
+              <q-input
+                v-model="startQuiz"
+                outlined
+                dense
+                label="Start Date & Time"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="startQuiz" mask="YYYY-MM-DD HH:mm">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+
+                <template v-slot:append>
+                  <q-icon name="access_time" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-time
+                        v-model="startQuiz"
+                        mask="YYYY-MM-DD HH:mm"
+                        format24h
+                      >
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-time>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+            <div class="col">
+              <q-input v-model="endQuiz" outlined dense label="End Date & Time">
+                <template v-slot:prepend>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="endQuiz" mask="YYYY-MM-DD HH:mm">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+
+                <template v-slot:append>
+                  <q-icon name="access_time" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-time v-model="endQuiz" mask="YYYY-MM-DD HH:mm" format24h>
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-time>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
+
+        <div class="row q-pt-md" v-if="!props.isForm">
+            <div class="col q-pr-md">
+              <q-input
+                v-model="startQuiz"
+                outlined
+                dense
+                label="Start Date & Time"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="startQuiz" mask="YYYY-MM-DD HH:mm">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+
+                <template v-slot:append>
+                  <q-icon name="access_time" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-time
+                        v-model="startQuiz"
+                        mask="YYYY-MM-DD HH:mm"
+                        format24h
+                      >
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-time>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+            <div class="col">
+              <q-input v-model="endQuiz" outlined dense label="End Date & Time">
+                <template v-slot:prepend>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date v-model="endQuiz" mask="YYYY-MM-DD HH:mm">
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+
+                <template v-slot:append>
+                  <q-icon name="access_time" class="cursor-pointer">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-time v-model="endQuiz" mask="YYYY-MM-DD HH:mm" format24h>
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="primary"
+                            flat
+                          />
+                        </div>
+                      </q-time>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
 
         <div class="row q-pt-md" v-if="props.isForm">
           <div class="col">
@@ -352,6 +498,20 @@ const rowsPageMethodsOpt = ref([
   },
 ]);
 const skipNextButtonMedia = ref(false);
+const formStatus = ref("draft");
+const formYear = ref(null);
+const addPeriod = ref(false);
+const sendNotifOnPeriod = ref(false);
+const formStatusOptions = ref([
+  { label: "Draft", value: "draft" },
+  { label: "Active", value: "active" },
+  { label: "Closed", value: "closed" },
+]);
+
+const convertToBoolean = (value) => {
+  if (typeof value === "number") return value !== 0;
+  return !!value;
+};
 
 onMounted(() => {
   if (props.setupTrainingSetup) {
@@ -375,6 +535,10 @@ onMounted(() => {
     minPass.value = props.setupTrainingSetup.minPass;
     startQuiz.value = props.setupTrainingSetup.startQuiz;
     endQuiz.value = props.setupTrainingSetup.endQuiz;
+    formStatus.value = props.setupTrainingSetup.formStatus || "draft";
+    formYear.value = props.setupTrainingSetup.formYear || null;
+    addPeriod.value = convertToBoolean(props.setupTrainingSetup.addPeriod) || false;
+    sendNotifOnPeriod.value = convertToBoolean(props.setupTrainingSetup.sendNotifOnPeriod) || false;
   }
 });
 
@@ -419,6 +583,10 @@ function onOKClick() {
     startQuiz: startQuiz.value,
     endQuiz: endQuiz.value,
     rowsPageMethods: rowsPageMethods.value,
+    formStatus: formStatus.value,
+    formYear: formYear.value,
+    addPeriod: addPeriod.value,
+    sendNotifOnPeriod: sendNotifOnPeriod.value,
   });
   // or with payload: onDialogOK({ ... })
   // ...and it will also hide the dialog automatically

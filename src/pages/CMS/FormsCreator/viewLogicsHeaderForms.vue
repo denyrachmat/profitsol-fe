@@ -24,6 +24,14 @@
               @click="onClickAddLogic()"
               outline
             />
+            <q-btn
+              color="orange"
+              icon="content_copy"
+              label="Copy from Assigned Logics"
+              @click="onClickCopyAssignedLogics()"
+              outline
+              class="q-ml-sm"
+            />
           </div>
         </div>
         <template v-if="listLogic.length > 0">
@@ -105,6 +113,7 @@ import { onMounted, ref, computed, watch } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import viewLogicForms from "./viewLogicForms.vue";
+import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
@@ -118,6 +127,7 @@ const props = defineProps({
 const $q = useQuasar();
 const { postData } = apiRequest();
 const listLogic = ref([]);
+const listAssignedLogics = ref([]);
 
 onMounted(() => {
   console.log(props.logics);
@@ -126,6 +136,22 @@ onMounted(() => {
     seq_desc: logic.seq_desc,
     data: logic.data,
   }));
+
+  listAssignedLogics.value = props.forms
+    .flatMap((form) => (form.type === "row" ? form.content : form))
+    .filter((form) => form.type === "form")
+    .flatMap((form) => form.logics || [])
+    .filter((logic) => logic.seq_name)
+    .map((logic) => {
+      return {
+        label: `${logic.seq_desc ? logic.seq_desc : logic.seq_name} (${
+          logic.seq_name
+        })`,
+        value: logic,
+      };
+    });
+
+  console.log("listForms", listAssignedLogics.value);
 });
 
 const onClickAddLogic = () => {
@@ -162,6 +188,48 @@ const onSubmit = () => {
   }).onOk(() => {
     // Save logic data
     onDialogOK(listLogic.value);
+  });
+};
+
+const onClickCopyAssignedLogics = () => {
+  if (listAssignedLogics.value.length === 0) {
+    $q.notify({
+      message: "No assigned logics available to copy.",
+      color: "orange",
+    });
+    return;
+  }
+
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "User Details",
+      initialFields: [
+        {
+          name: "selectedLogics",
+          label: "Choose Logics to Copy",
+          type: "select",
+          options: listAssignedLogics.value,
+          multiple: true,
+          default: [],
+          rules: [(val) => !!val || "Field is required"],
+        },
+      ],
+      addable: true,
+      removable: true,
+    },
+    persistent: true,
+    ok: true,
+    cancel: true,
+  }).onOk((datas) => {
+    const selectedLogics = datas.selectedLogics;
+    console.log("Selected logics to copy:", selectedLogics);
+    selectedLogics.map((logic, index) => {
+      listLogic.value.push({
+        seq_desc: logic.seq_desc,
+        data: logic.data,
+      });
+    });
   });
 };
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div eager>
     <div class="editor-container">
-      <div class="editor-mode-toggle q-mb-sm">
+      <div class="editor-mode-toggle q-mb-sm row items-center q-gutter-sm">
         <q-toggle
           v-model="editorMode"
           label="Code View ?"
@@ -13,10 +13,65 @@
           dense
           outlined
         />
+
+        <q-space />
+
+        <q-expansion-item
+          label="Custom CSS"
+          icon="palette"
+          dense
+          header-class="text-primary"
+          class="col-auto"
+        >
+          <q-card flat bordered class="q-mt-xs">
+            <q-card-section class="q-pb-sm">
+              <div class="text-caption text-grey-7 q-mb-sm">
+                Load external CSS into the editor preview (HTTPS only, max 5).
+              </div>
+
+              <div
+                v-for="(url, i) in localCssUrls"
+                :key="i"
+                class="row items-center q-gutter-xs q-mb-xs"
+              >
+                <q-input
+                  v-model="localCssUrls[i]"
+                  dense
+                  outlined
+                  placeholder="https://example.com/style.css"
+                  class="col"
+                  :rules="[isValidCssUrl]"
+                  lazy-rules
+                />
+                <q-btn
+                  icon="delete"
+                  flat
+                  dense
+                  round
+                  color="negative"
+                  size="sm"
+                  @click="removeCssUrl(i)"
+                />
+              </div>
+
+              <q-btn
+                v-if="localCssUrls.length < MAX_CSS_FILES"
+                flat
+                dense
+                no-caps
+                icon="add"
+                label="Add CSS URL"
+                color="primary"
+                class="q-mt-xs"
+                @click="addCssUrl"
+              />
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
       </div>
 
       <div class="row q-gutter-md">
-        <div class="col">
+        <div class="col" v-if="editorMode !== 'code'">
           <editor
             api-key="gw0rtlzda4wpi7l6uncts5jnjh5ftvfw8ncz54ex7maanor4"
             class="full-height"
@@ -25,17 +80,20 @@
           />
         </div>
         <div class="col" v-if="editorMode === 'code' && monacoReady">
-          <CodeEditor
-            v-model:value="editors"
-            language="html"
-            theme="vs-dark"
-            :height="600"
-            :options="{
-              minimap: { enabled: true },
-              wordWrap: 'on',
-              lineNumbers: 'on',
-              fontSize: 14,
-              automaticLayout: true,
+          <div
+            ref="sideMonacoEl"
+            style="height: 600px; border: 1px solid #ddd"
+          ></div>
+        </div>
+        <div class="col" v-else-if="editorMode === 'code'">
+          <q-input
+            v-model="editors"
+            type="textarea"
+            outlined
+            :input-style="{
+              height: '600px',
+              fontFamily: 'monospace',
+              fontSize: '13px',
             }"
           />
         </div>
@@ -45,14 +103,59 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch, computed, nextTick } from "vue";
 import Editor from "@tinymce/tinymce-vue";
 import { useQuasar } from "quasar";
 import { html as beautifyHtml } from "js-beautify";
-import { CodeEditor } from "monaco-editor-vue3";
+// NOTE: the side code panel intentionally uses the same window.monaco
+// instance loaded by ensureMonaco() below (single version, single AMD
+// loader). Do NOT mount a second monaco loader component here — competing
+// loaders re-point window.require and leave the editor uneditable.
 
 const editorMode = ref("visual"); // 'visual' or 'code'
 const monacoReady = ref(false);
+
+const MAX_CSS_FILES = 5;
+const BLOCKED_PROTOCOLS = ["javascript:", "data:", "vbscript:"];
+
+/* ================= CSS URL Security ================= */
+const isAbsoluteUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const isSecureUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const hasBlockedProtocol = (url) => {
+  const lower = url.trim().toLowerCase();
+  return BLOCKED_PROTOCOLS.some((p) => lower.startsWith(p));
+};
+
+const isValidCssUrl = (url) => {
+  if (!url || !url.trim()) return true;
+  if (hasBlockedProtocol(url)) return "Blocked protocol";
+  if (!isAbsoluteUrl(url)) return "Must be a full URL (https://...)";
+  if (!isSecureUrl(url)) return "HTTPS only";
+  if (!/\.(css)(\?.*)?$/i.test(url)) return "Must be a .css file";
+  return true;
+};
+
+const getSanitizedCssUrls = (urls) => {
+  return (urls || [])
+    .map((u) => (typeof u === "string" ? u.trim() : ""))
+    .filter((u) => u && isValidCssUrl(u) === true);
+};
 
 /* ================= Monaco Loader (CDN) ================= */
 const MONACO_BASE = "https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min";
@@ -100,15 +203,71 @@ async function ensureMonaco() {
   return window.monaco;
 }
 
-const props = defineProps({ modelValue: { type: String, default: "" } });
+const props = defineProps({
+  modelValue: { type: String, default: "" },
+  customCssUrls: { type: Array, default: () => [] },
+});
 const emit = defineEmits(["update:modelValue"]);
 const $q = useQuasar();
 const editors = ref("");
+const localCssUrls = ref([]);
+let tinyEditorInstance = null;
+const CUSTOM_CSS_ATTR = "data-custom-css";
+
+const addCssUrl = () => {
+  if (localCssUrls.value.length >= MAX_CSS_FILES) return;
+  localCssUrls.value.push("");
+};
+
+const removeCssUrl = (index) => {
+  localCssUrls.value.splice(index, 1);
+};
+
+const mergedContentCss = computed(() => {
+  const base = [
+    "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+  ];
+  const sanitized = getSanitizedCssUrls(localCssUrls.value);
+  return [...base, ...sanitized];
+});
+
+const applyCustomCss = (urls) => {
+  if (!tinyEditorInstance) return;
+
+  try {
+    const doc = tinyEditorInstance.getDoc();
+    if (!doc) return;
+
+    doc.querySelectorAll(`[${CUSTOM_CSS_ATTR}]`).forEach((el) => el.remove());
+
+    urls.forEach((url) => {
+      const link = doc.createElement("link");
+      link.rel = "stylesheet";
+      link.href = url;
+      link.setAttribute(CUSTOM_CSS_ATTR, "");
+      doc.head.appendChild(link);
+    });
+  } catch (e) {
+    console.error("Failed to apply custom CSS:", e);
+  }
+};
+
 onMounted(async () => {
   if (props.modelValue) editors.value = props.modelValue;
-  // Initialize Monaco environment when component mounts
-  await ensureMonaco();
-  monacoReady.value = true;
+  localCssUrls.value = getSanitizedCssUrls(props.customCssUrls);
+  try {
+    await ensureMonaco();
+    monacoReady.value = true;
+  } catch (e) {
+    console.error("Monaco failed to load (CDN blocked?):", e);
+  }
+});
+
+onUnmounted(() => {
+  if (sideMonacoEditor) {
+    sideMonacoEditor.dispose();
+    sideMonacoEditor = null;
+  }
 });
 watch(
   () => props.modelValue,
@@ -120,6 +279,64 @@ watch(
   () => editors.value,
   (v) => emit("update:modelValue", v)
 );
+
+// ---- Side code panel (own div, same window.monaco instance) ----
+const sideMonacoEl = ref(null);
+let sideMonacoEditor = null;
+
+const createSideEditor = () => {
+  if (sideMonacoEditor || !sideMonacoEl.value || !window.monaco) return;
+  sideMonacoEditor = window.monaco.editor.create(sideMonacoEl.value, {
+    value: editors.value || "",
+    language: "html",
+    theme: "vs-dark",
+    automaticLayout: true,
+    minimap: { enabled: true },
+    wordWrap: "on",
+    lineNumbers: "on",
+    fontSize: 14,
+    scrollBeyondLastLine: false,
+    readOnly: false,
+    domReadOnly: false,
+  });
+  sideMonacoEditor.onDidChangeModelContent(() => {
+    const v = sideMonacoEditor.getValue();
+    if (v !== editors.value) editors.value = v;
+  });
+};
+
+watch(editorMode, async (mode) => {
+  if (mode === "code" && monacoReady.value) {
+    await nextTick();
+    createSideEditor();
+    if (sideMonacoEditor) {
+      if (sideMonacoEditor.getValue() !== (editors.value || "")) {
+        sideMonacoEditor.setValue(editors.value || "");
+      }
+      setTimeout(() => {
+        sideMonacoEditor?.layout();
+        sideMonacoEditor?.focus();
+      }, 100);
+    }
+  }
+});
+
+// External/model changes flow into the side editor (guarded, no loops).
+watch(
+  () => editors.value,
+  (v) => {
+    if (
+      sideMonacoEditor &&
+      sideMonacoEditor.getValue() !== (v || "")
+    ) {
+      sideMonacoEditor.setValue(v || "");
+    }
+  }
+);
+
+watch(mergedContentCss, (urls) => {
+  applyCustomCss(getSanitizedCssUrls(urls));
+});
 
 const dialogConfig = {
   title: "Variable",
@@ -171,9 +388,7 @@ const initEditor = ref({
   toolbar_sticky: true,
   paste_data_images: true,
   image_advtab: true,
-  content_css: [
-    "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
-  ],
+  content_css: mergedContentCss.value,
   codesample_languages: [
     { text: "SQL", value: "sql" },
     { text: "HTML/XML", value: "markup" },
@@ -181,6 +396,11 @@ const initEditor = ref({
   codesample_content_css: "https://ourcodeworld.com/material/css/prism.css",
 
   setup: (editor) => {
+    tinyEditorInstance = editor;
+
+    editor.on("init", () => {
+      applyCustomCss(getSanitizedCssUrls(localCssUrls.value));
+    });
     editor.ui.registry.addButton("dialog-example-btn", {
       icon: "format-code",
       tooltip: "Add variable to become value",
@@ -219,11 +439,38 @@ const initEditor = ref({
       icon: "sourcecode",
       tooltip: "Source code (VS Code style)",
       onAction: async () => {
-        const monaco = await ensureMonaco();
+        let monaco = null;
+        try {
+          monaco = await ensureMonaco();
+        } catch (e) {
+          console.error("Monaco failed to load, using plain textarea:", e);
+        }
         const initial = beautifyHtml(editor.getContent({ format: "html" }), {
           indent_size: 2,
           wrap_line_length: 80,
         });
+
+        // Fallback for blocked CDN: plain editable textarea dialog.
+        if (!monaco) {
+          editor.windowManager.open({
+            title: "Source code",
+            size: "large",
+            body: {
+              type: "panel",
+              items: [{ type: "textarea", name: "src" }],
+            },
+            initialData: { src: initial },
+            buttons: [
+              { type: "submit", text: "OK", buttonType: "primary" },
+              { type: "cancel", text: "Cancel" },
+            ],
+            onSubmit(api) {
+              editor.setContent(api.getData().src ?? initial);
+              api.close();
+            },
+          });
+          return;
+        }
 
         let monacoEditor;
         let currentTheme = "vs-dark";
@@ -264,23 +511,25 @@ const initEditor = ref({
           },
           onReady() {
             // Use requestAnimationFrame to ensure DOM is ready
+            let attempts = 0;
             const initMonaco = () => {
+              attempts += 1;
               requestAnimationFrame(() => {
                 const container = document.getElementById("monaco-container");
                 if (!container || !container.isConnected) {
-                  setTimeout(initMonaco, 100);
+                  if (attempts < 50) setTimeout(initMonaco, 100);
                   return;
                 }
 
                 // Ensure container is properly attached to the document
                 if (!document.body.contains(container)) {
-                  setTimeout(initMonaco, 100);
+                  if (attempts < 50) setTimeout(initMonaco, 100);
                   return;
                 }
 
                 const rect = container.getBoundingClientRect();
                 if (rect.width === 0 || rect.height === 0) {
-                  setTimeout(initMonaco, 50);
+                  if (attempts < 50) setTimeout(initMonaco, 50);
                   return;
                 }
 
@@ -300,6 +549,7 @@ const initEditor = ref({
                     lineNumbers: "on",
                     scrollBeyondLastLine: false,
                     readOnly: false,
+                    domReadOnly: false,
                     fontSize: 14,
                     fixedOverflowWidgets: true,
                   });
@@ -329,9 +579,18 @@ const initEditor = ref({
     });
   },
 });
+
+const insertContent = (html) => {
+  if (!tinyEditorInstance) return;
+  tinyEditorInstance.execCommand("mceInsertContent", false, html);
+};
+
+defineExpose({ insertContent });
 </script>
 
 <style>
+.tox-silver-sink,
+.tox-dialog-wrap,
 .tox-dialog {
   z-index: 15000000000 !important;
 }

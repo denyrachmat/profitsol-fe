@@ -47,10 +47,17 @@ const apiRequest = ($qParam) => {
     if (auth) {
       header = {
         responseType: blob ? "arraybuffer" : "json",
+        xsrfCookieName: 'XSRF-TOKEN',
+        xsrfHeaderName: 'X-XSRF-TOKEN',
+        withCredentials: true,
         headers: {
           authorization: `Bearer ${isMSToken ? store.msTokenDet.accessToken : store.authDet.token
             }`,
           username: store.authDet.username,
+          ...(store.getChoosedRole?.role?.id
+            ? { roleid: store.getChoosedRole.role.id }
+            : null),
+          'X-Requested-With': 'XMLHttpRequest',
           ...(blob
             ? {
               "Content-Type":
@@ -65,6 +72,9 @@ const apiRequest = ($qParam) => {
         responseType: blob ? "arraybuffer" : "json",
         headers: {
           username: store.authDet.username,
+          ...(store.getChoosedRole?.role?.id
+            ? { roleid: store.getChoosedRole.role.id }
+            : null),
           ...(blob
             ? {
               "Content-Type":

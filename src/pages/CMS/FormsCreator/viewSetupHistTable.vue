@@ -56,7 +56,7 @@
                     <q-item-section
                       v-if="
                         element.forms &&
-                        element.forms.content.component.category === 'multiple'
+                        element.forms.content.component?.category === 'multiple'
                       "
                     >
                       <q-item-label>
@@ -94,6 +94,13 @@
                         v-model="element.isSortable"
                         color="primary"
                         label="Is Sortable ?"
+                      />
+                    </q-item-section>
+                    <q-item-section side v-if="element.value !== 'action'">
+                      <q-toggle
+                        v-model="element.isExportable"
+                        color="primary"
+                        label="Is Exportable ?"
                       />
                     </q-item-section>
                     <q-item-section side v-if="element.value === 'action'">
@@ -171,6 +178,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: true,
             },
           ]
         : []),
@@ -186,6 +194,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),
@@ -201,6 +210,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),
@@ -215,6 +225,7 @@ onMounted(() => {
               isSortable: false,
               isEditable: false,
               isDeletable: false,
+              isExportable: false,
             },
           ]
         : []),

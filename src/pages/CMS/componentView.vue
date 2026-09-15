@@ -5,9 +5,10 @@
         v-model="modelData"
         :label="props.label"
         dense
-        filled
+        outlined
         :type="props.typeInput"
         v-if="props.comp === 'q-input'"
+        :readonly="isReadonlyLocal || false"
       >
         <template
           v-slot:prepend
@@ -77,7 +78,7 @@
         <template v-if="props.typeInput === 'pdf'"> </template>
       </q-input>
       <q-file
-        filled
+        outlined
         bottom-slots
         v-model="modelData"
         :label="props.label"
@@ -85,6 +86,7 @@
         max-files="12"
         v-if="props.comp === 'q-file'"
         dense
+        :readonly="isReadonlyLocal"
       >
         <template v-slot:before>
           <q-icon name="folder_open" />
@@ -97,6 +99,50 @@
         </template>
       </q-file>
     </template>
+    <template v-else-if="props.comp === 'q-dms'">
+      <div v-if="!props.dmsOpt || !props.dmsOpt.root" class="text-grey">
+        DMS Folder Picker not configured yet — open Setup Component Forms and
+        press the folder button.
+      </div>
+      <div v-else>
+        <span v-html="props.label" />
+        <div class="q-gutter-xs q-py-sm" v-if="modelDataArr.length > 0">
+          <q-chip
+            v-for="(p, idx) in modelDataArr"
+            :key="idx"
+            removable
+            @remove="removeDMSPath(idx)"
+            color="primary"
+            text-color="white"
+            dense
+            :disable="isReadonlyLocal || props.mode == 'live-read'"
+          >
+            {{ p }}
+          </q-chip>
+        </div>
+        <div
+          v-else
+          class="text-caption text-grey-6 q-py-sm"
+        >
+          No folder picked yet.
+        </div>
+        <q-btn
+          outline
+          color="primary"
+          icon="folder_open"
+          label="Browse DMS"
+          dense
+          @click="openDMSBrowser()"
+          v-if="!isReadonlyLocal && props.mode !== 'live-read'"
+        />
+        <div
+          v-if="props.mode === 'edit'"
+          class="text-caption text-grey-6 q-pt-xs"
+        >
+          Preview only — picked folders here are not saved.
+        </div>
+      </div>
+    </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">
         <div style="max-height: 20vh; overflow: auto">
@@ -107,7 +153,6 @@
                 v-model="opt.value"
                 outlined
                 dense
-                filled
               />
             </div>
             <div class="col-6 q-pl-md">
@@ -116,7 +161,6 @@
                 v-model="opt.label"
                 outlined
                 dense
-                filled
               />
             </div>
 
@@ -144,7 +188,7 @@
           <div class="row q-pa-md" :key="refreshDetail">
             <div class="col">
               <q-select
-                filled
+                outlined
                 v-model="modelData"
                 :options="detailData"
                 :label="props.label"
@@ -179,6 +223,29 @@
                   />
                 </div>
               </template>
+
+              <template v-else-if="props.comp === 'q-table'">
+                <span v-html="props.label" />
+                <q-input
+                  v-model="tableFilter"
+                  label="Search"
+                  outlined
+                  dense
+                  clearable
+                  class="q-mb-sm"
+                />
+                <q-table
+                  :rows="detailData"
+                  :columns="tableColumns"
+                  row-key="value"
+                  :selection="isTableMulti ? 'multiple' : 'single'"
+                  v-model:selected="tableSelected"
+                  :loading="loadingAPI"
+                  :filter="tableFilter"
+                  dense
+                  @row-click="onTableRowClick"
+                />
+              </template>
             </div>
           </div>
         </fieldset>
@@ -186,13 +253,13 @@
       <template v-else>
         <div>
           <q-select
-            filled
+            outlined
             v-model="modelData"
             :options="detailData"
             :label="props.label"
             emit-value
             map-options
-            :readonly="props.mode == 'live-read'"
+            :readonly="isReadonlyLocal || props.mode == 'live-read'"
             v-if="props.comp === 'q-select'"
             :loading="loadingAPI"
             @filter="checkAPIData"
@@ -208,7 +275,7 @@
                 :options="props.detail"
                 type="checkbox"
                 v-model="modelDataArr"
-                :disable="props.mode == 'live-read'"
+                :disable="isReadonlyLocal || props.mode == 'live-read'"
               />
             </div>
           </template>
@@ -219,9 +286,39 @@
               <q-option-group
                 :options="props.detail"
                 v-model="modelData"
-                :disable="props.mode == 'live-read'"
+                :disable="isReadonlyLocal || props.mode == 'live-read'"
               />
             </div>
+          </template>
+
+          <template v-else-if="props.comp === 'q-table'">
+            <span v-html="props.label"></span>
+            <q-input
+              v-model="tableFilter"
+              label="Search"
+              outlined
+              dense
+              clearable
+              class="q-mb-sm"
+              :readonly="isReadonlyLocal || props.mode == 'live-read'"
+            />
+            <q-table
+              :rows="tableRows"
+              :columns="tableColumns"
+              row-key="value"
+              :selection="
+                isReadonlyLocal || props.mode == 'live-read'
+                  ? 'none'
+                  : isTableMulti
+                    ? 'multiple'
+                    : 'single'
+              "
+              v-model:selected="tableSelected"
+              :loading="loadingAPI"
+              :filter="tableFilter"
+              dense
+              @row-click="onTableRowClick"
+            />
           </template>
         </div>
       </template>
@@ -230,10 +327,11 @@
 </template>
 <script setup>
 import { api } from "src/boot/axios";
-import { defineProps, onMounted, ref, watch } from "vue";
+import { defineProps, onMounted, ref, watch, computed } from "vue";
 import { useQuasar } from "quasar";
 import { useFormStore } from "stores/formStore";
 import apiRequest from "src/components/apiRequest";
+import dmsFolderBrowser from "./dmsFolderBrowser.vue";
 
 const emit = defineEmits(["onDeleted", "customChange"]);
 
@@ -254,40 +352,224 @@ const props = defineProps({
   ansArr: Array,
   isRequired: Boolean,
   apiOpt: Object,
+  dmsOpt: Object,
+  readonly: Boolean,
 });
 
 const formStore = useFormStore();
 const loadingAPI = ref(false);
 const detailData = ref([]);
 
+// ---- Table Select (multiple-table / q-table) ----
+// Reuses the same detail_data + apiOpt config as the other Choose Answer
+// components. Single table answers like radio/select (modelData),
+// multi table answers like checkbox (modelDataArr).
+const tableFilter = ref("");
+const tableSelected = ref([]);
+
+const tableRows = computed(() => {
+  if (detailData.value && detailData.value.length > 0)
+    return detailData.value;
+  return props.detail ?? [];
+});
+
+const HIDDEN_TABLE_FIELDS = ["col_det_id", "col_det_label", "id_trees"];
+
+// multiple-table = single choice, multiple-table-multi = multiple choice.
+// Derived from typeInput so every existing caller works without changes.
+const isTableMulti = computed(
+  () => props.comp === "q-table" && props.typeInput === "multiple-table-multi"
+);
+
+const tableColumns = computed(() => {
+  const rows = tableRows.value ?? [];
+  if (rows.length === 0) return [];
+  const keys = [];
+  rows.forEach((row) => {
+    Object.keys(row ?? {}).forEach((k) => {
+      if (!HIDDEN_TABLE_FIELDS.includes(k) && !keys.includes(k)) keys.push(k);
+    });
+  });
+  // Keep value/label first, extra API/manual fields after
+  keys.sort((a, b) => {
+    const order = (k) => (k === "value" ? 0 : k === "label" ? 1 : 2);
+    return order(a) - order(b);
+  });
+  return keys.map((k) => ({
+    name: k,
+    label: k === "value" ? "Value" : k === "label" ? "Label" : k,
+    field: k,
+    align: "left",
+    sortable: true,
+  }));
+});
+
+const syncTableSelection = () => {
+  const rows = tableRows.value ?? [];
+  if (isTableMulti.value) {
+    const wanted = new Set(
+      (modelDataArr.value ?? []).map((v) => String(v))
+    );
+    const next = rows.filter((r) => wanted.has(String(r?.value)));
+    if (JSON.stringify(tableSelected.value) !== JSON.stringify(next)) {
+      tableSelected.value = next;
+    }
+    return;
+  }
+  const found = rows.find(
+    (r) => String(r?.value) === String(modelData.value)
+  );
+  const next = found ? [found] : [];
+  if (JSON.stringify(tableSelected.value) !== JSON.stringify(next)) {
+    tableSelected.value = next;
+  }
+};
+
+const onTableRowClick = (evt, row) => {
+  if (isReadonlyLocal.value || props.mode == "live-read" || !row) return;
+  if (isTableMulti.value) {
+    const idx = tableSelected.value.findIndex(
+      (r) => String(r?.value) === String(row?.value)
+    );
+    if (idx >= 0) {
+      tableSelected.value.splice(idx, 1);
+    } else {
+      const found = (tableRows.value ?? []).find(
+        (r) => String(r?.value) === String(row?.value)
+      );
+      if (found) tableSelected.value.push(found);
+    }
+  } else {
+    if (JSON.stringify(tableSelected.value) !== JSON.stringify([row])) {
+      tableSelected.value = [row];
+    }
+  }
+};
+
+watch(tableSelected, (val) => {
+  if (isTableMulti.value) {
+    const picked = (val ?? []).map((r) => r?.value ?? "");
+    if (JSON.stringify(picked) !== JSON.stringify(modelDataArr.value)) {
+      modelDataArr.value = picked;
+    }
+    return;
+  }
+  const picked = val && val.length > 0 ? val[0]?.value : "";
+  if (picked !== modelData.value) {
+    modelData.value = picked ?? "";
+  }
+});
+
+watch(tableRows, () => {
+  syncTableSelection();
+});
+
+watch(modelData, () => {
+  syncTableSelection();
+});
+
+watch(
+  () => JSON.stringify(modelDataArr.value),
+  () => {
+    syncTableSelection();
+  }
+);
+
 const onDeleteData = (idx) => {
   detailData.value.splice(idx, 1);
   emit("onDeleted", detailData.value);
 };
 
+// ---- DMS Folder Picker (multiple-dms / q-dms) ----
+const removeDMSPath = (idx) => {
+  modelDataArr.value.splice(idx, 1);
+};
+
+const openDMSBrowser = () => {
+  if (!props.dmsOpt || !props.dmsOpt.root) {
+    $q.notify({ type: "negative", message: "DMS picker is not configured." });
+    return;
+  }
+  $q.dialog({
+    component: dmsFolderBrowser,
+    componentProps: {
+      dmsOpt: props.dmsOpt,
+      initial: [...(modelDataArr.value ?? [])],
+    },
+  }).onOk((val) => {
+    modelDataArr.value = Array.isArray(val) ? val : [];
+  });
+};
+
 onMounted(() => {
-  console.log("masuk awalan");
-  console.log(props);
+  // console.log("masuk awalan");
 
   // if (props.mode && props.mode.includes("live")) {
   //   checkAPIData();
   // }
 
-  if (props.ans) {
-    modelData.value = props.ans.toString();
+  if (props.ans !== undefined && props.ans !== null && props.ans !== "") {
+    modelData.value = props.ans;
   }
 
   if (props.ansArr && props.ansArr.length > 0) {
-    console.log(props.ansArr);
+    // console.log(props.ansArr);
     modelDataArr.value = props.ansArr;
   }
+
+  // Seed manual options so the table renders before any change event
+  if (
+    (!detailData.value || detailData.value.length === 0) &&
+    props.detail &&
+    props.detail.length > 0
+  ) {
+    detailData.value = [...props.detail];
+  }
+
+  // q-table has no @filter trigger like q-select, so fetch API rows on mount
+  if (
+    props.comp === "q-table" &&
+    props.apiOpt &&
+    props.apiOpt.api_url &&
+    (!detailData.value || detailData.value.length === 0)
+  ) {
+    checkAPIData();
+  }
+
+  // q-select only loads API options on filter input; on mount (e.g. editing an
+  // existing answer) fetch them so the current value can resolve to its label.
+  if (
+    props.comp === "q-select" &&
+    props.apiOpt &&
+    props.apiOpt.api_url &&
+    (!detailData.value || detailData.value.length === 0)
+  ) {
+    checkAPIData();
+  }
+
+  syncTableSelection();
 });
 
 const checkAPIData = async (val, update, abort) => {
   if (val && detailData.value && detailData.value.length > 0) {
-    console.log(detailData.value);
+    // console.log(detailData.value);
     if (typeof val === "string" || typeof val === "number") {
-      update(() => {
+      if (typeof update === "function") {
+        update(() => {
+          detailData.value = detailData.value.filter(
+            (opt) =>
+              (opt.label &&
+                opt.label
+                  .toLowerCase()
+                  .includes(val.toString().toLowerCase())) ||
+              (opt.value &&
+                opt.value
+                  .toString()
+                  .toLowerCase()
+                  .includes(val.toString().toLowerCase()))
+          );
+        });
+      } else {
         detailData.value = detailData.value.filter(
           (opt) =>
             (opt.label &&
@@ -298,7 +580,7 @@ const checkAPIData = async (val, update, abort) => {
                 .toLowerCase()
                 .includes(val.toString().toLowerCase()))
         );
-      });
+      }
 
       return;
     }
@@ -338,8 +620,8 @@ const checkAPIData = async (val, update, abort) => {
       );
 
       if (data) {
-        console.log(data);
-        console.log("API request aborted");
+        // console.log(data);
+        // console.log("API request aborted");
         loadingAPI.value = false;
 
         // Navigate through the nested data structure
@@ -361,16 +643,29 @@ const checkAPIData = async (val, update, abort) => {
           return acc[key];
         }, data);
 
-        // Transform the final data into the required format
+        // Transform the final data into the required format.
+        // Table Select may carry extra display columns via apiOpt.selectedColumns.
+        const extraColumns = Array.isArray(props.apiOpt.selectedColumns)
+          ? props.apiOpt.selectedColumns
+          : [];
+        console.log("Table API columns:", extraColumns);
         const resultAPI = Array.isArray(currentData)
-          ? currentData.map((element, index) => ({
-              value:
-                element[props.apiOpt.selectedKeys.value] ??
-                element.value ??
-                index + 1,
-              label:
-                element[props.apiOpt.selectedKeys.label] ?? element.label ?? "",
-            }))
+          ? currentData.map((element, index) => {
+              const row = {
+                value:
+                  element[props.apiOpt.selectedKeys.value] ??
+                  element.value ??
+                  index + 1,
+                label:
+                  element[props.apiOpt.selectedKeys.label] ??
+                  element.label ??
+                  "",
+              };
+              extraColumns.forEach((col) => {
+                if (!(col in row)) row[col] = element[col] ?? "";
+              });
+              return row;
+            })
           : [];
 
         loadingAPI.value = false;
@@ -454,7 +749,7 @@ const checkAPIData = async (val, update, abort) => {
     //     loadingAPI.value = false;
     //   });
   } else {
-    console.log("tidak ada apiOpt");
+    // console.log("tidak ada apiOpt");
     update(() => {
       detailData.value = props.detail;
     });
@@ -464,13 +759,13 @@ const checkAPIData = async (val, update, abort) => {
 const onSelectData = (val) => {
   const checkAPI = props.apiOpt && props.apiOpt.api_url;
   if (checkAPI) {
-    console.log("onSelectData", val);
+    // console.log("onSelectData", val);
     const selectedOption = detailData.value.find(
       (option) => option.value === val
     );
 
     detailData.value = [selectedOption];
-    console.log("Selected option:", selectedOption);
+    // console.log("Selected option:", selectedOption);
   } else {
     // modelData.value = val;
   }
@@ -546,10 +841,22 @@ const getParams = (params) => {
   }
 };
 
+// Buat status readonly lokal yang reaktif
+const isReadonlyLocal = ref(props.readonly || false);
+
+// Pantau perubahan props.readonly dari komponen induk secara realtime
+watch(
+  () => props.readonly,
+  (newVal) => {
+    isReadonlyLocal.value = newVal;
+  },
+  { immediate: true } // <-- WAJIB TAMBAHKAN INI
+);
+
 watch(
   () => JSON.stringify(props.detail),
   (val) => {
-    console.log(props);
+    // console.log(props);
     detailData.value = JSON.parse(val);
 
     modelDataArr.value = props.ansArr;
@@ -563,7 +870,6 @@ watch(
   (val) => {
     detailData.value = JSON.parse(val);
 
-    checkAPIData();
     emit("onDeleted", JSON.parse(val));
     refreshDetail.value = refreshDetail.value + 1;
   }
@@ -572,7 +878,7 @@ watch(
 watch(
   () => props.ans,
   (val) => {
-    console.log("masuk cek jawaban 1");
+    // console.log("masuk cek jawaban 1");
     modelData.value = val;
   }
 );
@@ -581,17 +887,20 @@ watch(
   () => JSON.stringify(props.ansArr),
   (val) => {
     if (JSON.parse(val).length > 0) {
-      console.log("masuk cek jawaban Array");
-      console.log(JSON.parse(val));
+      // console.log("masuk cek jawaban Array");
+      // console.log(JSON.parse(val));
       modelDataArr.value = JSON.parse(val);
     }
   }
 );
 
-// Jawaban yang di pilih
+// JAWABAN YANG DIPILIH (ARRAY / CHECKBOX)
 watch(
   () => JSON.stringify(modelDataArr.value),
   (val) => {
+    // PENGAMAN: Jika dalam mode readonly, blokir pengiriman data ke parent
+    if (isReadonlyLocal.value) return;
+
     if (modelDataArr.value) {
       if (props.mode == "live-ans") {
         emit("customAnschange", JSON.parse(val));
@@ -602,12 +911,16 @@ watch(
   }
 );
 
+// JAWABAN YANG DIPILIH (SINGLE VALUE / INPUT / SELECT / RADIO)
 watch(
   () => modelData.value,
-  (val) => {
-    if (modelData.value) {
-      console.log(props.mode);
-      console.log(val);
+  (val, prev) => {
+    // PENGAMAN: Jika dalam mode readonly, blokir pengiriman data ke parent
+    if (isReadonlyLocal.value) return;
+
+    // Kirim walau nilainya falsy (0 / '' / false), asal benar-benar berubah agar
+    // logika (mis. tampilkan komponen jika pilih nilai X) tetap terpicu.
+    if (val !== prev) {
       if (props.mode == "live-ans") {
         emit("customAnschange", val);
       } else {
@@ -616,4 +929,33 @@ watch(
     }
   }
 );
+
+// Jawaban yang di pilih
+// watch(
+//   () => JSON.stringify(modelDataArr.value),
+//   (val) => {
+//     if (modelDataArr.value) {
+//       if (props.mode == "live-ans") {
+//         emit("customAnschange", JSON.parse(val));
+//       } else {
+//         emit("customChange", JSON.parse(val));
+//       }
+//     }
+//   }
+// );
+
+// watch(
+//   () => modelData.value,
+//   (val) => {
+//     if (modelData.value) {
+//       // console.log(props.mode);
+//       // console.log(val);
+//       if (props.mode == "live-ans") {
+//         emit("customAnschange", val);
+//       } else {
+//         emit("customChange", val);
+//       }
+//     }
+//   }
+// );
 </script>

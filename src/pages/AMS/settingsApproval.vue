@@ -66,6 +66,23 @@
             />
           </div>
         </div>
+        <div class="row">
+          <div class="col col-xs-12 col-sm-4 q-pa-sm">
+            <q-btn
+              outline
+              :color="forms.amssd_content ? 'orange' : 'cyan'"
+              icon="integration_instructions"
+              :label="forms.amssd_content ? 'Update Content' : 'Create Content'"
+              @click="onClickChangeContent()"
+            >
+              <q-tooltip>{{
+                forms.amssd_content
+                  ? "Content already created, click to edit."
+                  : "Create notification content for approval page"
+              }}</q-tooltip>
+            </q-btn>
+          </div>
+        </div>
 
         <q-separator />
         <p class="text-bold q-pa-sm">Approval Type</p>
@@ -81,19 +98,28 @@
               :true-value="1"
             />
           </div>
-          <div class="col col-xs-12 col-sm-4 q-pa-sm">
+          <div class="col col-xs-12 col-sm-3 q-pa-sm" v-if="forms.amssd_is_docsign">
+            <q-toggle
+              v-model="forms.amssd_sign_uploaded_doc"
+              checked-icon="check"
+              color="warning"
+              label="Sign uploaded doc ?"
+              unchecked-icon="clear"
+              :false-value="0"
+              :true-value="1"
+            />
+            <q-tooltip>If enabled, API submitters must upload the document and place sign boxes for every approval submission</q-tooltip>
+          </div>
+          <div class="col col-xs-12 col-sm-3 q-pa-sm" v-if="forms.amssd_is_docsign && !forms.amssd_sign_uploaded_doc">
             <q-btn
               outline
-              :color="forms.amssd_content ? 'orange' : 'cyan'"
-              icon="integration_instructions"
-              :label="forms.amssd_content ? 'Update Content' : 'Create Content'"
-              @click="onClickChangeContent()"
+              color="deep-orange"
+              icon="draw"
+              label="Setup Sign Boxes"
+              @click="onClickSetupSignBoxes()"
+              :disable="!props.dataExists || !props.dataExists.id"
             >
-              <q-tooltip>{{
-                forms.amssd_content
-                  ? "Content already create, click again to edit."
-                  : "Create content for approval page"
-              }}</q-tooltip>
+              <q-tooltip>Place signature boxes on the fixed document (not applicable when submitters upload their own document)</q-tooltip>
             </q-btn>
           </div>
         </div>
@@ -194,14 +220,19 @@
 import { ref, defineProps, onMounted, computed } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
-import addContentComponent from "../CMS/addContentComponent.vue";
 import approvalAttachmentSet from "./approvalAttachmentSet.vue";
+import approvalSignSetup from "./approvalSignSetup.vue";
+import approvalContentEditor from "./approvalContentEditor.vue";
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
   useDialogPluginComponent();
 
 const props = defineProps({
   dataExists: Object,
+  approvers: {
+    type: Array,
+    default: () => [],
+  },
   // ...your custom props
 });
 
@@ -214,11 +245,13 @@ onMounted(() => {
       amssd_iswa: parseInt(props.dataExists.amssd_iswa),
       amssd_issms: parseInt(props.dataExists.amssd_issms),
       amssd_is_docsign: parseInt(props.dataExists.amssd_is_docsign),
+      amssd_sign_uploaded_doc: parseInt(props.dataExists.amssd_sign_uploaded_doc),
       amssd_unread_autonotif: parseInt(props.dataExists.amssd_unread_autonotif),
       amssd_unread_chktime: parseInt(props.dataExists.amssd_unread_chktime),
       amssd_autorun: parseInt(props.dataExists.amssd_autorun),
       amssd_autorun_chktime: parseInt(props.dataExists.amssd_autorun_chktime),
       amssd_content: props.dataExists.amssd_content,
+      amssd_content_variables: props.dataExists.amssd_content_variables,
       amssd_attachment: parseInt(props.dataExists.amssd_attachment),
       attch: props.dataExists.attch,
     };
@@ -232,25 +265,30 @@ const forms = ref({
   amssd_iswa: 0,
   amssd_issms: 0,
   amssd_is_docsign: 0,
+  amssd_sign_uploaded_doc: 0,
   amssd_unread_autonotif: 0,
   amssd_unread_chktime: 0,
   amssd_autorun: 0,
   amssd_autorun_chktime: 0,
   amssd_content: "",
+  amssd_content_variables: [],
   amssd_attachment: 0,
   attch: [],
 });
 
 const onClickChangeContent = () => {
   $q.dialog({
-    component: addContentComponent,
+    component: approvalContentEditor,
     componentProps: {
-      comp: forms.value.amssd_content,
+      content: forms.value.amssd_content,
+      variables: forms.value.amssd_content_variables || [],
     },
   }).onOk((val) => {
-    console.log(val);
     if (val.content) {
       forms.value.amssd_content = val.content;
+    }
+    if (val.variables) {
+      forms.value.amssd_content_variables = val.variables;
     }
   });
 };
@@ -274,6 +312,28 @@ const onClickAddAttachmentStorage = () => {
     },
   }).onOk((val) => {
     forms.value.attch = val;
+  });
+};
+
+const onClickSetupSignBoxes = () => {
+  const amsmId = props.dataExists.id;
+  const signBoxApprovers = props.approvers.map((a) => ({
+    amsmd_id: a.amsmd_id,
+    amsmd_order: a.amsmd_order,
+    amsmd_username: a.amsmd_username,
+    fullname: a.fullname || a.user_det?.fullname,
+  }));
+
+  $q.dialog({
+    component: approvalSignSetup,
+    componentProps: {
+      amsm_id: String(amsmId),
+      approvers: signBoxApprovers,
+      existingBoxes: props.dataExists.sign_boxes || [],
+      documentUrl: props.dataExists.doc_url || "",
+    },
+  }).onOk((val) => {
+    console.log("sign boxes saved", val);
   });
 };
 </script>

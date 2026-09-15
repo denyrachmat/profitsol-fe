@@ -56,7 +56,14 @@
               class="q-mb-md"
             />
           </div>
-          <div class="col-1 q-pl-sm text-right">
+          <div class="col-1 q-pl-sm">
+            <q-toggle
+              v-model="item.isDownload"
+              color="green"
+              label="Download API ?"
+            />
+          </div>
+          <div class="col-1 q-pl-sm flex flex-column">
             <q-btn
               color="primary"
               icon="checklist"
@@ -64,6 +71,9 @@
               @click="onAddParams(index)"
             >
               <q-tooltip>Add Parameter</q-tooltip>
+              <q-badge color="red" floating>{{
+                item.params ? item.params.length : 0
+              }}</q-badge>
             </q-btn>
             <q-btn
               color="negative"
@@ -103,30 +113,55 @@ const props = defineProps({
   setup: Object,
 });
 
+onMounted(() => {
+  // console.log(props.forms);
+  if (props.dataEdit && props.dataEdit.length > 0) {
+    listAPI.value = JSON.parse(JSON.stringify(props.dataEdit));
+  }
+  // if (props.dataEdit && props.dataEdit.length > 0) {
+  //   listAPI.value = JSON.parse(JSON.stringify(props.dataEdit));
+  // } else {
+  //   listAPI.value = [];
+  // }
+});
+
 const listAPI = ref([]);
 
 const addRows = () => {
   listAPI.value.push({
     apiUrl: "",
     method: "GET",
+    isDownload: false,
     headers: "",
     params: [],
   });
 };
 
+const getAllForms = computed(() =>
+  props.forms
+    .flatMap((form) => (form.type === "row" ? form.content : form))
+    .filter((form) => form.type === "form")
+    .map((form) => ({
+      value: form.id,
+      label: form.content.label,
+    }))
+);
+
 const onAddParams = (idx) => {
   // Open the AddAPIParamByComponent dialog to add parameters
+  console.log("Adding parameters for API at index:", listAPI.value);
+  console.log(listAPI.value[idx]);
   $q.dialog({
     component: AddAPIParamByComponent,
     componentProps: {
-      listParam: listAPI.value,
-      forms: props.dataEdit,
+      listParam: listAPI.value[idx].params || [],
+      forms: getAllForms.value,
     },
     persistent: true,
-  }).onOk((params) => {
+  }).onOk((param) => {
     // Handle the parameters returned from the dialog
-    if (params && params.length > 0) {
-      listAPI.value[idx].params.push(...params);
+    if (param && param.length > 0) {
+      listAPI.value[idx].params = param;
     }
   });
 };

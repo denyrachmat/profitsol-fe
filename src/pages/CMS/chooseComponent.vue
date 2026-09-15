@@ -92,6 +92,7 @@
                     "
                   >
                     <q-btn
+                      v-if="componentChoosed.value?.comp !== 'q-dms'"
                       round
                       dense
                       flat
@@ -102,6 +103,7 @@
                       <q-tooltip>Add Option</q-tooltip>
                     </q-btn>
                     <q-btn
+                      v-if="componentChoosed.value?.comp !== 'q-dms'"
                       round
                       dense
                       flat
@@ -110,6 +112,17 @@
                       @click="addAPIComponent(componentChoosed.apiOpt ?? {})"
                     >
                       <q-tooltip>Add API Data</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      v-if="componentChoosed.value?.comp === 'q-dms'"
+                      round
+                      dense
+                      flat
+                      icon="folder_open"
+                      color="orange"
+                      @click="addDMSComponent(componentChoosed.dmsOpt ?? {})"
+                    >
+                      <q-tooltip>Setup DMS Folder Picker</q-tooltip>
                     </q-btn>
                   </template>
                 </q-select>
@@ -136,6 +149,7 @@
                 :label="label"
                 :detail="detailData"
                 :apiOpt="componentChoosed.apiOpt"
+                :dmsOpt="componentChoosed.dmsOpt"
                 @onDeleted="onDeleteOpt"
                 mode="edit"
                 @paste="onPasteData"
@@ -160,6 +174,7 @@ import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
 import inputType from "../../components/inputType.json";
 import addAPIComponentOptions from "./addAPIComponentOptions.vue";
+import addDMSComponentOptions from "./addDMSComponentOptions.vue";
 
 import componentViewVue from "./componentView.vue";
 
@@ -242,8 +257,7 @@ const onPasteData = (event) => {
   console.log(lines);
 };
 
-const addAPIComponent = (data) => {
-  if (!data || Object.keys(data).length === 0) {
+const addAPIComponent = (data) => {  if (!data || Object.keys(data).length === 0) {
     componentChoosed.value.apiOpt = {
       api_url: "",
       api_method: "GET",
@@ -258,10 +272,34 @@ const addAPIComponent = (data) => {
     componentProps: {
       detailData: componentChoosed.value.apiOpt,
       forms: props.forms,
+      comp: componentChoosed.value.value?.comp || "",
     },
   })
     .onOk((val) => {
       componentChoosed.value.apiOpt = val;
+    })
+    .onDismiss(() => {
+      console.log("Dialog dismissed");
+    });
+};
+
+const addDMSComponent = (data) => {
+  if (!data || Object.keys(data).length === 0) {
+    componentChoosed.value.dmsOpt = {
+      root: "",
+      start_folder_id: "",
+      kind: "both",
+    };
+  }
+
+  $q.dialog({
+    component: addDMSComponentOptions,
+    componentProps: {
+      detailData: componentChoosed.value.dmsOpt,
+    },
+  })
+    .onOk((val) => {
+      componentChoosed.value.dmsOpt = val;
     })
     .onDismiss(() => {
       console.log("Dialog dismissed");

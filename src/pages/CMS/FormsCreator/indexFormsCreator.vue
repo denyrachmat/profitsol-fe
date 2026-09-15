@@ -50,9 +50,50 @@
                 >
                   <q-item-section>Share this question</q-item-section>
                 </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickReviewAllLogics"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Review All Logics</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickExportBackup"
+                  :disable="!idRef"
+                >
+                  <q-item-section>Download Backup (.json)</q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickImportBackup"
+                >
+                  <q-item-section>Restore from Backup</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="onClickDeleteCurrentForm"
+                  :disable="!idRef"
+                >
+                  <q-item-section class="text-negative">Delete Form</q-item-section>
+                </q-item>
               </q-list>
             </q-menu>
           </q-btn>
+          <q-btn
+            color="negative"
+            icon="delete_sweep"
+            flat
+            no-caps
+            label="Trash"
+            @click="onClickTrash"
+          />
         </q-btn-group>
       </div>
     </div>
@@ -640,8 +681,8 @@
                               col.required ? '*' : ''
                             }`"
                             :detail="col.content.detail_data"
-                            mode="live-ans"
-                            @customAnschange="
+                            :dmsOpt="col.content.component.dmsOpt"
+                            mode="live-ans"                            @customAnschange="
                               (val) => onChooseValue(val, index)
                             "
                             :key="index + 'color'"
@@ -673,15 +714,16 @@ import chooseComponent from "../chooseComponent.vue";
 import addContentComponent from "../addContentComponent.vue";
 import componentViewVue from "../componentView.vue";
 import viewLogicHeaderForms from "./viewLogicsHeaderForms.vue";
+import viewLogicsAll from "./viewLogicsAll.vue";
 import openTraining from "../Training/openTraining.vue";
 import apiRequest from "src/components/apiRequest";
 import previewComponentVue from "../Forms/previewComponent.vue";
 import viewSetupForms from "./viewSetupForms.vue";
 import shareFormsVue from "../Forms/shareForms.vue";
-import indexPostManage from "src/pages/UpdateFP/postManage/indexPostManage.vue";
+// import indexPostManage from "src/pages/UpdateFP/components/postManage/indexPostManage.vue";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 
-import folderFilesChooser from "src/pages/UpdateFP/pageManage/folderFilesChooser.vue";
+import folderFilesChooser from "src/pages/UpdateFP/components/pageManage/folderFilesChooser.vue";
 
 import { useAuthStore } from "src/stores/authStore";
 
@@ -695,7 +737,18 @@ const title = ref("");
 const desc = ref("");
 const idRef = ref(null);
 const forms = ref([]);
-const setupTrainingSetup = ref([]);
+const setupTrainingSetup = ref({
+  isRPA: false,
+  isApproval: false,
+  isAPI: false,
+  isNotif: false,
+  rpaId: null,
+  rpaParams: {},
+  apiOpt: [],
+  bulkMode: "once",
+});
+const formStatus = ref("draft");
+const formYear = ref(null);
 const share = ref([]);
 const shareMainMenu = ref(false);
 const shareIsroles = ref(false);
@@ -955,6 +1008,124 @@ const onClickLogics = (index, indexCol) => {
   });
 };
 
+const onClickReviewAllLogics = () => {
+  $q.dialog({
+    component: viewLogicsAll,
+    componentProps: {
+      forms: forms.value,
+    },
+  }).onOk((changes) => {
+    changes.forEach(({ rowIdx, colIdx, logics }) => {
+      const content = forms.value[rowIdx].type === "row"
+        ? forms.value[rowIdx].content
+        : [forms.value[rowIdx]];
+      if (content[colIdx]) {
+        content[colIdx].logics = logics;
+      }
+    });
+  });
+};
+
+const onClickExportBackup = () => {
+  const backup = {
+    title: title.value,
+    desc: desc.value,
+    status: formStatus.value,
+    year: formYear.value,
+    isQuiz: props.mode ?? false,
+    forms: JSON.parse(JSON.stringify(forms.value)),
+    setupTraining: JSON.parse(JSON.stringify(setupTrainingSetup.value)),
+    share: share.value,
+    shareMainMenu: shareMainMenu.value,
+    shareIsroles: shareIsroles.value,
+    selectedSharedMenu: selectedSharedMenu.value,
+    shareFormsMenuIcon: shareFormsMenuIcon.value,
+    shareFormsRoleID: selectedTableRoles.value,
+    exportedAt: new Date().toISOString(),
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.value || "form"}-backup.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  $q.notify({ color: "positive", message: "Backup downloaded", icon: "download" });
+};
+
+const onClickImportBackup = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        title.value = data.title || "";
+        desc.value = data.desc || "";
+        formStatus.value = data.status || "draft";
+        formYear.value = data.year || null;
+        forms.value = data.forms || [];
+        setupTrainingSetup.value = Array.isArray(data.setupTraining)
+          ? {}
+          : data.setupTraining || {};
+        share.value = data.share || [];
+        shareMainMenu.value = data.shareMainMenu || false;
+        shareIsroles.value = data.shareIsroles || false;
+        selectedSharedMenu.value = data.selectedSharedMenu || "";
+        shareFormsMenuIcon.value = data.shareFormsMenuIcon || "";
+        shareFormsRoleID.value = data.shareFormsRoleID || "";
+        $q.notify({ color: "positive", message: "Backup restored", icon: "check" });
+      } catch (err) {
+        $q.notify({ color: "negative", message: "Invalid backup file", icon: "warning" });
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+const onClickDeleteCurrentForm = () => {
+  $q.dialog({
+    title: "Confirm Delete",
+    message: "Move this form to trash? It can be restored later.",
+    persistent: true,
+    cancel: true,
+    color: "negative",
+  }).onOk(async () => {
+    const data = await postData("delete", null, `cms/forms/${idRef.value}`, false, false, true);
+    if (data && data.status) {
+      $q.notify({ color: "positive", message: "Form moved to trash", icon: "check" });
+      title.value = "";
+      forms.value = [];
+      idRef.value = null;
+    } else {
+      $q.notify({ color: "negative", message: data?.message || "Delete failed", icon: "warning" });
+    }
+  });
+};
+
+const onClickTrash = async () => {
+  const { default: viewTrashForms } = await import("./viewTrashForms.vue");
+  const trashedData = await postData("get", null, "cms/trashed", false, false, true);
+  if (!trashedData?.data) {
+    $q.notify({ color: "negative", message: "Failed to load trash", icon: "warning" });
+    return;
+  }
+
+  $q.dialog({
+    component: viewTrashForms,
+    componentProps: {
+      forms: trashedData.data,
+    },
+  });
+};
+
 function updateRowSeqNamesInPlace(data) {
   data.forEach((row, index) => {
     if (row.type === "row") {
@@ -972,9 +1143,13 @@ const onClickOpenTraining = () => {
     },
   }).onOk(async (val) => {
     forms.value = updateRowSeqNamesInPlace(val.forms);
-    setupTrainingSetup.value = val.setupTraining;
+    setupTrainingSetup.value = Array.isArray(val.setupTraining)
+      ? {}
+      : val.setupTraining || {};
     title.value = val.title;
     idRef.value = val.id;
+    formStatus.value = val.status || "draft";
+    formYear.value = val.year || null;
     share.value = val.share;
     shareMainMenu.value = val.shareFormsIsMainMenu;
     shareIsroles.value = val.shareFormsIsRoles;
@@ -984,15 +1159,50 @@ const onClickOpenTraining = () => {
   });
 };
 
-const openPreview = () => {
+const openPreview = async () => {
+  // Test mode must not create real answers: hide submit button.
+  // Also reload server-fresh definition so preview cols have real ids
+  // (in-memory creator rows from chooseComponent have no id yet).
+  let previewForms = forms.value;
+  if (idRef.value) {
+    try {
+      const fresh = await postData(
+        "get",
+        null,
+        `cms/viewByID/${idRef.value}`,
+        false,
+        false,
+        true
+      );
+      if (fresh?.data?.value?.forms) {
+        previewForms = fresh.data.value.forms;
+      }
+    } catch (e) {
+      console.warn("[FormsCreator] preview reload failed, using local", e);
+    }
+  }
+  const missingIds = (previewForms || []).some((row) =>
+    (Array.isArray(row?.content) ? row.content : []).some(
+      (col) => col?.type === "form" && (col.id === undefined || col.id === null)
+    )
+  );
+  if (missingIds) {
+    $q.notify({
+      message:
+        "Preview has unsaved fields (missing IDs). Save the form and reopen preview for accurate testing.",
+      color: "orange",
+      icon: "warning",
+    });
+  }
   $q.dialog({
     component: previewComponentVue,
     componentProps: {
-      data: forms.value,
+      data: previewForms,
       setup: setupTrainingSetup.value,
       id: idRef.value,
       mode: "form",
       idDet: [],
+      removeButton: true,
     },
   }).onOk(async (val) => {
     console.log(val);
@@ -1006,6 +1216,9 @@ const onSaveQuestion = () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
+    const safeSetup = Array.isArray(setupTrainingSetup.value)
+      ? {}
+      : setupTrainingSetup.value || {};
     const data = await postData(
       "post",
       {
@@ -1014,12 +1227,21 @@ const onSaveQuestion = () => {
         title: title.value,
         desc: desc.value,
         isQuiz: props.mode ?? false,
-        setupTraining: setupTrainingSetup.value,
+        status: formStatus.value,
+        year: formYear.value,
+        setupTraining: {
+          isRPA: false,
+          isApproval: false,
+          isAPI: false,
+          isNotif: false,
+          ...safeSetup,
+        },
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
         shareFormsIsRoles: shareIsroles.value,
         selectedSharedMenu: selectedSharedMenu.value,
         shareFormsMenuIcon: shareFormsMenuIcon.value,
+        shareFormsRoleID: selectedTableRoles.value,
       },
       `cms/forms`,
       false,
@@ -1052,9 +1274,13 @@ const onClickSetupTraining = () => {
     componentProps: {
       setupTrainingSetup: setupTrainingSetup.value,
       forms: forms.value,
+      formStatus: formStatus.value,
+      formYear: formYear.value,
     },
   }).onOk(async (val) => {
-    setupTrainingSetup.value = val;
+    setupTrainingSetup.value = Array.isArray(val) ? {} : val || {};
+    formStatus.value = val.formStatus || "draft";
+    formYear.value = val.formYear || null;
   });
 };
 
@@ -1077,6 +1303,7 @@ const onClickShare = () => {
     shareIsroles.value = val.isRoles;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
     selectedSharedMenu.value = val.selectedSharedMenu;
+    selectedTableRoles.value = val.selectedTableRoles || [];
   });
 };
 
@@ -1085,6 +1312,8 @@ watch(
     title,
     forms,
     setupTrainingSetup,
+    formStatus,
+    formYear,
     share,
     shareMainMenu,
     shareIsroles,
@@ -1097,6 +1326,8 @@ watch(
       newTitle,
       newForms,
       newSetup,
+      newStatus,
+      newYear,
       newShare,
       newMainMenu,
       newIsroles,
@@ -1108,6 +1339,8 @@ watch(
       oldTitle,
       oldForms,
       oldSetup,
+      oldStatus,
+      oldYear,
       oldShare,
       oldMainMenu,
       oldIsroles,
@@ -1120,6 +1353,8 @@ watch(
       title: [oldTitle, newTitle],
       forms: [oldForms, newForms],
       setupTrainingSetup: [oldSetup, newSetup],
+      formStatus: [oldStatus, newStatus],
+      formYear: [oldYear, newYear],
       share: [oldShare, newShare],
       shareMainMenu: [oldMainMenu, newMainMenu],
       shareIsroles: [oldIsroles, newIsroles],
@@ -1132,6 +1367,8 @@ watch(
         title: [oldTitle, newTitle],
         forms: [oldForms, newForms],
         setupTrainingSetup: [oldSetup, newSetup],
+        formStatus: [oldStatus, newStatus],
+        formYear: [oldYear, newYear],
         share: [oldShare, newShare],
         shareMainMenu: [oldMainMenu, newMainMenu],
         shareIsroles: [oldIsroles, newIsroles],

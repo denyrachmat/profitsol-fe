@@ -71,7 +71,7 @@
           </q-select>
         </q-toolbar-title>
 
-        <div>Portal Application v2.1.1</div>
+        <div>Portal Application v2.26.9.2</div>
 
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>
@@ -494,13 +494,6 @@ export default defineComponent({
 
     this.getNotif();
     this.getListDomain();
-  },
-  mounted() {
-    window.addEventListener("beforeunload", this.handleBeforeUnload);
-  },
-  beforeUnmount() {
-    // Clean up the event listener when component unmounts
-    window.removeEventListener("beforeunload", this.handleBeforeUnload);
   },
   computed: {
     authDetail() {

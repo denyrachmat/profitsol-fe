@@ -10,7 +10,7 @@
         <div class="row">
           <div class="col">
             <q-tree
-              class="col-12 col-sm-6"
+              class="assign-tree"
               :nodes="options"
               label-key="label"
               node-key="value"
@@ -79,12 +79,20 @@ onMounted(() => {
 const getDataApps = () =>
   realData.value.filter((fil) => fil.am_app_code === val);
 
+const normalizeIcon = (iconName) => {
+  const icon = String(iconName || "").trim();
+  if (!icon) return "apps";
+  // Guard against malformed icon payloads that can break tree node layout.
+  if (icon.length > 60 && !icon.startsWith("img:")) return "apps";
+  return icon;
+};
+
 const spreadingNodes = (data) => {
   return data.map((val) => {
     return {
       label: val.am_app_name,
       value: val.am_app_code,
-      icon: val.am_app_icon,
+      icon: normalizeIcon(val.am_app_icon),
       children: val.child_apps.length > 0 ? spreadingNodes(val.child_apps) : [],
       parent: val.am_app_parent,
     };
@@ -172,3 +180,27 @@ function onOKClick() {
   // ...and it will also hide the dialog automatically
 }
 </script>
+
+<style scoped>
+.assign-tree :deep(.q-tree__node-header) {
+  align-items: center;
+}
+
+.assign-tree :deep(.q-tree__node-header .q-checkbox) {
+  flex: 0 0 auto;
+  margin-right: 6px;
+  z-index: 2;
+}
+
+.assign-tree :deep(.q-tree__icon) {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin-right: 6px;
+}
+
+.assign-tree :deep(.q-tree__node-header-content) {
+  min-width: 0;
+}
+</style>

@@ -8,7 +8,9 @@
   >
     <q-card class="q-dialog-plugin bg-white q-pa-md">
       <q-card-section>
-        <div class="text-h6">Preview Content</div>
+        <div class="text-h6">
+          {{ props.isPreview ? "Preview Content" : "Form Content" }}
+        </div>
       </q-card-section>
 
       <q-card-section class="q-pa-md" style="min-height: 40vh">
@@ -19,6 +21,8 @@
           :id="props.id"
           :showFormOnly="isShowFormOnlyValue"
           :preventClear="props.preventClear"
+          :batchID="props.answersKey"
+          :removeButton="props.removeButton"
         />
         <showQuizComponentVue
           :id="props.id"
@@ -29,7 +33,7 @@
         />
       </q-card-section>
 
-      <q-card-actions align="right">
+      <q-card-actions align="right" class="q-pt-md">
         <q-btn flat label="OK" color="primary" @click="onOKClick" />
       </q-card-actions>
     </q-card>
@@ -59,6 +63,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  answersKey: {
+    type: String,
+    default: "",
+  },
+  isPreview: {
+    type: Boolean,
+    default: true,
+  },
+  formsList: {
+    type: Array,
+    default: () => [],
+  },
+  removeButton: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const isShowFormOnlyValue = ref(true);
@@ -80,8 +100,6 @@ onMounted(async () => {
   }
 
   isShowFormOnlyValue.value = props.showFormOnly;
-
-  console.log("isShowFormOnlyValue", isShowFormOnlyValue.value);
 });
 
 function onOKClick() {

@@ -12,6 +12,72 @@
         >
       </div>
     </div>
+    <q-separator />
+    <div class="row q-pa-md q-col-gutter-md items-end">
+      <div class="col-12">
+        <span class="text-h6">Filters</span>
+      </div>
+      <div class="col-12 col-md-4">
+        <q-input
+          v-model="searchSubject"
+          label="Search Subject"
+          dense
+          outlined
+          clearable
+          debounce="400"
+        />
+      </div>
+      <div class="col-12 col-md-4">
+        <q-input
+          v-model="searchUser"
+          label="Search User"
+          dense
+          outlined
+          clearable
+          debounce="400"
+        />
+      </div>
+      <div class="col-12 col-md-3">
+        <q-input
+          v-model="searchDate"
+          type="input"
+          label="Search Date"
+          dense
+          outlined
+          clearable
+          debounce="400"
+          readonly
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="cursor-pointer">
+              <q-popup-proxy
+                cover
+                transition-show="scale"
+                transition-hide="scale"
+              >
+                <q-date v-model="searchDate" mask="YYYY-MM-DD">
+                  <div class="row items-center justify-end">
+                    <q-btn v-close-popup label="Close" color="primary" flat />
+                  </div>
+                </q-date>
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+      </div>
+      <div class="col-12 col-md-1">
+        <q-btn
+          color="primary"
+          icon="restart_alt"
+          flat
+          class="full-width"
+          @click="clearSearch"
+        >
+          <q-tooltip>Clear Filters</q-tooltip>
+        </q-btn>
+      </div>
+    </div>
+
     <div class="row">
       <div class="col">
         <q-list bordered separator>
@@ -26,7 +92,7 @@
             <template v-if="posts.length === 0">
               <q-item>
                 <q-item-section>
-                  <span>No posts found</span>
+                  <span>No posts found for your search</span>
                 </q-item-section>
               </q-item>
             </template>
@@ -56,18 +122,28 @@
                       border-radius: 12px;
                     "
                   />
-                  <img
-                    :src="
-                      post.image || 'https://cdn.quasar.dev/img/mountains.jpg'
-                    "
-                    style="
-                      width: 100%;
-                      height: 150px;
-                      object-fit: cover;
-                      border-radius: 12px;
-                    "
-                    v-else
-                  />
+                  <template v-else>
+                    <img
+                      :src="post.image"
+                      style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                      "
+                      v-if="post.image"
+                    />
+                    <img
+                      src="~assets/10167807.jpg"
+                      style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                      "
+                      v-else
+                    />
+                  </template>
                 </q-item-section>
 
                 <q-item-section class="col-10">
@@ -124,9 +200,8 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
-import showComponent from "../CMS/Forms/showComponent.vue";
 import apiRequest from "src/components/apiRequest";
 import { useFormStore } from "stores/formStore";
 
@@ -145,6 +220,10 @@ const pagination = ref({
 });
 
 const posts = ref([]);
+const searchSubject = ref("");
+const searchUser = ref("");
+const searchDate = ref("");
+let searchDebounce = null;
 
 onMounted(() => {
   getTags();
@@ -163,16 +242,43 @@ const getTags = async () => {
   loadingData.value = true;
   const orderByObj = {};
   orderByObj[orderBy.value] = order.value;
+  const filter = [];
+
+  if (searchSubject.value) {
+    filter.push({
+      cols: "cfmt_title",
+      param: "like",
+      value: `%${searchSubject.value}%`,
+    });
+  }
+
+  if (searchUser.value) {
+    filter.push({
+      cols: "p_u_username",
+      param: "like",
+      value: `%${searchUser.value}%`,
+    });
+  }
+
+  if (searchDate.value) {
+    filter.push({
+      cols: "created_at",
+      param: "like",
+      value: `${searchDate.value}%`,
+    });
+  }
 
   const response = await postData(
     "post",
     {
       id: "post",
       tags: tags.value,
+      filter,
       orderBy: [orderByObj],
       limit: pagination.value.rowsPerPage,
       isPaginated: true,
       page: pagination.value.page,
+      isPublisedOnly: true,
     },
     "cms/formsDetail"
   );
@@ -252,4 +358,28 @@ const onChangePage = (newPage) => {
   pagination.value.page = newPage;
   getTags();
 };
+
+const clearSearch = () => {
+  searchSubject.value = "";
+  searchUser.value = "";
+  searchDate.value = "";
+};
+
+watch([searchSubject, searchUser, searchDate], () => {
+  if (searchDebounce) {
+    clearTimeout(searchDebounce);
+  }
+
+  searchDebounce = setTimeout(() => {
+    pagination.value.page = 1;
+    getTags();
+  }, 400);
+});
+
+onBeforeUnmount(() => {
+  if (searchDebounce) {
+    clearTimeout(searchDebounce);
+    searchDebounce = null;
+  }
+});
 </script>

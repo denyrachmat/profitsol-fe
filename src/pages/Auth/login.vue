@@ -14,6 +14,7 @@
           label="Username"
           lazy-rules
           :rules="[(val) => (val && val.length > 0) || 'Please type something']"
+          disable
         />
 
         <q-input
@@ -23,9 +24,14 @@
           label="Password"
           lazy-rules
           :rules="[(val) => (val && val.length > 0) || 'Please type something']"
+          style="display: none"
         />
 
-        <q-toggle v-model="remember" label="Remember Me?" />
+        <q-toggle
+          v-model="remember"
+          label="Remember Me?"
+          style="display: none"
+        />
 
         <q-btn
           flat
@@ -33,9 +39,10 @@
           label="Forget your password?"
           no-caps
           @click="$emit('getrouted', 'forgot')"
+          style="display: none"
         />
 
-        <div>
+        <div style="display: none">
           <q-btn
             label="Submit"
             type="submit"
@@ -44,7 +51,7 @@
           />
         </div>
       </q-form>
-      <div class="q-pa-md text-center">Or</div>
+      <div class="q-pa-md text-center" style="display: none">Or</div>
       <div class="row">
         <div class="col text-center">
           <q-btn
@@ -230,6 +237,8 @@ export default defineComponent({
         "Sites.ReadWrite.All",
         // "Calendars.ReadBasic",
         "Calendars.ReadWrite",
+        "Chat.Create",
+        "Chat.ReadWrite",
       ];
 
       if (this.isInteractionInProgress || interactionState) {
@@ -292,6 +301,7 @@ export default defineComponent({
         "Files.ReadWrite.All",
         "Sites.ReadWrite.All",
         "Calendars.ReadWrite",
+        "ChatMessage.Send",
       ];
 
       // Check if interaction is in progress

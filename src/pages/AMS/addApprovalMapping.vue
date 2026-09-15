@@ -249,6 +249,13 @@ const onClickApprovalSet = (id) => {
     component: settingsApproval,
     componentProps: {
       dataExists: props.dataUpdated.apprv_set,
+      approvers: listApproval.value.map((a, i) => ({
+        amsmd_id: (props.dataUpdated.det && props.dataUpdated.det[i]?.id) || i,
+        amsmd_order: a.amsmd_order,
+        amsmd_username: a.amsmd_username,
+        fullname: a.fullname,
+      })),
+      amsm_id: String(ids.value),
     },
   }).onOk(async (val) => {
     loading.value = true;
@@ -295,9 +302,13 @@ const onClickChangeContent = () => {
       );
 
       if (data) {
-        getData();
+        contents.value = val.content;
+        $q.notify({
+          color: "green",
+          message: data.message || "Content updated successfully",
+        });
       }
-      console.log(val);
+      loading.value = false;
     }
   });
 };

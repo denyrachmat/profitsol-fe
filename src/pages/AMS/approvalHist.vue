@@ -17,7 +17,7 @@
           bordered
           :rows="listData"
           :columns="columns"
-          row-key="YSPDT_INVNO"
+          row-key="id"
           color="amber"
           :loading="loading"
           title="Approval & Notification History"
@@ -92,6 +92,18 @@ const { postData } = apiRequest();
 const store = useAuthStore();
 
 const listData = ref([]);
+const formatKeys = (row) => {
+  const dk = row.dataKey || {};
+  const parts = [];
+  if (dk.form_id) parts.push(`Form #${dk.form_id} • Batch ${dk.batch_id || "-"}`);
+  const cmsVals = Object.entries(dk)
+    .filter(([k]) => k.startsWith("CMS_REPORT_") && !k.includes("_POS") && !k.includes("_VAL") && !["form_id", "batch_id", "progress", "progress_detail", "created_by", "created_at", "prh_id", "prh_flag"].includes(k))
+    .map(([, v]) => String(v ?? "").trim())
+    .filter(Boolean);
+  if (cmsVals.length) parts.push(cmsVals.join(" | "));
+  if (dk.created_by) parts.push(`by ${dk.created_by}`);
+  return parts.join(" — ") || JSON.stringify(dk);
+};
 const columns = ref([
   {
     name: "approval_title",
@@ -99,18 +111,35 @@ const columns = ref([
     field: (row) => row.master.ams_title,
     sortable: true,
     align: "left",
+    style: "max-width:220px; white-space:normal; word-break:break-word",
   },
   {
     name: "approval_keys",
-    label: "Keys Value",
-    field: (row) => row.dataKey,
+    label: "Leave / Keys",
+    field: (row) => formatKeys(row),
+    sortable: true,
+    align: "left",
+    style: "max-width:380px; white-space:normal; word-break:break-word",
+  },
+  {
+    name: "approver",
+    label: "Approver",
+    field: (row) => row.data?.amshd_username_apprv || row.mapdet?.amsmd_username || "-",
     sortable: true,
     align: "left",
   },
   {
+    name: "remarks",
+    label: "Remarks",
+    field: (row) => row.data?.amshd_remarks || "-",
+    sortable: false,
+    align: "left",
+    style: "max-width:200px; white-space:normal",
+  },
+  {
     name: "created_at",
-    label: "Created Date",
-    field: (row) => date.formatDate(row.created_at, "D MMM YYYY HH:MM"),
+    label: "Created",
+    field: (row) => date.formatDate(row.created_at, "D MMM YYYY HH:mm"),
     sortable: true,
     align: "left",
   },

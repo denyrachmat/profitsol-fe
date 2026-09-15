@@ -23,7 +23,8 @@ export const useFormStore = defineStore("form", {
     startFormDate: "",
     endFormDate: "",
     CMSPageChoosed: "",
-    isLoadingArticle: false
+    isLoadingArticle: false,
+    isFrontPageTourDone: false
   }),
 
   getters: {
@@ -59,12 +60,15 @@ export const useFormStore = defineStore("form", {
     },
     getIsLoadingArticle(state) {
       return parseInt(state.isLoadingArticle);
+    },
+    getIsFrontPageTourDone(state) {
+      return state.isFrontPageTourDone;
     }
   },
 
   actions: {
     startCountDown() {
-      // console.log("masuk timer 1");
+      console.log("masuk timer 1");
       this.startTime = true;
       this.finishQuiz = false;
 
@@ -101,14 +105,33 @@ export const useFormStore = defineStore("form", {
       this.userAnswers[idx] = val;
     },
     addAnswersForm(rowIdx, colIdx, val) {
+      if (colIdx === undefined || colIdx === null || colIdx === "") {
+        console.warn("[formStore] ignored answer with missing fieldId", {
+          rowIdx,
+          colIdx,
+          val,
+        });
+        return;
+      }
+      const key = String(colIdx);
+      if (key === "undefined" || key === "null") {
+        console.warn("[formStore] ignored answer with invalid fieldId", {
+          rowIdx,
+          colIdx,
+          val,
+        });
+        return;
+      }
       this.userAnswersForm[rowIdx] = {
         ...this.userAnswersForm[rowIdx],
-        [colIdx]: val,
+        [key]: val,
       };
     },
     restoreDefault() {
       this.userAnswers = [];
       this.userAnswersForm = [];
+      this.startTime = false;
+      this.finishQuiz = false;
       this.timeData = {
         hours: 0,
         minutes: 0,
@@ -152,6 +175,13 @@ export const useFormStore = defineStore("form", {
     },
     setLoadingArticle(stateVal) {
       this.isLoadingArticle = stateVal;
+    },
+    setFrontPageTourDone(stateVal) {
+      this.isFrontPageTourDone = stateVal;
+    },
+    setUserAnswerAtIndex(index, value) {
+      this.userAnswers[index] = value;
     }
   },
+  persist: true
 });

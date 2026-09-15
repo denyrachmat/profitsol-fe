@@ -4,7 +4,7 @@
     <div class="row">
       <div class="col-12 col-md-4 q-pa-sm">
         <q-card class="my-card" v-if="store.getDetail">
-          <q-img src="~assets/sumitronics_OGP.png" height="36vh">
+          <q-img src="~assets/Logo_STXI 1.png" height="36vh">
             <div class="text-center full-width full-height">
               <q-avatar
                 size="150px"
@@ -163,6 +163,8 @@ import informationList from "./informationList.vue";
 import viewApps from "./viewApps.vue";
 import { date, useQuasar } from "quasar";
 
+import { authHelper, sharePointService } from "@/components/msHelpers";
+
 import appListVue from "./appList.vue";
 // import {
 //   Providers,
@@ -203,7 +205,7 @@ onMounted(() => {
         keyInfo.value = keyInfo.value + 1;
         getMSUserDetail();
       }
-    }, 10000);
+    }, 60000);
   } else {
     clearInterval(timeoutRefresh.value);
   }
@@ -219,7 +221,7 @@ watch(
         if (store.getIsNotifDone) {
           keyInfo.value = keyInfo.value + 1;
         }
-      }, 10000);
+      }, 60000);
     } else {
       clearInterval(timeoutRefresh.value);
     }
@@ -235,22 +237,13 @@ const getMSUserDetail = async () => {
     return;
   }
 
-  const data = await postData(
-    "get",
-    null,
-    null,
-    false,
-    false,
-    true,
-    `${process.env.GRAPH_API}me/calendar/events?$orderby=start/dateTime desc`,
-    true
+  const data = await sharePointService.getCalendarEvents(
+    store.msTokenDet.accessToken
   );
 
-  // console.log(process.env.GRAPH_API + store.getMSLogDet.localAccountId);
-
   if (data) {
-    // console.log(data.value);
-    mainEvent.value = data.value;
+    // console.log(data);
+    mainEvent.value = data;
   }
 };
 

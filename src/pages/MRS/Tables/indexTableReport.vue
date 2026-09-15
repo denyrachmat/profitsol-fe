@@ -1,14 +1,40 @@
 <template>
   <div class="q-pa-md">
+    <div v-if="!isUserCanViewReport" class="text-center q-py-xl text-grey">
+      <template v-if="loadingOwnData">
+        <q-spinner-dots size="48px" color="primary" />
+        <div class="text-h6 q-mt-sm">Loading your data...</div>
+        <div class="text-caption">Please wait while the form is populated.</div>
+      </template>
+      <template v-else>
+        <q-icon name="lock" size="48px" color="orange" />
+        <div class="text-h6 q-mt-sm">{{ accessDeniedReason }}</div>
+        <template v-if="idForms && isOwnDataEditAllowed">
+          <div class="text-caption">Use the form to manage your data instead.</div>
+          <q-btn
+            class="q-mt-md"
+            color="primary"
+            icon="edit"
+            label="Open Form (My Data)"
+            no-caps
+            outline
+            @click="openFormWithAllData()"
+          />
+        </template>
+      </template>
+    </div>
     <q-table
+      v-else
       :title="TableTitle"
       :rows="rows"
       :columns="columns"
-      row-key="mrm_name"
+      row-key="batch_id"
       v-model:pagination="pagination"
       @request="onRequest"
       :loading="loading"
       ref="tableRef"
+      selection="multiple"
+      v-model:selected="selectedRows"
       class="my-sticky-header-table"
     >
       <template v-slot:top-left>
@@ -24,6 +50,7 @@
             @click="onExportExcel()"
           />
           <q-btn
+            v-if="props.canFilter"
             color="primary"
             icon-right="search"
             label="Filter"
@@ -32,7 +59,102 @@
           >
             <q-badge color="red" floating>{{ filter.length }}</q-badge>
           </q-btn>
-          <q-btn color="red" icon-right="delete" no-caps @click="clearFilter">
+          <q-btn-dropdown color="cyan" label="Settings" no-caps>
+            <q-list>
+              <q-item
+                clickable
+                v-close-popup
+                @click="onPeriodClick()"
+                :disable="!props.isAddActivePeriod"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="orange"
+                    icon="date_range"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Setup Period</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list v-if="isUserCanSetStatus">
+              <q-item clickable v-close-popup @click="onClickSetStatus">
+                <q-item-section avatar>
+                  <q-avatar color="purple" icon="publish" text-color="white" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Set Form Status</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list v-if="isUserCanSetFieldPerms">
+              <q-item clickable v-close-popup @click="onClickFieldPerms">
+                <q-item-section avatar>
+                  <q-avatar
+                    color="deep-purple"
+                    icon="visibility"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Field Permissions</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list>
+              <q-item
+                clickable
+                v-close-popup
+                @click="onMultipleManageClick()"
+                :disable="!props.activateMultipleCreate"
+              >
+                <q-item-section avatar>
+                  <q-avatar
+                    color="indigo"
+                    icon="playlist_add"
+                    text-color="white"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Multiple form management</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <q-list v-if="props.isAPIExport && props.maxAPIOpt > 0">
+              <q-item clickable v-close-popup @click="onRefresh()">
+                <q-item-section avatar>
+                  <q-avatar color="indigo" icon="refresh" text-color="white" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Refresh Data</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item
+                v-for="opt in props.maxAPIOpt"
+                :key="opt"
+                clickable
+                v-close-popup
+                @click="onExportExcel(true)"
+              >
+                <q-item-section avatar>
+                  <q-avatar color="green" icon="archive" text-color="white" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Export API {{ opt }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+          <q-btn
+            v-if="props.canFilter && !isFilterReadOnly"
+            color="red"
+            icon-right="delete"
+            no-caps
+            @click="clearFilter"
+          >
             <q-tooltip>Reset Filter</q-tooltip>
           </q-btn>
           <q-btn color="orange" icon-right="refresh" no-caps @click="onRefresh">
@@ -50,6 +172,14 @@
           >
             <q-tooltip>Add Data</q-tooltip>
           </q-btn>
+          <q-btn
+            v-if="selectedRows.length > 0"
+            color="orange"
+            icon="edit_note"
+            label="Bulk Edit"
+            no-caps
+            @click="onBulkEditSelected"
+          />
         </q-btn-group>
       </template>
 
@@ -59,7 +189,15 @@
 
       <template v-slot:body="props">
         <q-tr :props="props">
-          <q-td v-for="col in props.cols" :key="col.name" :props="props">
+          <q-td auto-width class="text-center">
+            <q-checkbox v-model="props.selected" dense />
+          </q-td>
+          <q-td
+            v-for="col in props.cols"
+            :key="col.name"
+            :props="props"
+            style="word-break: break-word; white-space: normal"
+          >
             <div
               v-if="
                 col.name !== 'action' &&
@@ -102,25 +240,47 @@
                   v-if="propsReports.includes('approval')"
                 />
                 <q-btn
-                  color="orange"
+                  :color="
+                    !props.canEdit &&
+                    isRPAOrApproval &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
+                      ? 'grey'
+                      : 'orange'
+                  "
                   icon="edit"
                   no-caps
                   @click="onEditData(props.row)"
                   outline
                   :disabled="
-                    parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3
+                    !props.canEdit &&
+                    isRPAOrApproval &&
+                    !(
+                      parseInt(props.row.prh_flag) > 0 &&
+                      parseInt(props.row.prh_flag) < 3
+                    )
                   "
                 />
                 <q-btn
-                  color="red"
+                  :color="
+                    isRPAOrApproval &&
+                    parseInt(props.row.prh_flag) > 0 &&
+                    parseInt(props.row.prh_flag) < 3 &&
+                    !props.canDelete
+                      ? 'grey'
+                      : 'red'
+                  "
                   icon="delete"
                   no-caps
                   @click="onDelete(props.row)"
                   outline
                   :disabled="
+                    isRPAOrApproval &&
                     parseInt(props.row.prh_flag) > 0 &&
-                    parseInt(props.row.prh_flag) < 3
+                    parseInt(props.row.prh_flag) < 3 &&
+                    !props.canDelete
                   "
                 />
               </q-btn-group>
@@ -145,15 +305,54 @@ import { socket } from "src/boot/socket";
 import { useFormStore } from "stores/formStore";
 import { useAuthStore } from "stores/authStore";
 
+import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+import viewSetupFieldPerms from "src/pages/CMS/FormsCreator/viewSetupFieldPerms.vue";
+
 const $q = useQuasar();
 const route = useRoute();
 const { postData } = apiRequest();
 const store = useAuthStore();
 
 const props = defineProps({
-  idReport: String,
+  idReport: [String, Number],
   TableTitle: String,
-  idForms: String,
+  idForms: [String, Number],
+  isAPIExport: {
+    type: Boolean,
+    default: false,
+  },
+  maxAPIOpt: {
+    type: Number,
+    default: 0,
+  },
+  isAddActivePeriod: {
+    type: Boolean,
+    default: false,
+  },
+  activateMultipleCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canFilter: {
+    type: Boolean,
+    default: true,
+  },
+  readOnlyFilter: {
+    type: Boolean,
+    default: false,
+  },
+  defaultFilter: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const TableTitle = ref(props.TableTitle);
@@ -175,8 +374,123 @@ const propsReports = ref("");
 const isFilterFirst = ref(false);
 const idForms = ref(props.idForms || null);
 const formStore = useFormStore();
+const formPeriod = ref({
+  from: null,
+  to: null,
+});
+const maxMultipleCreate = ref(0);
+const enableMultipleCreate = ref(false);
+const enableMultipleEditNewForm = ref(false);
+const enableMultipleDeleteNewForm = ref(false);
+const selectedRows = ref([]);
+const setupTrainingData = ref({});
+const formInfo = ref({});
+const loadingOwnData = ref(false);
+
+// Computed property to check if the report is an RPA or Approval type
+const isRPAOrApproval = computed(() => {
+  return (
+    propsReports.value &&
+    (propsReports.value.includes("rpa") ||
+      propsReports.value.includes("approval"))
+  );
+});
+
+const currentUsername = computed(() => store.authDet?.username || "");
+const currentRoleId = computed(() => {
+  const role = store.getChoosedRole;
+  return role?.role?.id || null;
+});
+
+const isSetupFlagOn = (val) =>
+  val === true || val === 1 || val === "1" || val === "true";
+
+const isUserCanSetStatus = computed(() => {
+  const list = setupTrainingData.value.listSpecificUserSetStatus || [];
+  return list.includes(currentUsername.value);
+});
+
+const isUserCanViewHistory = computed(() => {
+  if (!isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return true;
+  }
+  const list = setupTrainingData.value.listSpecificUserRoleSetViewHistory || [];
+  if (setupTrainingData.value.userView === "role") {
+    const roleId = currentRoleId.value;
+    return list.some((r) => String(r) === String(roleId ?? ""));
+  }
+  const username = String(currentUsername.value || "").trim().toLowerCase();
+  if (!username) return false;
+  return list.some(
+    (u) => String(u || "").trim().toLowerCase() === username
+  );
+});
+
+const rawFormStatusRestricted = computed(() => {
+  const status =
+    formInfo.value.status ||
+    formInfo.value.cfmt_status ||
+    setupTrainingData.value?.formStatus;
+  return status === "draft" || status === "closed";
+});
+
+const rawOutsidePeriod = computed(() => {
+  if (!formPeriod.value.from && !formPeriod.value.to) return false;
+  const today = new Date();
+  const fromDate = new Date(formPeriod.value.from);
+  const toDate = new Date(formPeriod.value.to + " 23:59:59");
+  return today < fromDate || today > toDate;
+});
+
+const isFormStatusRestricted = computed(() => {
+  if (isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return false;
+  }
+  return rawFormStatusRestricted.value;
+});
+
+const isOutsidePeriod = computed(() => {
+  if (isSetupFlagOn(setupTrainingData.value.specificUserSetViewHistory)) {
+    return false;
+  }
+  return rawOutsidePeriod.value;
+});
+
+const isUserCanViewReport = computed(
+  () =>
+    isUserCanViewHistory.value &&
+    !isFormStatusRestricted.value &&
+    !isOutsidePeriod.value
+);
+
+const isOwnDataEditAllowed = computed(
+  () => !rawFormStatusRestricted.value && !rawOutsidePeriod.value
+);
+
+const accessDeniedReason = computed(() => {
+  if (!isUserCanViewHistory.value)
+    return "You don't have access to view this report history";
+  if (isFormStatusRestricted.value) {
+    const s =
+      formInfo.value.status ||
+      formInfo.value.cfmt_status ||
+      setupTrainingData.value?.formStatus ||
+      "draft";
+    return `This form is ${s} and not available`;
+  }
+  if (isOutsidePeriod.value) return "This form is outside the active period";
+  return "You don't have access to view this report history";
+});
+
+const isUserCanSetFieldPerms = computed(() => {
+  const list = setupTrainingData.value.listSpecificUserRoleFieldPerms || [];
+  return (
+    list.includes(currentUsername.value) || list.includes(currentRoleId.value)
+  );
+});
 
 onMounted(async () => {
+  console.log("props result", props);
   if (route.params.idReport) {
     idNya.value = route.params.idReport;
   } else {
@@ -185,24 +499,51 @@ onMounted(async () => {
 
   const colsnya = await getCols(idNya.value);
 
+  try {
+    await getPeriodData();
+  } catch (e) {
+    console.log("period load skipped", e);
+  }
+
+  if (idForms.value) {
+    await checkFormsByID(idForms.value);
+  }
+
   if (colsnya) {
-    if (isFilterFirst.value) {
-      filterDatas();
-    } else {
-      if (propsReports.value !== "sp") {
-        tableRef.value.requestServerInteraction();
-      } else {
-        filterDatas();
+    const defFilter = resolveDefaultFilter();
+    if (defFilter.length > 0) {
+      filter.value = defFilter;
+    }
+    if (!isUserCanViewReport.value) {
+      loading.value = false;
+      if (idForms.value && isOwnDataEditAllowed.value) {
+        openFormWithAllData();
       }
+    } else if (props.canFilter) {
+      if (isFilterFirst.value) {
+        filterDatas();
+      } else {
+        if (propsReports.value !== "sp") {
+          tableRef.value.requestServerInteraction();
+        } else {
+          filterDatas();
+        }
+      }
+    } else {
+      tableRef.value.requestServerInteraction();
     }
   }
+
+  console.log("propsReports", propsReports.value);
+
+  getMultipleManageData();
 });
 
 socket.on("server-stxi", (data) => {
   console.log(data);
   if (data.app === "rpa") {
-    if (propsReports.value === "rpa") {
-      tableRef.value.requestServerInteraction();
+    if (propsReports.value === "rpa" && isUserCanViewReport.value) {
+      tableRef.value?.requestServerInteraction();
     }
     // console.log("Received data from server-stxi", data);
   }
@@ -227,6 +568,7 @@ const getCols = async (id) => {
     columns.value = checkDatanya.data.cols;
     propsReports.value = checkDatanya.data.props;
     isFilterFirst.value = checkDatanya.data.filterFirst;
+    idForms.value = checkDatanya.data.idForms || idForms.value;
 
     if (checkDatanya.data.props === "sp") {
       columnFilter.value = checkDatanya.data.colsParam;
@@ -240,6 +582,8 @@ const getCols = async (id) => {
 };
 
 const onRequest = async (propsTab) => {
+  if (!isUserCanViewReport.value) return;
+
   const { page, rowsPerPage, sortBy, descending } = propsTab.pagination;
 
   loading.value = true;
@@ -278,9 +622,12 @@ const filterDatas = () => {
   $q.dialog({
     component: filterData,
     componentProps: {
+      idReport: idNya.value,
       colsData: columnFilter.value,
       filtered: filter.value,
       propsReports: propsReports.value,
+      isAPIOpt: props.isAPIExport,
+      readOnly: isFilterReadOnly.value,
     },
   }).onOk(async (val) => {
     filter.value = val.data;
@@ -293,8 +640,25 @@ const filterDatas = () => {
   });
 };
 
+const resolveDefaultFilter = () => {
+  if (props.defaultFilter && props.defaultFilter.length > 0) {
+    return JSON.parse(JSON.stringify(props.defaultFilter));
+  }
+  const fromSetup = setupTrainingData.value.defaultFilterData;
+  if (Array.isArray(fromSetup) && fromSetup.length > 0) {
+    return JSON.parse(JSON.stringify(fromSetup));
+  }
+  return [];
+};
+
+const isFilterReadOnly = computed(
+  () =>
+    props.readOnlyFilter ||
+    isSetupFlagOn(setupTrainingData.value.defaultFilterReadOnly)
+);
+
 const clearFilter = () => {
-  filter.value = [];
+  filter.value = resolveDefaultFilter();
   tableRef.value.requestServerInteraction();
 };
 
@@ -358,10 +722,29 @@ const onExportExcel = async (bypass = false) => {
   }
 };
 
-const onOpenForms = async (isEdit = false) => {
+const onOpenForms = async (isEdit = false, keyValue = "") => {
+  // Bypass period check for authorized add via indexTableReport - per user request (authorized only)
+  // if (formPeriod.value.from || formPeriod.value.to) {
+  //   const today = new Date();
+  //   const fromDate = new Date(formPeriod.value.from);
+  //   const toDate = new Date(formPeriod.value.to + " 23:59:59");
+  //   if (today < fromDate || today > toDate) {
+  //     $q.notify({ color: "negative", message: "The form is not active, it will available from " + fromDate.toLocaleDateString() + " to " + toDate.toLocaleDateString(), icon: "warning" });
+  //     return;
+  //   }
+  // }
+
+  if (enableMultipleCreate.value) {
+  }
+
   const checkDatanya = await checkFormsByID(idForms.value);
   if (checkDatanya) {
-    console.log("checkDatanya", checkDatanya);
+    const setupWithStatus = {
+      ...(checkDatanya.value.setupTraining || {}),
+      formStatus: "active",
+      status: "active",
+      __bypassPeriod: true,
+    };
     $q.dialog({
       component: previewComponent,
       componentProps: {
@@ -369,14 +752,24 @@ const onOpenForms = async (isEdit = false) => {
         mode: "form",
         id: idForms.value,
         isShowFormOnly: true,
-        setup: checkDatanya.value.setupTraining,
+        setup: setupWithStatus,
         showFormOnly: true,
         preventClear: isEdit,
+        answersKey: isEdit ? keyValue : "",
+        isPreview: false,
       },
-    }).onOk(async (val) => {
-      console.log(val);
-      tableRef.value.requestServerInteraction();
-    });
+    })
+      .onOk(async (val) => {
+        console.log(val);
+        if (isUserCanViewReport.value && tableRef.value) {
+          tableRef.value.requestServerInteraction();
+        }
+      })
+      .onDismiss(() => {
+        if (isUserCanViewReport.value && tableRef.value) {
+          tableRef.value.requestServerInteraction();
+        }
+      });
   } else {
     return;
   }
@@ -393,6 +786,15 @@ const checkFormsByID = async (id) => {
   );
 
   if (checkDatanya && checkDatanya.status === true) {
+    formInfo.value = checkDatanya.data.value || {};
+    setupTrainingData.value = checkDatanya.data.value?.setupTraining || {};
+    console.log("view-history gate data:", {
+      flag: setupTrainingData.value.specificUserSetViewHistory,
+      userView: setupTrainingData.value.userView,
+      list: setupTrainingData.value.listSpecificUserRoleSetViewHistory,
+      username: currentUsername.value,
+      roleId: currentRoleId.value,
+    });
     return checkDatanya.data;
   } else {
     $q.notify({
@@ -483,29 +885,97 @@ const onSendApproval = (row) => {
 };
 
 const onEditData = (row) => {
-  console.log("onEdit", row);
-  const listForms = [];
+  console.log("Editing Batch Data:", row);
 
+  // 1. Kosongkan store jawaban terlebih dahulu untuk mencegah sisa data sebelumnya menempel
+  formStore.restoreDefault();
+
+  // 2. Masukkan SEMUA field jawaban ke index 0 (satu baris saja)
+  //    POS data dari backend diabaikan — sama persis dengan cara kerja onBulkEditSelected
+  //    untuk satu baris. Ini mencegah "spreading" yang terjadi karena POS index
+  //    backend yang tidak berurutan / sparse.
   for (let index = 0; index < Object.keys(row).length; index++) {
     const idx = Object.keys(row)[index];
+
     if (idx.includes("CMS_REPORT_POS")) {
-      // listForms.push()
       const idxParts = idx.split("_");
-      console.log(
-        "idxParts",
-        row[`CMS_REPORT_${idxParts[idxParts.length - 1]}`]
-      );
+      const fieldId = idxParts[idxParts.length - 1];
+      const ans = row[`CMS_REPORT_VAL_${fieldId}`];
 
-      const ans = row[`CMS_REPORT_VAL_${idxParts[idxParts.length - 1]}`];
-      const ansPos = row[`CMS_REPORT_POS_${idxParts[idxParts.length - 1]}`];
-
-      console.log("ansPos", ansPos);
-      console.log("answers", [ansPos[0], idxParts[idxParts.length - 1], ans]);
-      formStore.addAnswersForm(ansPos[0], idxParts[idxParts.length - 1], ans);
+      if (ans !== undefined && ans !== null) {
+        formStore.addAnswersForm(0, fieldId, ans);
+      }
     }
   }
 
-  onOpenForms(true);
+  // 3. Buka modal previewComponent dengan flag isEdit (preventClear = true)
+  onOpenForms(true, row.batch_id);
+};
+
+const openFormWithAllData = async () => {
+  formStore.restoreDefault();
+  loadingOwnData.value = true;
+
+  let dataRows = [];
+  try {
+    const res = await postData(
+      "post",
+      {
+        pagination: {
+          sortBy: columns.value[0]?.name || "",
+          descending: false,
+          page: 1,
+          rowsPerPage: 0,
+          rowsNumber: 0,
+        },
+        filter: [
+          ...resolveDefaultFilter(),
+          {
+            cols: { value: "created_by", label: "Created By", type: "text" },
+            value: [currentUsername.value],
+            type: "text",
+            opr: "=",
+            conmet: "and",
+          },
+        ],
+      },
+      `mrs/runningReport/${idNya.value}`,
+      false,
+      false,
+      true
+    );
+    if (!res || res.status !== true) {
+      $q.notify({
+        color: "negative",
+        message: res?.message || "You don't have access to this data",
+        icon: "warning",
+      });
+      return;
+    }
+
+    dataRows = res?.data?.data || [];
+
+    dataRows.forEach((row, targetRowIdx) => {
+      for (let index = 0; index < Object.keys(row).length; index++) {
+        const idx = Object.keys(row)[index];
+
+        if (idx.includes("CMS_REPORT_POS")) {
+          const idxParts = idx.split("_");
+          const fieldId = idxParts[idxParts.length - 1];
+          const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+
+          if (ans !== undefined && ans !== null) {
+            formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+          }
+        }
+      }
+    });
+  } finally {
+    loadingOwnData.value = false;
+  }
+
+  const referenceBatchId = dataRows[0]?.batch_id || null;
+  onOpenForms(true, referenceBatchId);
 };
 
 const onDelete = (row) => {
@@ -543,6 +1013,396 @@ const onDelete = (row) => {
       });
     }
   });
+};
+
+const onPeriodClick = () => {
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "User Details",
+      initialFields: [
+        {
+          name: "rangePeriod",
+          label: "Select Period",
+          type: "datetime-range",
+          default: formPeriod.value.from
+            ? {
+                from: formPeriod.value.from,
+                to: formPeriod.value.to,
+              }
+            : null,
+          rules: [(val) => !!val || "Field is required"],
+        },
+      ],
+      addable: true,
+      removable: true,
+    },
+    persistent: true,
+    ok: true,
+    cancel: true,
+  }).onOk(async (datas) => {
+    if (datas.rangePeriod) {
+      const payload = {
+        data: {
+          pgm_code: "MRS_FORM_PERIOD",
+          pgm_value: idNya.value || props.idReport,
+          pgm_value2: store.authDet.username,
+          pgm_value3: JSON.stringify(datas.rangePeriod),
+          pgm_desc: `Period from ${datas.rangePeriod.from} to ${datas.rangePeriod.to}`,
+          pgm_parent: null,
+        },
+        keys: {
+          pgm_code: "MRS_FORM_PERIOD",
+          pgm_value: idNya.value || props.idReport,
+          pgm_value2: store.authDet.username,
+        },
+      };
+
+      await postGencodeData(payload);
+      await getPeriodData();
+      $q.notify({
+        message: "Period has been updated successfully.",
+        color: "green",
+        icon: "check_circle",
+      });
+
+      formPeriod.value.from = datas.rangePeriod.from;
+      formPeriod.value.to = datas.rangePeriod.to;
+    }
+  });
+};
+
+const onClickSetStatus = async () => {
+  const formData = await checkFormsByID(idForms.value);
+  if (!formData) return;
+  const currentStatus =
+    formData.value.status ||
+    formData.value.cfmt_status ||
+    formData.value.setupTraining?.formStatus ||
+    setupTrainingData.value?.formStatus ||
+    "draft";
+  $q.dialog({
+    title: "Set Form Status",
+    message: `Current status: ${currentStatus}. Select new status:`,
+    options: {
+      type: "radio",
+      model: currentStatus,
+      items: [
+        { label: "Draft", value: "draft" },
+        { label: "Active", value: "active" },
+        { label: "Closed", value: "closed" },
+      ],
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (val) => {
+    const data = await postData(
+      "post",
+      { id: idForms.value, status: val },
+      "cms/updateStatus",
+      false,
+      false,
+      true
+    );
+    if (data && data.status) {
+      $q.notify({
+        color: "positive",
+        message: "Status updated",
+        icon: "check",
+      });
+      await checkFormsByID(idForms.value);
+    } else {
+      $q.notify({
+        color: "negative",
+        message: data?.message || "Failed to update status",
+        icon: "warning",
+      });
+    }
+  });
+};
+
+const onClickFieldPerms = async () => {
+  const formData = await checkFormsByID(idForms.value);
+  if (!formData) return;
+
+  // Load users and roles for the select options
+  const usersData = await postData(
+    "get",
+    null,
+    "portal/users/ActiveOnly",
+    false,
+    false,
+    true
+  );
+  const rolesData = await postData(
+    "get",
+    null,
+    "portal/roles",
+    false,
+    false,
+    true
+  );
+
+  const optionsUsers =
+    usersData?.data?.map((u) => ({
+      label: `${u.pud_first_name} ${u.pud_last_name}`.trim(),
+      value: u.username,
+    })) || [];
+
+  const optionsRoles =
+    rolesData?.data?.map((r) => ({
+      label: r.rm_role_name,
+      value: r.id,
+    })) || [];
+
+  $q.dialog({
+    component: viewSetupFieldPerms,
+    componentProps: {
+      forms: formData.value.forms,
+      fieldPermissions: setupTrainingData.value.fieldPermissions || [],
+      optionsUsers,
+      optionsRoles,
+    },
+  }).onOk(async (perms) => {
+    const data = await postData(
+      "post",
+      {
+        idRef: idForms.value,
+        setupTraining: { ...setupTrainingData.value, fieldPermissions: perms },
+      },
+      "cms/saveSetupTraining",
+      false,
+      false,
+      true
+    );
+    if (data && data.status) {
+      $q.notify({
+        color: "positive",
+        message: "Field permissions saved",
+        icon: "check",
+      });
+      setupTrainingData.value.fieldPermissions = perms;
+    }
+  });
+};
+
+const getPeriodData = async () => {
+  const data = await getGencodeData(
+    "MRS_FORM_PERIOD",
+    {
+      reportOpt: "pgm_value",
+      userOpt: "pgm_value2",
+      periodOpt: "pgm_value3",
+    },
+    {
+      pgm_value: idNya.value || props.idReport,
+      pgm_value2: store.authDet.username,
+    },
+    true
+  );
+
+  const periodData = JSON.parse(data.periodOpt);
+  formPeriod.value.from = periodData.from;
+  formPeriod.value.to = periodData.to;
+
+  console.log("getPeriodData", data);
+};
+
+const onMultipleManageClick = () => {
+  $q.dialog({
+    component: multiplePromptDialog,
+    componentProps: {
+      title: "User Details",
+      initialFields: [
+        {
+          name: "enableMultipleCreate",
+          label: "Enable Multiple Create for new form?",
+          type: "radio",
+          default: enableMultipleCreate.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "enableMultipleEditNewForm",
+          label: "Enable Multiple Edit?",
+          type: "radio",
+          default: enableMultipleEditNewForm.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "enableMultipleDeleteNewForm",
+          label: "Enable Multiple Delete?",
+          type: "radio",
+          default: enableMultipleDeleteNewForm.value ? 1 : 0,
+          options: [
+            { label: "Yes", value: 1 },
+            { label: "No", value: 0 },
+          ],
+        },
+        {
+          name: "total",
+          label: "Max form to be created for new form (Leave 0 for unlimited)",
+          type: "number",
+          default: maxMultipleCreate.value,
+        },
+      ],
+    },
+    persistent: true,
+    ok: true,
+    cancel: true,
+  }).onOk(async (datas) => {
+    const payload = {
+      data: {
+        pgm_code: "MRS_MULTIPLE_CREATE_OPT",
+        pgm_value: {
+          value: [
+            "enableMultipleCreate",
+            "enableMultipleEditNewForm",
+            "enableMultipleDeleteNewForm",
+            "maxMultipleCreate",
+          ],
+          store_separately: true,
+        },
+        pgm_value2: {
+          value: [
+            datas.enableMultipleCreate,
+            datas.enableMultipleEditNewForm,
+            datas.enableMultipleDeleteNewForm,
+            datas.total,
+          ],
+          store_separately: true,
+        },
+        pgm_value3: props.idReport,
+        pgm_desc: `Multiple form management with max form to create ${datas.total}`,
+        pgm_parent: null,
+      },
+      keys: {
+        pgm_code: "MRS_MULTIPLE_CREATE_OPT",
+        pgm_value: {
+          value: [
+            "enableMultipleCreate",
+            "enableMultipleEditNewForm",
+            "enableMultipleDeleteNewForm",
+            "maxMultipleCreate",
+          ],
+          store_separately: true,
+        },
+        pgm_value2: {
+          value: [
+            datas.enableMultipleCreate,
+            datas.enableMultipleEditNewForm,
+            datas.enableMultipleDeleteNewForm,
+            datas.total,
+          ],
+          store_separately: true,
+        },
+        pgm_value3: props.idReport,
+      },
+    };
+
+    await postGencodeData(payload);
+    await getMultipleManageData();
+    $q.notify({
+      message:
+        "Multiple form management settings has been updated successfully.",
+      color: "green",
+      icon: "check_circle",
+    });
+  });
+};
+
+const getMultipleManageData = async () => {
+  const { data } = await postData(
+    "post",
+    {
+      id: "MRS_MULTIPLE_CREATE_OPT",
+      selectAs: {
+        typeOpt: "pgm_value",
+        valueOpt: "pgm_value2|int",
+      },
+      firstSelect: false,
+    },
+    `portal/gencode/showDetail/MRS_MULTIPLE_CREATE_OPT`,
+    false,
+    false,
+    false
+  );
+
+  data.map((item) => {
+    if (item.typeOpt === "enableMultipleCreate") {
+      enableMultipleCreate.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "enableMultipleEditNewForm") {
+      enableMultipleEditNewForm.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "enableMultipleDeleteNewForm") {
+      enableMultipleDeleteNewForm.value = item.valueOpt === 1 ? true : false;
+    } else if (item.typeOpt === "maxMultipleCreate") {
+      maxMultipleCreate.value = parseInt(item.valueOpt) || 0;
+    }
+  });
+};
+
+const postGencodeData = async (payload) => {
+  return await postData("post", payload, "portal/gencode/saveGencode");
+};
+
+const getGencodeData = async (idCode, selectAs, filter, firstSelect) => {
+  const { data } = await postData(
+    "post",
+    {
+      id: idCode,
+      selectAs: selectAs,
+      filter: filter,
+      firstSelect: firstSelect,
+    },
+    `portal/gencode/showDetail/${idCode}`,
+    false,
+    false,
+    false
+  );
+
+  if (data) {
+    return data;
+  }
+};
+
+const onBulkEditSelected = () => {
+  console.log("Data yang dicentang user:", selectedRows.value);
+
+  // 1. Kosongkan store jawaban lama
+  formStore.restoreDefault();
+
+  // 2. Iterasi setiap baris data yang dicentang oleh user
+  selectedRows.value.forEach((row, targetRowIdx) => {
+    // Bedah field jawaban di dalam baris ini seperti pada fungsi edit single
+    for (let index = 0; index < Object.keys(row).length; index++) {
+      const idx = Object.keys(row)[index];
+
+      if (idx.includes("CMS_REPORT_POS")) {
+        const idxParts = idx.split("_");
+        const fieldId = idxParts[idxParts.length - 1];
+        const ans = row[`CMS_REPORT_VAL_${fieldId}`];
+
+        // 3. Masukkan ke store berdasarkan urutan baris centangan (targetRowIdx)
+        if (ans !== undefined && ans !== null) {
+          formStore.addAnswersForm(targetRowIdx, fieldId, ans);
+        }
+      }
+    }
+  });
+
+  // 4. Ambil batch_id dari baris pertama sebagai referensi token update ke backend
+  const referenceBatchId = selectedRows.value[0]?.batch_id || null;
+
+  // 5. Buka modal spreadsheet
+  onOpenForms(true, referenceBatchId);
+
+  // 6. Bersihkan kembali centangan setelah modal dibuka
+  selectedRows.value = [];
 };
 </script>
 <style lang="sass">

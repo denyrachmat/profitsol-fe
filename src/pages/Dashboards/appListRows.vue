@@ -2,7 +2,7 @@
   <q-list
     separator
     class="full-width bg-white"
-    v-for="(element, idx) in dataProps"
+    v-for="(element, idx) in filteredProps"
     :key="idx"
     dense
   >
@@ -36,7 +36,7 @@
 </template>
 <script setup>
 import draggable from "vuedraggable";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useDialogPluginComponent, date, useQuasar } from "quasar";
 
 import viewApps from "./viewApps.vue";
@@ -48,6 +48,15 @@ const props = defineProps({
   dataProps: Object || null,
   // ...your custom props
 });
+
+const isMobileOnly = (element) =>
+  String(element?.apps?.am_app_code || "").indexOf("MBL_APP") === 0;
+
+const filteredProps = computed(() =>
+  Array.isArray(props.dataProps)
+    ? props.dataProps.filter((el) => !isMobileOnly(el))
+    : props.dataProps
+);
 
 onMounted(() => {
   dataHasil.value = props.dataProps;

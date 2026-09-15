@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-sm">
     <div class="row no-gutter">
-      <div class="col-2 q-pa-sm" v-for="value in props.folders" :key="value.id">
+      <div class="col-2 q-pa-sm" v-for="value in props.folders" :key="`folder-${value.id}`">
         <q-card
           :class="
             'my-card text-center cursor-pointer ' +
@@ -75,7 +75,7 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-2 q-pa-sm" v-for="value in props.files" :key="value.id">
+      <div class="col-2 q-pa-sm" v-for="value in props.files" :key="`file-${value.id}`">
         <q-card
           :class="
             'my-card text-center cursor-pointer ' +

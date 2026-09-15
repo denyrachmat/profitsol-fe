@@ -30,7 +30,7 @@
               : selectedFilesFolder.push(value.id)
           "
           v-for="value in props.folders"
-          :key="value.id"
+          :key="`folder-${value.id}`"
         >
           <q-item-section
             v-if="props.activateSelected && !props.selectFilesOnly"
@@ -131,7 +131,7 @@
               : selectedFilesFolder.push(value.id)
           "
           v-for="value in props.files"
-          :key="value.id"
+          :key="`file-${value.id}`"
         >
           <q-item-section
             v-if="props.activateSelected && !props.selectFilesOnly"

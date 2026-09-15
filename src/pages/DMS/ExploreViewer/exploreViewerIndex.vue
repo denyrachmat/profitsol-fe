@@ -280,14 +280,14 @@
   </div>
 </template>
 <script setup>
-import { onMounted, ref, computed, defineEmits, onBeforeUnmount } from "vue";
+import { onMounted, ref, computed, defineEmits, onBeforeUnmount, watch } from "vue";
 import { useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import exploreTilesView from "./exploreTilesView.vue";
 import exploreListsView from "./exploreListsView.vue";
 import { useAuthStore } from "src/stores/authStore";
 import openFiles from "src/components/files/openFiles.vue";
-import uploadPhoto from "src/components/uploadPhoto";
+import uploadPhoto from "src/components/uploadPhoto/index.vue";
 import exploreImportFromSharepoint from "./exploreImportFromSharepoint.vue";
 import { authHelper, sharePointService } from "@/components/msHelpers";
 import exploreShareView from "./exploreShareView.vue";
@@ -338,14 +338,14 @@ const listFilesMenu = ref([
     disable: false,
   },
 ]);
-const listActionMenu = ref([
+const listActionMenu = computed(() => [
   {
     icon: "autorenew",
     label: "Re-sync files with server",
     onClick: () => {
       syncWithRealFolder();
     },
-    disable: false,
+    disable: isSyncing.value,
   },
   {
     icon: "edit",
@@ -371,9 +371,18 @@ const listActionMenu = ref([
     },
     disable: false,
   },
+  {
+    icon: "delete",
+    label: "Delete",
+    onClick: () => {
+      deleteFilesFolders();
+    },
+    disable: false,
+  },
 ]);
 const splitterModel = ref(50);
 const searchShared = ref("");
+const isSyncing = ref(false);
 // End Ref
 
 const handleKeydown = (event) => {
@@ -442,17 +451,31 @@ const props = defineProps({
 onMounted(() => {
   window.addEventListener("keydown", handleKeydown);
   usernameRef.value = props.username || store.getDetail.username;
-  getRoot(true);
+  if (props.choosedRoot) {
+    root.value = props.choosedRoot;
+    // still fetch listRoots for display but don't show loading spinner for folders
+    getRoot(false);
+    getFoldersFiles(root.value, "0");
+  } else {
+    getRoot(true);
+  }
 
   sharedList.value = props.selectedDataDetail;
 
   if (props.sharedOnly) {
     splitterModel.value = 100;
   }
-  // if (props.selectedDataDetail) {
-  //   fetchFoldersAndFilesonProps();
-  // }
 });
+
+watch(
+  () => props.choosedRoot,
+  (newVal) => {
+    if (newVal) {
+      root.value = newVal;
+      getFoldersFiles(newVal, "0");
+    }
+  }
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeydown);
@@ -524,10 +547,11 @@ const getFoldersFiles = async (root = "", id = "0", shared = false) => {
 
     if (id == "0") {
       folderList.value = data.data.child_folders.filter(
-        (val) => val.shared && val.shared.length === 0
+        (val) => !val.shared || val.shared.length === 0
       );
+      // keep files consistent with folders - use shared check, not author equality (alias breaks author check)
       filesList.value = data.data.doc.filter(
-        (val) => val.shared && val.shared.length === 0
+        (val) => !val.shared || val.shared.length === 0
       );
       sharedList.value = [
         ...data.data.child_folders.filter(
@@ -543,18 +567,18 @@ const getFoldersFiles = async (root = "", id = "0", shared = false) => {
           ),
           ...data.data.doc.filter((val) => val.shared && val.shared.length > 0),
           ...data.data.child_folders.filter(
-            (val) => val.shared && val.shared.length === 0
+            (val) => !val.shared || val.shared.length === 0
           ),
           ...data.data.doc.filter(
-            (val) => val.shared && val.shared.length === 0
+            (val) => !val.shared || val.shared.length === 0
           ),
         ];
       } else {
         folderList.value = data.data.child_folders.filter(
-          (val) => val.shared && val.shared.length === 0
+          (val) => !val.shared || val.shared.length === 0
         );
         filesList.value = data.data.doc.filter(
-          (val) => val.shared && val.shared.length === 0
+          (val) => !val.shared || val.shared.length === 0
         );
       }
     }
@@ -853,7 +877,7 @@ const addFolder = () => {
   }).onOk(async (data) => {
     isLoading.value = true;
 
-    const getLatestFolder = selectedPath.value[selectedPath.value.length - 1];
+    // const getLatestFolder = selectedPath.value[selectedPath.value.length - 1];
     const datas = await postData(
       "post",
       {
@@ -872,11 +896,7 @@ const addFolder = () => {
     );
 
     if (datas) {
-      const getDatas = await getData();
-
-      if (getDatas) {
-        refreshCurrentPath();
-      }
+      refreshCurrentPath();
     }
   });
 };
@@ -920,26 +940,85 @@ const refreshCurrentPath = () => {
 };
 
 const syncWithRealFolder = () => {
+  if (isSyncing.value) return;
+
   $q.dialog({
     title: "Confirmation",
     message: "Do you want resync with current folder ?",
     cancel: true,
   }).onOk(async () => {
     isLoading.value = true;
-    const data = await postData(
-      "get",
-      null,
-      `dms/documentsRoots/resyncFolderToDB/${usernameRef.value}/${root.value}`,
-      false,
-      false,
-      true
-    );
+    isSyncing.value = true;
 
-    if (data) {
+    try {
+      // 1. start sync (returns quickly - no long request)
+      const started = await postData(
+        "get",
+        null,
+        `dms/documentsRoots/resyncFolderToDBStart/${usernameRef.value}/${root.value}`,
+        false,
+        false,
+        true
+      );
+
+      if (!started || !started.data || !started.data.token) {
+        $q.notify({ type: "negative", message: "Failed to start sync" });
+        isLoading.value = false;
+        isSyncing.value = false;
+        return;
+      }
+
+      const token = started.data.token;
+      let total = started.data.total || 0;
+
+      // 2. poll until done
+      let notif = $q.notify({
+        type: "info",
+        message: total > 0 ? `Syncing... 0 / ${total}` : "Syncing...",
+        position: "top",
+        timeout: 0,
+        group: false,
+      });
+
+      let done = 0;
+      let running = true;
+      while (running) {
+        const poll = await postData(
+          "get",
+          null,
+          `dms/documentsRoots/resyncFolderToDBPoll/${token}?batch=20`,
+          false,
+          false,
+          true
+        );
+
+        if (!poll || !poll.data) {
+          running = false;
+          break;
+        }
+
+        done = poll.data.done || done;
+        total = poll.data.total || total;
+        notif({
+          message: `Syncing... ${done} / ${total}`,
+        });
+
+        if (poll.data.status === "done") {
+          running = false;
+        }
+      }
+
+      notif({
+        message: `Sync completed (${done} folder${done === 1 ? "" : "s"})`,
+        type: "positive",
+        timeout: 3000,
+      });
+    } catch (e) {
+      $q.notify({ type: "negative", message: "Sync failed" });
+    } finally {
       isLoading.value = false;
+      isSyncing.value = false;
       onClickBreadcrumb(0);
-    } else {
-      isLoading.value = false;
     }
   });
 };
@@ -1061,6 +1140,45 @@ const openExploreSendToFE = () => {
     .onCancel(() => {
       console.log("Import Cancel");
     });
+};
+
+const deleteFilesFolders = () => {
+  let dataSelected = selectedData.value.map((item) => {
+    return (
+      folderList.value.find((f) => f.id === item) ||
+      filesList.value.find((f) => f.id === item)
+    );
+  });
+
+  if (dataSelected.length === 0) {
+    $q.notify({
+      type: "warning",
+      message: "Please select a file or folder to delete",
+    });
+    return;
+  }
+
+  $q.dialog({
+    title: "Confirmation",
+    message: `Are you sure want to delete ${dataSelected.length} item(s) ?`,
+    cancel: true,
+  }).onOk(async () => {
+    // const ids = dataSelected.map(item => item.id).join(',');
+    for await (const item of dataSelected) {
+      const deleted = await postData(
+        "delete",
+        null,
+        `dms/${item.type === "folder" ? "folders" : "documents"}/${btoa(
+          item.id
+        )}`,
+        false,
+        false,
+        true
+      );
+    }
+
+    refreshCurrentPath();
+  });
 };
 // End Options Click
 </script>

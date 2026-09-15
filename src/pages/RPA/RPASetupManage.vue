@@ -20,6 +20,12 @@
               {{ parameterList.length }}
             </q-badge>
           </q-btn>
+          <q-btn color="orange" icon="code" @click="onClickCreateCommandRPA">
+            <q-tooltip>Create Command RPA</q-tooltip>
+            <q-badge color="red" floating align="top right" class="q-mr-sm">
+              {{ commandRPAList.length }}
+            </q-badge>
+          </q-btn>
         </div>
       </q-card-section>
       <q-card-section class="q-gutter-md">
@@ -98,6 +104,7 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 import apiRequest from "src/components/apiRequest";
 import { useAuthStore } from "src/stores/authStore";
 import RPASetupParameterManage from "./RPASetupParameterManage.vue";
+import RPASetupCommandManage from "./RPASetupCommandManage.vue";
 
 const props = defineProps({
   dataEdit: Object,
@@ -112,6 +119,7 @@ onMounted(() => {
     RPAName.value = props.dataEdit.prm_name;
     idRPA.value = props.dataEdit.id;
     parameterList.value = props.dataEdit.prm_parameter || [];
+    commandRPAList.value = props.dataEdit.prm_command || [];
   }
 });
 
@@ -120,14 +128,15 @@ const selectedType = ref(null);
 const loading = ref(false);
 const idRPA = ref("");
 const typeOptions = ref([
-  { label: "API RPA Integration", value: "api" },
-  { label: "Direct RPA Integration", value: "direct" },
+  { label: "Web RPA Integration", value: "web" },
+  { label: "Desktop RPA Integration", value: "desktop" },
 ]);
 const hostRPA = ref("");
 const portRPA = ref("");
 const descRPA = ref("");
 const RPAName = ref("");
 const parameterList = ref([]);
+const commandRPAList = ref([]);
 
 const authStore = useAuthStore();
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -159,6 +168,7 @@ const saveRPAConnection = async (data) => {
       prm_desc: data.descRPA,
       prm_isactive: true,
       prm_parameter: parameterList.value,
+      prm_command: commandRPAList.value,
     },
     idRPA.value ? `rpa/rpaMaster/${idRPA.value}` : `rpa/rpaMaster`,
     false,
@@ -184,6 +194,21 @@ const onClickAddParameter = () => {
     },
   }).onOk((newParameter) => {
     parameterList.value = newParameter;
+  });
+};
+
+const onClickCreateCommandRPA = () => {
+  $q.dialog({
+    component: RPASetupCommandManage,
+    componentProps: {
+      listCommandRPA: commandRPAList.value,
+      rpaType: selectedType.value,
+      listParam: parameterList.value,
+    },
+    persistent: true,
+  }).onOk((newCommandRPA) => {
+    // console.log("Received new Command RPA from dialog:", newCommandRPA);
+    commandRPAList.value = newCommandRPA;
   });
 };
 </script>

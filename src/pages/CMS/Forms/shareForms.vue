@@ -442,6 +442,16 @@ const getSharedMenu = async () => {
     if (data?.data) {
       sharedMenuList.value = data.data;
     }
+    if (props.selectedSharedMenu) {
+      const exists = (sharedMenuList.value || []).some((m) => String(m.am_app_code) === String(props.selectedSharedMenu));
+      if (!exists) {
+        const fallback = await postData("get", null, "portal/apps", false, false, true);
+        if (fallback?.data) {
+          const found = fallback.data.find((m) => String(m.am_app_code) === String(props.selectedSharedMenu));
+          if (found) sharedMenuList.value = [...sharedMenuList.value, found];
+        }
+      }
+    }
   } catch (error) {
     console.error("Error loading shared menu:", error);
   }
@@ -458,12 +468,31 @@ onMounted(async () => {
 
   if (shareToMainMenu.value) {
     await getSharedMenu();
+    if (!selectedSharedMenuS.value && props.id) {
+      try {
+        const fresh = await postData("get", null, `cms/viewByID/${props.id}`, false, true, true);
+        const fv = fresh?.data?.value;
+        if (fv?.selectedSharedMenu) selectedSharedMenuS.value = fv.selectedSharedMenu;
+        else if (fv?.am_app_parent) selectedSharedMenuS.value = fv.am_app_parent;
+        console.log("shareForms fallback selectedSharedMenu", selectedSharedMenuS.value, fv);
+      } catch (e) {
+        console.log("shareForms fallback fetch failed", e);
+      }
+    }
   }
 });
+
+watch(
+  () => props.selectedSharedMenu,
+  (val) => {
+    if (val) selectedSharedMenuS.value = val;
+  }
+);
 
 watch(shareToMainMenu, async (val) => {
   if (val) {
     await getSharedMenu();
+    if (props.selectedSharedMenu) selectedSharedMenuS.value = props.selectedSharedMenu;
   }
 });
 
@@ -474,6 +503,7 @@ function onOKClick() {
     isRoles: isUsingRoles.value,
     selectedSharedMenu: selectedSharedMenuS.value,
     shareFormsMenuIcon: shareFormsMenuIconS.value,
+    selectedTableRoles: selectedTableRolesS.value.map((r) => r.id),
   });
 }
 </script>

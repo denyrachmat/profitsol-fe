@@ -174,6 +174,20 @@
               />
             </div>
           </div>
+          <div class="q-pa-md" v-if="isTable">
+            <q-select
+              v-model="selectedColumns"
+              :options="columnOptions"
+              multiple
+              use-chips
+              emit-value
+              map-options
+              outlined
+              dense
+              label="Extra table columns"
+              hint="Value & Label are always shown. Pick more API fields as table columns."
+            />
+          </div>
           <div class="q-pa-md" style="overflow: auto">
             <template v-if="selectedData && selectedData.length > 0">
               <q-list
@@ -325,7 +339,32 @@ const { onDialogCancel, onDialogOK, dialogRef } = useDialogPluginComponent();
 const props = defineProps({
   detailData: Object,
   forms: Array,
+  comp: { type: String, default: "" },
 });
+
+const isTable = computed(() => props.comp === "q-table");
+const selectedColumns = ref([]);
+const columnOptions = computed(() =>
+  (Array.isArray(selectedData.value) ? selectedData.value : [])
+    .map((item) => item.label)
+    .filter((label) => label && label !== "id_trees")
+);
+
+// Re-apply previously saved value/label/column marks onto freshly
+// fetched key lists (e.g. when reopening an existing API config).
+const applySavedMarks = () => {
+  if (!Array.isArray(selectedData.value)) selectedData.value = [];
+  const vk = selectedKeys.value?.value || "";
+  const lk = selectedKeys.value?.label || "";
+  selectedData.value.forEach((item) => {
+    if (vk && item.label === vk) item.stateAs = "value";
+    else if (lk && item.label === lk) item.stateAs = "label";
+  });
+  const available = selectedData.value.map((i) => i.label);
+  selectedColumns.value = (selectedColumns.value || []).filter(
+    (c) => available.includes(c) && c !== vk && c !== lk
+  );
+};
 
 onMounted(() => {
   console.log(getAllForms.value);
@@ -341,11 +380,15 @@ onMounted(() => {
       : "";
     selectedNode.value = props.detailData.selectedNode || [];
     isExactChoosedKeys.value = props.detailData.isExactChoosedKeys || false;
-    selectedData.value = props.detailData.selectedKeys || [];
+    // NOTE: selectedData must stay an array of { label, ex_value, stateAs } —
+    // never assign selectedKeys ({ value, label }) here, it breaks .map/.filter.
     selectedKeys.value = {
       label: props.detailData.selectedKeys?.label || "",
       value: props.detailData.selectedKeys?.value || "",
     };
+    selectedColumns.value = Array.isArray(props.detailData.selectedColumns)
+      ? [...props.detailData.selectedColumns]
+      : [];
 
     onClickGetData(); // Fetch data on component mount
   }
@@ -491,6 +534,7 @@ const onClickGetData = () => {
             stateAs: "",
           });
         });
+        applySavedMarks();
       } else if (typeof data === "object" && data !== null) {
         // If data is an object, show its keys
         Object.keys(api_data.value).forEach((key) => {
@@ -595,6 +639,7 @@ const onSelectedData = (selected) => {
       });
     }
 
+    applySavedMarks();
     refreshedKey.value += 1; // Force re-render of the tree
   }
 };
@@ -697,6 +742,19 @@ const saveOptions = () => {
     })
       .onOk(() => {
         // Perform save operation here
+        const keysMap = selectedData.value
+          .filter(
+            (item) => item.stateAs === "value" || item.stateAs === "label"
+          )
+          .reduce((acc, item) => {
+            if (item.stateAs === "value") {
+              acc.value = item.label;
+            } else if (item.stateAs === "label") {
+              acc.label = item.label;
+            }
+            return acc;
+          }, {});
+
         const createArray = {
           api_url: api_url.value,
           api_method: api_method.value,
@@ -704,18 +762,10 @@ const saveOptions = () => {
           api_headers: api_headers.value ? JSON.parse(api_headers.value) : "",
           selectedNode: selectedNode.value,
           isExactChoosedKeys: isExactChoosedKeys.value,
-          selectedKeys: selectedData.value
-            .filter(
-              (item) => item.stateAs === "value" || item.stateAs === "label"
-            )
-            .reduce((acc, item) => {
-              if (item.stateAs === "value") {
-                acc.value = item.label;
-              } else if (item.stateAs === "label") {
-                acc.label = item.label;
-              }
-              return acc;
-            }, {}),
+          selectedKeys: keysMap,
+          selectedColumns: (selectedColumns.value || []).filter(
+            (col) => col !== keysMap.value && col !== keysMap.label
+          ),
         };
 
         console.log("Options saved:", createArray);

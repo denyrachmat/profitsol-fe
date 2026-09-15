@@ -246,7 +246,7 @@ import { useAuthStore } from "src/stores/authStore";
 import { is, useQuasar } from "quasar";
 import { useRoute } from "vue-router";
 
-import uploadPhoto from "../../components/uploadPhoto";
+import uploadPhoto from "../../components/uploadPhoto/index.vue";
 
 import tilesView from "src/components/folders/tilesView.vue";
 import listView from "src/components/folders/listView.vue";

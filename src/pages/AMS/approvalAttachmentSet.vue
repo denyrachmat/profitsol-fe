@@ -60,7 +60,7 @@
                   <div
                     class="col q-pl-sm"
                     v-if="
-                      form.aats_method != 'GET' || form.aats_method != 'DELETE'
+                      form.aats_method != 'GET' && form.aats_method != 'DELETE'
                     "
                   >
                     <span class="text-bold"> Request Param </span>
@@ -130,7 +130,7 @@ const onAddData = () => {
 }`,
     aats_param: `{
     "param1":"",
-    "param2":""
+    "param2":"",
     "param3":""
 }`,
   });

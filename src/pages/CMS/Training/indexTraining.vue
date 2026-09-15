@@ -6,7 +6,7 @@
           <q-btn color="primary" label="File" flat no-caps>
             <q-menu>
               <q-list dense style="min-width: 100px">
-                <q-item clickable v-close-popup>
+                <q-item clickable v-close-popup @click="onNewQuiz">
                   <q-item-section>New Quiz</q-item-section>
                 </q-item>
                 <q-item clickable v-close-popup @click="openTraining">
@@ -16,7 +16,7 @@
                   clickable
                   v-close-popup
                   @click="onSaveQuestion"
-                  :disable="!title || valueSubmited.length !== forms.length"
+                  :disable="!title"
                 >
                   <q-item-section>Save Quiz</q-item-section>
                 </q-item>
@@ -58,7 +58,13 @@
     </div>
     <div class="row q-pt-sm">
       <div class="col q-pr-md">
-        <q-input outlined label="Question Bank Title" v-model="title" dense />
+        <q-input
+          outlined
+          label="Question Bank Title"
+          v-model="title"
+          dense
+          :loading="loadingUpload"
+        />
       </div>
       <div class="col-2 text-right">
         <q-btn-group>
@@ -77,6 +83,14 @@
             :disable="!title"
           >
             <q-tooltip> Add HTML Rows. </q-tooltip>
+          </q-btn>
+          <q-btn
+            color="orange"
+            icon="upload"
+            @click="onUploadFile"
+            :loading="loadingUpload"
+          >
+            <q-tooltip> Upload Questions Bank </q-tooltip>
           </q-btn>
         </q-btn-group>
       </div>
@@ -134,7 +148,7 @@
                         name="check"
                         class="text-blue"
                         size="3em"
-                        v-if="valueSubmited[idxCol]"
+                        v-if="hasAnswer(getNormalizedAnswerValue(idxCol, col))"
                       />
                       <q-icon
                         name="cancel"
@@ -198,22 +212,26 @@
                   :comp="col.content.component.value.comp"
                   :label="col.content.label"
                   :detail="col.content.detail_data"
+                  :dmsOpt="col.content.component.dmsOpt"
                   mode="live-ans"
                   @customAnschange="(val) => onChooseValue(val, idxCol)"
                   :key="idxCol + 'color'"
                   :ans="
-                    !Array.isArray(valueSubmited[idxCol])
-                      ? valueSubmited[idxCol]
+                    !Array.isArray(getNormalizedAnswerValue(idxCol, col))
+                      ? getNormalizedAnswerValue(idxCol, col)
                       : ''
                   "
                   :ansArr="
-                    Array.isArray(valueSubmited[idxCol])
-                      ? valueSubmited[idxCol]
+                    Array.isArray(getNormalizedAnswerValue(idxCol, col))
+                      ? getNormalizedAnswerValue(idxCol, col)
                       : []
                   "
                 />
 
-                <div class="row" v-if="valueSubmited[idxCol]">
+                <div
+                  class="row"
+                  v-if="hasAnswer(getNormalizedAnswerValue(idxCol, col))"
+                >
                   <div class="col">
                     <span class="text-bold">Explanation (Optional)</span>
                     <q-editor
@@ -238,6 +256,7 @@ import { useQuasar } from "quasar";
 import componentViewVue from "../componentView.vue";
 import chooseComponent from "../chooseComponent.vue";
 import addContentComponent from "../addContentComponent.vue";
+import UploadFiles from "src/components/uploadFiles/index.vue"; // Import the new component
 
 import apiRequest from "src/components/apiRequest";
 
@@ -271,9 +290,11 @@ const setupTrainingSetup = ref({
   endQuiz: "",
 });
 const share = ref([]);
-const shareMainMenu = ref(0);
-const shareIsroles = ref(0);
+const shareMainMenu = ref(false);
+const shareIsroles = ref(false);
 const shareFormsMenuIcon = ref("");
+const selectedSharedMenu = ref("");
+const loadingUpload = ref(false);
 
 const valueSubmited = ref([]);
 const explainSubmit = ref([]);
@@ -299,13 +320,109 @@ const getFormsOnly = computed(() =>
 
 const onChooseValue = (val, idx) => {
   console.log([val, idx, val.exp]);
-  valueSubmited.value[idx] = Array.isArray(val) ? val : parseInt(val);
+  valueSubmited.value[idx] = val;
   // explainSubmit.value = val.exp;
   forms.value[idx].value = val;
 };
 
+const getAnswerValue = (idx, formRow) => {
+  const answers = valueSubmited.value;
+
+  if (Array.isArray(answers)) {
+    return answers[idx];
+  }
+
+  if (answers && typeof answers === "object") {
+    if (
+      formRow &&
+      formRow.id !== undefined &&
+      formRow.id !== null &&
+      answers[formRow.id] !== undefined
+    ) {
+      return answers[formRow.id];
+    }
+
+    if (answers[idx] !== undefined) {
+      return answers[idx];
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeSingleAnswer = (answer, formRow) => {
+  const options = formRow?.content?.detail_data || [];
+
+  if (answer === undefined || answer === null || answer === "") {
+    return answer;
+  }
+
+  if (typeof answer === "object" && !Array.isArray(answer)) {
+    const nestedAnswer =
+      answer.value ?? answer.ans ?? answer.answer ?? answer.id ?? null;
+
+    if (nestedAnswer !== null) {
+      return normalizeSingleAnswer(nestedAnswer, formRow);
+    }
+  }
+
+  if (!Array.isArray(options) || options.length === 0) {
+    return answer;
+  }
+
+  const normalized = String(answer).trim().toLowerCase();
+
+  const exactMatch = options.find((opt) => opt?.value === answer);
+  if (exactMatch) {
+    return exactMatch.value;
+  }
+
+  const looseValueMatch = options.find(
+    (opt) => String(opt?.value).trim().toLowerCase() === normalized
+  );
+  if (looseValueMatch) {
+    return looseValueMatch.value;
+  }
+
+  const labelMatch = options.find(
+    (opt) => String(opt?.label).trim().toLowerCase() === normalized
+  );
+  if (labelMatch) {
+    return labelMatch.value;
+  }
+
+  if (typeof answer === "string") {
+    const firstChar = answer.trim().charAt(0).toUpperCase();
+    if (/^[A-Z]$/.test(firstChar)) {
+      const idx = firstChar.charCodeAt(0) - 65;
+      if (idx >= 0 && idx < options.length) {
+        return options[idx].value;
+      }
+    }
+  }
+
+  return answer;
+};
+
+const getNormalizedAnswerValue = (idx, formRow) => {
+  const answer = getAnswerValue(idx, formRow);
+
+  if (Array.isArray(answer)) {
+    return answer.map((item) => normalizeSingleAnswer(item, formRow));
+  }
+
+  return normalizeSingleAnswer(answer, formRow);
+};
+
+const hasAnswer = (answer) => {
+  if (Array.isArray(answer)) {
+    return answer.length > 0;
+  }
+
+  return answer !== undefined && answer !== null && answer !== "";
+};
+
 const onClickChooseComponent = (idxForm = {}) => {
-  console.log(forms.value[idxForm]);
   $q.dialog({
     component: chooseComponent,
     componentProps: {
@@ -352,6 +469,159 @@ const onClickChooseHTML = (idxForm = {}) => {
   });
 };
 
+// Define the options array as a ref to make it reactive
+const uploadOptions = ref([
+  {
+    type: "radio-group",
+    name: "uploadMethod", // Key to store the selected value
+    label: "Choose Upload Method:",
+    required: true,
+    value: "template", // Default selected value, now reactive
+    choices: [
+      {
+        value: "template",
+        label: "Upload using template",
+      },
+      { value: "ai", label: "Use AI to scan question bank" },
+    ],
+  },
+]);
+
+// Determine downloadTemplate prop based on the initial default uploadMethod
+// Now a computed property to react to changes in uploadOptions.value[0].value
+const showDownloadTemplateButton = computed(() => {
+  const uploadMethodOption = uploadOptions.value.find(
+    (opt) => opt.name === "uploadMethod"
+  );
+  return uploadMethodOption && uploadMethodOption.value === "template";
+});
+
+const onUploadFile = () => {
+  $q.dialog({
+    component: UploadFiles,
+    componentProps: {
+      title: "Upload Question Bank",
+      accept: ".csv,.txt,.json,.xlsx,.docx",
+      multiple: false, // Assuming single file upload for question bank
+      options: uploadOptions.value, // Use the .value of the ref
+      isDownloadTemplate: {
+        enabled: showDownloadTemplateButton.value, // Use the .value of the computed prop
+        url: `${process.env.API}cms/downloadQuizTemplate`, // Replace with your actual template URL
+      },
+      onDownloadTemplate: handleDownloadTemplate, // Pass the function prop
+      isBase64: false,
+    },
+  })
+    .onOk(async ({ result, fileName, dynamicOptions }) => {
+      console.log("Uploaded file base64:", result);
+      console.log("Uploaded file name:", fileName);
+      console.log("Chosen upload method:", dynamicOptions); // Access the method from dynamicOptions
+
+      const actualFileName = fileName;
+      const method = dynamicOptions.uploadMethod;
+      loadingUpload.value = true;
+
+      if (method === "template") {
+        $q.notify({
+          message: `Uploading "${actualFileName}" using template...`,
+          color: "info",
+        });
+
+        const formData = new FormData();
+        formData.append("file", result);
+        if (actualFileName) {
+          formData.append("fileName", actualFileName);
+        }
+
+        const data = await postData(
+          "post",
+          formData,
+          `cms/uploadQuizTemplate`,
+          false,
+          false,
+          true
+        );
+
+        if (data) {
+          $q.notify({
+            message: `File "${actualFileName}" uploaded successfully!`,
+            color: "positive",
+          });
+          // Handle the response data as needed
+          console.log("Response from server:", data);
+          title.value = data.title;
+          forms.value = data.forms;
+          valueSubmited.value = data.ans;
+          explainSubmit.value = data.exp;
+          loadingUpload.value = false;
+        } else {
+          $q.notify({
+            message: `Failed to upload "${actualFileName}".`,
+            color: "negative",
+          });
+          loadingUpload.value = false;
+        }
+      } else if (method === "ai") {
+        $q.notify({
+          message: `Scanning "${actualFileName}" with AI...`,
+          color: "info",
+        });
+
+        const formData = new FormData();
+        formData.append("file", result);
+        if (actualFileName) {
+          formData.append("fileName", actualFileName);
+        }
+
+        const data = await postData(
+          "post",
+          formData,
+          `cms/uploadQuizTemplateAi`,
+          false,
+          false,
+          true
+        );
+
+        if (data) {
+          $q.notify({
+            message: `File "${actualFileName}" uploaded successfully!`,
+            color: "positive",
+          });
+          // Handle the response data as needed
+          console.log("Response from server:", data);
+          title.value = data.title;
+          forms.value = data.forms;
+          valueSubmited.value = data.ans;
+          explainSubmit.value = data.exp;
+          loadingUpload.value = false;
+        } else {
+          $q.notify({
+            message: `Failed to upload "${actualFileName}".`,
+            color: "negative",
+          });
+          loadingUpload.value = false;
+        }
+      }
+    })
+    .onCancel(() => {
+      $q.notify({
+        message: "Upload cancelled.",
+        color: "negative",
+      });
+    });
+};
+
+// Define the download handler function
+const handleDownloadTemplate = () => {
+  $q.notify({
+    message: "Downloading template...",
+    color: "primary",
+  });
+  // ponytail: Implement actual template download logic here.
+  // For example, trigger a file download or navigate to a template URL.
+  // window.open('/path/to/your/template.xlsx', '_blank');
+};
+
 const onClickSetupTraining = () => {
   $q.dialog({
     component: setupTraining,
@@ -370,12 +640,18 @@ const onClickShare = () => {
     componentProps: {
       id: idRef.value,
       shared: share.value,
+      shareMainMenu: shareMainMenu.value,
+      shareIsroles: shareIsroles.value,
+      selectedSharedMenu: selectedSharedMenu.value,
+      shareFormsMenuIcon: shareFormsMenuIcon.value,
+      selectedTableRoles: [],
     },
   }).onOk(async (val) => {
     share.value = val.emails;
     shareMainMenu.value = val.isMainMenu;
     shareIsroles.value = val.isRoles;
     shareFormsMenuIcon.value = val.shareFormsMenuIcon;
+    selectedSharedMenu.value = val.selectedSharedMenu;
   });
 };
 
@@ -410,6 +686,8 @@ const onSaveQuestion = () => {
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
         shareFormsIsRoles: shareIsroles.value,
+        selectedSharedMenu: selectedSharedMenu.value,
+        shareFormsMenuIcon: shareFormsMenuIcon.value,
       },
       `cms/forms`,
       false,
@@ -452,6 +730,42 @@ const openTraining = () => {
     setupTrainingSetup.value = val.setupTraining;
     idDetForm.value = val.ans_id;
     share.value = val.share;
+  });
+};
+
+const onNewQuiz = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Do you really want to create new quiz ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    title.value = "";
+    forms.value = [];
+    valueSubmited.value = [];
+    explainSubmit.value = [];
+    setupTrainingSetup.value = {
+      defaultTypeChoice: "multiple-radio",
+      defaultNumberOfChoice: "1",
+      showResult: true,
+      randomizeQuestion: true,
+      maxQuestionCount: 1,
+      skipNextButtonMedia: false,
+      showRightKeysAnswer: true,
+      showRightKeysAnswerLocation: "end",
+      setUpTimer: false,
+      timerEveryQuestion: false,
+      hourTimer: 0,
+      minTimer: 0,
+      secTimer: 0,
+      minPass: 100,
+      startQuiz: "",
+      endQuiz: "",
+    };
+    share.value = [];
+    shareMainMenu.value = 0;
+    shareIsroles.value = 0;
+    shareFormsMenuIcon.value = "";
   });
 };
 

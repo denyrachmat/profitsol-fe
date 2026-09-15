@@ -71,7 +71,7 @@
                 <div class="col">
                   <q-select
                     v-model="param.prpd_param_type"
-                    :options="['String', 'Number', 'Boolean', 'Date']"
+                    :options="['String', 'Number', 'Boolean', 'Date', 'Array']"
                     label="Type"
                     dense
                     outlined
@@ -87,7 +87,7 @@
                     outlined
                   />
                 </div>
-                <div class="col">
+                <div class="col" v-if="param.prpd_param_type !== 'Array'">
                   <q-input
                     v-model="param.prpd_param_default"
                     label="Default Value"
