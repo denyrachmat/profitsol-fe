@@ -5,7 +5,7 @@
       :style="{
         backgroundColor: mainConfData.headerColor || '#ffffff',
       }"
-      v-if="mainConfData && mainConfData.isHeader == 1"
+      v-if="mainConfData && mainConfData.isHeader == 1 && pageHeaderVisible"
     >
       <q-toolbar>
         <q-btn
@@ -204,7 +204,17 @@
           </div>
         </div>
         <template v-else>
-          <div class="col q-pa-md" :key="refreshKeysContent">
+          <!-- CMSPageCreator pages manage their own padding (Page Padding
+               setting), so skip the default q-pa-md to avoid double padding. -->
+          <div
+            class="col"
+            :class="
+              choosedPages?.forms?.setupTraining?.pagePadding
+                ? 'q-pa-none'
+                : 'q-pa-md'
+            "
+            :key="refreshKeysContent"
+          >
             <showComponent
               :data="choosedPages.forms.forms"
               v-if="
@@ -335,6 +345,15 @@ const mainConfData = computed(() => {
     }
     return acc;
   }, {});
+});
+
+// Per-page override from the CMS Page Settings: "Show Page Header" off
+// hides the frontpage top bar on that page. The value can arrive as a
+// boolean or as "0"/0/"false" strings, so normalize it.
+const pageHeaderVisible = computed(() => {
+  const v = choosedPages.value?.forms?.setupTraining?.showHeader;
+  if (v === undefined || v === null || v === "") return true;
+  return !(v === false || v === 0 || v === "0" || v === "false");
 });
 
 const shouldRenderMainShowComponent = computed(

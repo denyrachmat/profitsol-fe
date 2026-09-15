@@ -111,8 +111,7 @@ const resolveColor = (val) => {
   return QUASAR_COLOR_MAP[val] || val;
 };
 
-const iconSize = computed(() => {
-  const c = props.block.content;
+const iconSize = computed(() => {  const c = props.block.content;
   if (c.customHeight) {
     const px = Math.max(14, Math.round(c.customHeight * 0.45));
     return px + "px";
@@ -126,6 +125,30 @@ const resolvedLabelColor = computed(() => {
   if (c.labelColor) return resolveColor(c.labelColor);
   return undefined;
 });
+
+// Parses "prop: value; ..." into a style object. Custom CSS wins (applied last).
+const parseCustomCss = (css) => {
+  const s = {};
+  if (!css || typeof css !== "string") return s;
+  css.split(";").forEach((decl) => {
+    const idx = decl.indexOf(":");
+    if (idx === -1) return;
+    const prop = decl.slice(0, idx).trim();
+    const val = decl.slice(idx + 1).trim();
+    if (!prop || !val) return;
+    // kebab-case -> camelCase for Vue style binding
+    const key = prop.replace(/-([a-z])/g, (_, ch) => ch.toUpperCase());
+    s[key] = val;
+  });
+  return s;
+};
+
+const extraStyle = (c) => {
+  const s = {};
+  if (c.padding) s.padding = c.padding;
+  if (c.borderRadius) s.borderRadius = c.borderRadius;
+  return { ...s, ...parseCustomCss(c.customCss) };
+};
 
 const btnStyle = computed(() => {
   const c = props.block.content;
@@ -144,7 +167,7 @@ const btnStyle = computed(() => {
   if (resolvedLabelColor.value) {
     s.color = resolvedLabelColor.value;
   }
-  return s;
+  return { ...s, ...extraStyle(c) };
 });
 
 const labelColorStyle = computed(() => {
@@ -172,6 +195,6 @@ const tooltipBtnStyle = computed(() => {
   if (resolvedLabelColor.value) {
     s.color = resolvedLabelColor.value;
   }
-  return s;
+  return { ...s, ...extraStyle(c) };
 });
 </script>

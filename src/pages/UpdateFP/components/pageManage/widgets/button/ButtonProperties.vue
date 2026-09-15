@@ -96,6 +96,9 @@
       </template>
     </q-select>
     <q-select v-if="icon" v-model="iconPosition" :options="iconPositionOptions" label="Icon Position" dense outlined emit-value map-options class="q-mb-sm" />
+    <PaddingControl v-model="padding" label="Padding" />
+    <q-input v-model="borderRadius" label="Border Radius (CSS, e.g. 16px)" dense outlined placeholder="default" class="q-mb-sm" />
+    <q-input v-model="customCss" label="Custom CSS (e.g. margin-top: -40px; z-index: 2;)" type="textarea" dense outlined autogrow placeholder="property: value;" class="q-mb-sm" />
   </div>
 </template>
 <script setup>
@@ -103,6 +106,7 @@ import { ref, onMounted } from "vue";
 import { toRef } from "vue";
 import { colorOptions, variantOptions, sizeOptions, alignOptions, buttonWidthOptions, iconPositionOptions, labelDisplayOptions, buttonShapeOptions } from "../options.js";
 import { useBlockField } from "../useBlockField.js";
+import PaddingControl from "../shared/PaddingControl.vue";
 import iconList from "src/assets/icon_list.json";
 
 const props = defineProps({ block: { type: Object, required: true } });
@@ -123,6 +127,9 @@ const iconPosition = useBlockField(blockRef, "iconPosition");
 const customColor = useBlockField(blockRef, "customColor");
 const labelColor = useBlockField(blockRef, "labelColor");
 const customLabelColor = useBlockField(blockRef, "customLabelColor");
+const padding = useBlockField(blockRef, "padding");
+const borderRadius = useBlockField(blockRef, "borderRadius");
+const customCss = useBlockField(blockRef, "customCss");
 
 const colorHexMap = {
   primary: "#1976d2",

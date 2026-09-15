@@ -97,6 +97,19 @@
         </template>
       </q-btn-toggle>
 
+      <q-select
+        v-if="previewMode !== 'mobile'"
+        v-model="canvasWidth"
+        :options="canvasWidthOptions"
+        label="Canvas Width"
+        dense
+        outlined
+        emit-value
+        map-options
+        class="q-ml-md"
+        style="width: 150px"
+      />
+
       <q-btn
         flat
         no-caps
@@ -105,7 +118,15 @@
         label="Save"
         @click="onSavePage"
         :disable="!pageTitle"
-      />
+      >
+        <q-badge
+          v-if="hasUnsavedChanges"
+          color="orange"
+          floating
+          rounded
+        />
+        <q-tooltip v-if="hasUnsavedChanges">Unsaved changes</q-tooltip>
+      </q-btn>
     </q-toolbar>
 
     <q-separator />
@@ -156,6 +177,7 @@
             'canvas-desktop': previewMode === 'desktop',
             'canvas-mobile': previewMode === 'mobile',
           }"
+          :style="canvasInnerStyle"
         >
           <!-- Empty state (shown inside draggable when no blocks) -->
           <div v-if="blocks.length === 0" class="canvas-empty">
@@ -264,6 +286,7 @@
                     :preview="previewMode !== 'edit'"
                     :edit-mode="previewMode === 'edit'"
                     :selected-block-id="selectedBlockId"
+                    :responsive="pageMobileFriendly"
                     @select-block="selectBlock"
                     @update:children="onUpdateColumnChildren"
                     @delete-child="onDeleteColumnChild"
@@ -411,6 +434,7 @@
               :key="block.id"
               :block="block"
               :preview="true"
+              :responsive="pageMobileFriendly"
             />
           </div>
         </q-card-section>
@@ -478,6 +502,19 @@
             label="Mobile Friendly (Responsive)"
             class="q-mt-sm"
           />
+          <q-select
+            v-model="pagePadding"
+            :options="[
+              { label: 'Padded (inside card)', value: 'padded' },
+              { label: 'Full (edge to edge)', value: 'full' },
+            ]"
+            label="Page Padding"
+            dense
+            outlined
+            emit-value
+            map-options
+            class="q-mt-sm"
+          />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="negative" v-close-popup />
@@ -526,11 +563,45 @@ const pageStatus = ref("draft");
 const pageShowHeader = ref(true);
 const pageContainerWidth = ref("contained");
 const pageMobileFriendly = ref(false);
+const pagePadding = ref("padded");
 const blocks = ref([]);
 const selectedBlockId = ref(null);
+// True when canvas differs from the last loaded/saved server state.
+// Deletes are local-only until Save — this dot reminds the user to save.
+const hasUnsavedChanges = ref(false);
+// Fresh server snapshot after save; Open... prefers it over the stale prop.
+const lastSavedSnapshot = ref(null);
+const suspendDirty = ref(false);
+
+// Any canvas/title mutation marks the page dirty (deletes included —
+// they only persist after Save + server delete-sync).
+watch(
+  [blocks, pageTitle, pageDesc],
+  () => {
+    if (suspendDirty.value) {
+      suspendDirty.value = false;
+      return;
+    }
+    hasUnsavedChanges.value = true;
+  },
+  { deep: true }
+);
 const propsPanelOpen = ref(true);
 const propsPanelWidth = ref(340);
 const previewMode = ref("edit");
+const canvasWidth = ref("fill");
+const canvasWidthOptions = [
+  { label: "Fill", value: "fill" },
+  { label: "1440 px", value: "1440px" },
+  { label: "1280 px", value: "1280px" },
+  { label: "1024 px", value: "1024px" },
+  { label: "768 px", value: "768px" },
+];
+const canvasInnerStyle = computed(() =>
+  canvasWidth.value === "fill"
+    ? undefined
+    : { maxWidth: canvasWidth.value, margin: "0 auto" }
+);
 const fabOpen = ref(false);
 const previewDialog = ref(false);
 const dialogPreviewMode = ref("desktop");
@@ -552,6 +623,10 @@ const findBlockById = (id, blockList) => {
           if (found) return found;
         }
       }
+    }
+    if (b.type === "container" && b.content.children?.length) {
+      const found = findBlockById(id, b.content.children);
+      if (found) return found;
     }
     if (b.type === "carousel" && b.content.slides) {
       for (const slide of b.content.slides) {
@@ -672,6 +747,10 @@ const onUpdateColumnChildren = ({ colIndex, slideIndex, children, blockId }) => 
     if (parentBlock.content.slides[slideIndex].children !== children) {
       parentBlock.content.slides[slideIndex].children = children;
     }
+  } else if (parentBlock.type === "container") {
+    if (parentBlock.content.children !== children) {
+      parentBlock.content.children = children;
+    }
   }
 };
 
@@ -683,6 +762,12 @@ const findColumnsBlockContainingChild = (blockId) => {
           return block;
         }
       }
+    }
+    if (
+      block.type === "container" &&
+      block.content.children?.some((c) => c.id === blockId)
+    ) {
+      return block;
     }
     if (block.type === "carousel" && block.content.slides) {
       for (const slide of block.content.slides) {
@@ -709,6 +794,15 @@ const onDeleteColumnChild = ({ colIndex, slideIndex, blockId }) => {
       }
       return;
     }
+    if (deep.containerBlock) {
+      const children = deep.containerBlock.content.children || [];
+      const idx = children.findIndex((b) => b.id === blockId);
+      if (idx !== -1) {
+        if (selectedBlockId.value === blockId) selectedBlockId.value = null;
+        children.splice(idx, 1);
+      }
+      return;
+    }
     if (deep.slide) {
       const idx = deep.slide.children.findIndex((b) => b.id === blockId);
       if (idx !== -1) {
@@ -727,6 +821,13 @@ const onDeleteColumnChild = ({ colIndex, slideIndex, blockId }) => {
     if (idx !== -1) {
       if (selectedBlockId.value === blockId) selectedBlockId.value = null;
       col.children.splice(idx, 1);
+    }
+  } else if (parentColumnsBlock.type === "container") {
+    const children = parentColumnsBlock.content.children || [];
+    const idx = children.findIndex((b) => b.id === blockId);
+    if (idx !== -1) {
+      if (selectedBlockId.value === blockId) selectedBlockId.value = null;
+      children.splice(idx, 1);
     }
   } else if (parentColumnsBlock.type === "carousel") {
     const idx = slideIndex ?? colIndex;
@@ -749,6 +850,8 @@ const cloneBlockWithNewIds = (block) => {
       b.content.columns.forEach((col) => {
         if (col.children) col.children.forEach(regenerate);
       });
+    } else if (b.type === "container" && b.content?.children) {
+      b.content.children.forEach(regenerate);
     } else if (b.type === "carousel" && b.content?.slides) {
       b.content.slides.forEach((slide) => {
         if (slide.children) slide.children.forEach(regenerate);
@@ -766,18 +869,24 @@ const findParentForChild = (targetId, list) => {
         const col = block.content.columns[ci];
         if (col.children) {
           const idx = col.children.findIndex((c) => c.id === targetId);
-          if (idx !== -1) return { parentBlock: block, colIndex: ci, childIndex: idx, column: col, slide: null };
+          if (idx !== -1) return { parentBlock: block, colIndex: ci, childIndex: idx, column: col, slide: null, containerBlock: null };
           const deeper = findParentForChild(targetId, col.children);
           if (deeper) return deeper;
         }
       }
+    }
+    if (block.type === "container" && block.content.children) {
+      const idx = block.content.children.findIndex((c) => c.id === targetId);
+      if (idx !== -1) return { parentBlock: block, colIndex: 0, childIndex: idx, column: null, slide: null, containerBlock: block };
+      const deeper = findParentForChild(targetId, block.content.children);
+      if (deeper) return deeper;
     }
     if (block.type === "carousel" && block.content.slides) {
       for (let si = 0; si < block.content.slides.length; si++) {
         const slide = block.content.slides[si];
         if (slide.children) {
           const idx = slide.children.findIndex((c) => c.id === targetId);
-          if (idx !== -1) return { parentBlock: block, slideIndex: si, childIndex: idx, column: null, slide };
+          if (idx !== -1) return { parentBlock: block, slideIndex: si, childIndex: idx, column: null, slide, containerBlock: null };
           const deeper = findParentForChild(targetId, slide.children);
           if (deeper) return deeper;
         }
@@ -803,6 +912,15 @@ const onDuplicateNestedChild = ({ colIndex, slideIndex, blockId }) => {
       selectedBlockId.value = clone.id;
       return;
     }
+    if (p.type === "container") {
+      const children = p.content.children || [];
+      const idx = children.findIndex((b) => b.id === blockId);
+      if (idx === -1) return;
+      const clone = cloneBlockWithNewIds(children[idx]);
+      children.splice(idx + 1, 0, clone);
+      selectedBlockId.value = clone.id;
+      return;
+    }
     if (p.type === "carousel") {
       const idx = slideIndex ?? colIndex;
       const slide = p.content.slides[idx];
@@ -822,6 +940,12 @@ const onDuplicateNestedChild = ({ colIndex, slideIndex, blockId }) => {
     const idx = parentInfo.childIndex;
     const clone = cloneBlockWithNewIds(parentInfo.column.children[idx]);
     parentInfo.column.children.splice(idx + 1, 0, clone);
+    selectedBlockId.value = clone.id;
+  } else if (parentInfo.containerBlock) {
+    const children = parentInfo.containerBlock.content.children || [];
+    const idx = parentInfo.childIndex;
+    const clone = cloneBlockWithNewIds(children[idx]);
+    children.splice(idx + 1, 0, clone);
     selectedBlockId.value = clone.id;
   } else if (parentInfo.slide) {
     const idx = parentInfo.childIndex;
@@ -856,8 +980,9 @@ const onLoadPage = () => {
     cancel: true,
     persistent: true,
   }).onOk(() => {
-    if (props.dataPage) {
-      loadPageData(props.dataPage);
+    const src = lastSavedSnapshot.value || props.dataPage;
+    if (src) {
+      loadPageData(src);
     } else {
       $q.notify({ message: "No page data available", color: "info" });
     }
@@ -869,8 +994,13 @@ const loadPageData = (data) => {
   pageTitle.value = data.title || "";
   pageDesc.value = data.desc || "";
   pageSlug.value = data.url || "";
+  pageStatus.value = data.status || "draft";
   blocks.value = transformBlocksFromBackend(data.forms || []);
   selectedBlockId.value = null;
+  // Freshly loaded == in sync with that source. The deep watcher below
+  // fires async for this assignment, so arm the guard first.
+  suspendDirty.value = true;
+  hasUnsavedChanges.value = false;
 
   if (data.setupTraining) {
     if (data.setupTraining.containerWidth) {
@@ -878,6 +1008,12 @@ const loadPageData = (data) => {
     }
     if (data.setupTraining.mobileFriendly !== undefined) {
       pageMobileFriendly.value = !!data.setupTraining.mobileFriendly;
+    }
+    if (data.setupTraining.showHeader !== undefined) {
+      pageShowHeader.value = !!data.setupTraining.showHeader;
+    }
+    if (data.setupTraining.pagePadding) {
+      pagePadding.value = data.setupTraining.pagePadding;
     }
   }
 };
@@ -897,6 +1033,12 @@ const deepCloneBlocks = (blockList) => {
         })),
       };
     }
+    if (clone.type === "container" && clone.content?.children) {
+      clone.content = {
+        ...clone.content,
+        children: deepCloneBlocks(clone.content.children),
+      };
+    }
     return clone;
   });
 };
@@ -912,10 +1054,22 @@ const transformBlocksToBackend = (blockList) => {
         type: "columns",
         width: block.width || 12,
         content: {
+          ...block.content,
           columns: (block.content.columns || []).map((col) => ({
             size: col.width || 6,
             children: transformBlocksToBackend(col.children || []),
           })),
+        },
+      };
+    } else if (block.type === "container") {
+      const { children, ...rest } = block.content || {};
+      return {
+        ...base,
+        type: "container",
+        width: block.width || 12,
+        content: {
+          ...rest,
+          children: transformBlocksToBackend(children || []),
         },
       };
     } else if (block.type === "carousel") {
@@ -960,7 +1114,7 @@ const transformBlocksFromBackend = (forms) => {
         id: generateBlockId(),
         type: "columns",
         width: form.width || 12,
-        content: { columns },
+        content: { ...content, columns },
         _dbId: form.id || null,
       };
     }
@@ -986,6 +1140,20 @@ const transformBlocksFromBackend = (forms) => {
         type: "carousel",
         width: form.width || 12,
         content: { ...content, slides },
+        _dbId: form.id || null,
+      };
+    }
+
+    if (form.type === "container") {
+      const content = form.content || {};
+      return {
+        id: generateBlockId(),
+        type: "container",
+        width: form.width || 12,
+        content: {
+          ...content,
+          children: transformBlocksFromBackend(content.children || []),
+        },
         _dbId: form.id || null,
       };
     }
@@ -1031,9 +1199,30 @@ const transformBlocksFromBackend = (forms) => {
   });
 };
 
+// Re-fetch the page from the server and reload the canvas. Makes the
+// local state (incl. deletions) exactly match what was persisted.
+const refreshFromServer = async () => {
+  if (!pageIdLocal.value) return false;
+  try {
+    const res = await postData(
+      "get",
+      null,
+      `cms/viewByID/${pageIdLocal.value}`
+    );
+    const page = res?.data?.value;
+    if (page) {
+      loadPageData(page);
+      lastSavedSnapshot.value = page;
+      return true;
+    }
+  } catch (e) {
+    console.error("Refresh after save failed:", e);
+  }
+  return false;
+};
+
 const onSavePage = () => {
-  if (!pageTitle.value) {
-    $q.notify({
+  if (!pageTitle.value) {    $q.notify({
       message: "Page title is required",
       color: "red",
       icon: "warning",
@@ -1053,11 +1242,14 @@ const onSavePage = () => {
       idRef: pageIdLocal.value || null,
       title: pageTitle.value,
       desc: pageDesc.value,
+      status: pageStatus.value,
       forms: transformBlocksToBackend(blocks.value),
       isQuiz: 2,
       setupTraining: {
         containerWidth: pageContainerWidth.value,
         mobileFriendly: pageMobileFriendly.value,
+        showHeader: pageShowHeader.value,
+        pagePadding: pagePadding.value,
       },
     };
 
@@ -1071,18 +1263,26 @@ const onSavePage = () => {
     );
 
     if (data) {
-      if (!pageIdLocal.value && data.id) {
-        pageIdLocal.value = data.id;
+      // postData returns the handleResponse envelope
+      // { status, data: { insert, id }, message } — unwrap one level.
+      const body = data?.data ?? {};
+
+      if (!pageIdLocal.value && body.id) {
+        pageIdLocal.value = body.id;
       }
 
-      if (data.insert && Array.isArray(data.insert)) {
-        data.insert.forEach((result, i) => {
+      if (body.insert && Array.isArray(body.insert)) {
+        body.insert.forEach((result, i) => {
           const master = result?.[0]?.data?.master;
-          if (master?.id && blocks.value[i]) {
+          if (master?.id && blocks.value[i] && !blocks.value[i]._dbId) {
             blocks.value[i]._dbId = master.id;
           }
         });
       }
+
+      // Re-read the saved page so canvas/_dbIds exactly match the server
+      // (deleted blocks are really gone, no stale state for Open...).
+      await refreshFromServer();
 
       $q.dialog({
         title: "Success",
@@ -1101,7 +1301,6 @@ const onSavePage = () => {
 const onPreviewPage = () => {
   previewDialog.value = true;
 };
-
 const onPageSettings = () => {
   pageSettingsDialog.value = true;
 };
@@ -1229,7 +1428,7 @@ watch(
 
 .canvas-inner {
   width: 100%;
-  max-width: 960px;
+  max-width: 100%;
   padding: 24px;
   min-height: 100%;
 }

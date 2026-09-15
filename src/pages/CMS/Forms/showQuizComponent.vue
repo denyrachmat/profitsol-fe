@@ -135,6 +135,7 @@
               "
               @customChange="(val) => getAnswers(val)"
               mode="live"
+              :dmsOpt="getNowQuestion.content.component.dmsOpt"
               :key="'liveView'"
             />
           </div>

@@ -338,14 +338,14 @@ const listFilesMenu = ref([
     disable: false,
   },
 ]);
-const listActionMenu = ref([
+const listActionMenu = computed(() => [
   {
     icon: "autorenew",
     label: "Re-sync files with server",
     onClick: () => {
       syncWithRealFolder();
     },
-    disable: false,
+    disable: isSyncing.value,
   },
   {
     icon: "edit",
@@ -382,6 +382,7 @@ const listActionMenu = ref([
 ]);
 const splitterModel = ref(50);
 const searchShared = ref("");
+const isSyncing = ref(false);
 // End Ref
 
 const handleKeydown = (event) => {
@@ -939,26 +940,85 @@ const refreshCurrentPath = () => {
 };
 
 const syncWithRealFolder = () => {
+  if (isSyncing.value) return;
+
   $q.dialog({
     title: "Confirmation",
     message: "Do you want resync with current folder ?",
     cancel: true,
   }).onOk(async () => {
     isLoading.value = true;
-    const data = await postData(
-      "get",
-      null,
-      `dms/documentsRoots/resyncFolderToDB/${usernameRef.value}/${root.value}`,
-      false,
-      false,
-      true
-    );
+    isSyncing.value = true;
 
-    if (data) {
+    try {
+      // 1. start sync (returns quickly - no long request)
+      const started = await postData(
+        "get",
+        null,
+        `dms/documentsRoots/resyncFolderToDBStart/${usernameRef.value}/${root.value}`,
+        false,
+        false,
+        true
+      );
+
+      if (!started || !started.data || !started.data.token) {
+        $q.notify({ type: "negative", message: "Failed to start sync" });
+        isLoading.value = false;
+        isSyncing.value = false;
+        return;
+      }
+
+      const token = started.data.token;
+      let total = started.data.total || 0;
+
+      // 2. poll until done
+      let notif = $q.notify({
+        type: "info",
+        message: total > 0 ? `Syncing... 0 / ${total}` : "Syncing...",
+        position: "top",
+        timeout: 0,
+        group: false,
+      });
+
+      let done = 0;
+      let running = true;
+      while (running) {
+        const poll = await postData(
+          "get",
+          null,
+          `dms/documentsRoots/resyncFolderToDBPoll/${token}?batch=20`,
+          false,
+          false,
+          true
+        );
+
+        if (!poll || !poll.data) {
+          running = false;
+          break;
+        }
+
+        done = poll.data.done || done;
+        total = poll.data.total || total;
+        notif({
+          message: `Syncing... ${done} / ${total}`,
+        });
+
+        if (poll.data.status === "done") {
+          running = false;
+        }
+      }
+
+      notif({
+        message: `Sync completed (${done} folder${done === 1 ? "" : "s"})`,
+        type: "positive",
+        timeout: 3000,
+      });
+    } catch (e) {
+      $q.notify({ type: "negative", message: "Sync failed" });
+    } finally {
       isLoading.value = false;
+      isSyncing.value = false;
       onClickBreadcrumb(0);
-    } else {
-      isLoading.value = false;
     }
   });
 };

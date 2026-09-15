@@ -99,6 +99,50 @@
         </template>
       </q-file>
     </template>
+    <template v-else-if="props.comp === 'q-dms'">
+      <div v-if="!props.dmsOpt || !props.dmsOpt.root" class="text-grey">
+        DMS Folder Picker not configured yet — open Setup Component Forms and
+        press the folder button.
+      </div>
+      <div v-else>
+        <span v-html="props.label" />
+        <div class="q-gutter-xs q-py-sm" v-if="modelDataArr.length > 0">
+          <q-chip
+            v-for="(p, idx) in modelDataArr"
+            :key="idx"
+            removable
+            @remove="removeDMSPath(idx)"
+            color="primary"
+            text-color="white"
+            dense
+            :disable="isReadonlyLocal || props.mode == 'live-read'"
+          >
+            {{ p }}
+          </q-chip>
+        </div>
+        <div
+          v-else
+          class="text-caption text-grey-6 q-py-sm"
+        >
+          No folder picked yet.
+        </div>
+        <q-btn
+          outline
+          color="primary"
+          icon="folder_open"
+          label="Browse DMS"
+          dense
+          @click="openDMSBrowser()"
+          v-if="!isReadonlyLocal && props.mode !== 'live-read'"
+        />
+        <div
+          v-if="props.mode === 'edit'"
+          class="text-caption text-grey-6 q-pt-xs"
+        >
+          Preview only — picked folders here are not saved.
+        </div>
+      </div>
+    </template>
     <template v-else-if="props.type === 'multiple'">
       <template v-if="props.mode == 'edit'">
         <div style="max-height: 20vh; overflow: auto">
@@ -179,6 +223,29 @@
                   />
                 </div>
               </template>
+
+              <template v-else-if="props.comp === 'q-table'">
+                <span v-html="props.label" />
+                <q-input
+                  v-model="tableFilter"
+                  label="Search"
+                  outlined
+                  dense
+                  clearable
+                  class="q-mb-sm"
+                />
+                <q-table
+                  :rows="detailData"
+                  :columns="tableColumns"
+                  row-key="value"
+                  :selection="isTableMulti ? 'multiple' : 'single'"
+                  v-model:selected="tableSelected"
+                  :loading="loadingAPI"
+                  :filter="tableFilter"
+                  dense
+                  @row-click="onTableRowClick"
+                />
+              </template>
             </div>
           </div>
         </fieldset>
@@ -223,6 +290,36 @@
               />
             </div>
           </template>
+
+          <template v-else-if="props.comp === 'q-table'">
+            <span v-html="props.label"></span>
+            <q-input
+              v-model="tableFilter"
+              label="Search"
+              outlined
+              dense
+              clearable
+              class="q-mb-sm"
+              :readonly="isReadonlyLocal || props.mode == 'live-read'"
+            />
+            <q-table
+              :rows="tableRows"
+              :columns="tableColumns"
+              row-key="value"
+              :selection="
+                isReadonlyLocal || props.mode == 'live-read'
+                  ? 'none'
+                  : isTableMulti
+                    ? 'multiple'
+                    : 'single'
+              "
+              v-model:selected="tableSelected"
+              :loading="loadingAPI"
+              :filter="tableFilter"
+              dense
+              @row-click="onTableRowClick"
+            />
+          </template>
         </div>
       </template>
     </template>
@@ -230,10 +327,11 @@
 </template>
 <script setup>
 import { api } from "src/boot/axios";
-import { defineProps, onMounted, ref, watch } from "vue";
+import { defineProps, onMounted, ref, watch, computed } from "vue";
 import { useQuasar } from "quasar";
 import { useFormStore } from "stores/formStore";
 import apiRequest from "src/components/apiRequest";
+import dmsFolderBrowser from "./dmsFolderBrowser.vue";
 
 const emit = defineEmits(["onDeleted", "customChange"]);
 
@@ -254,6 +352,7 @@ const props = defineProps({
   ansArr: Array,
   isRequired: Boolean,
   apiOpt: Object,
+  dmsOpt: Object,
   readonly: Boolean,
 });
 
@@ -261,9 +360,145 @@ const formStore = useFormStore();
 const loadingAPI = ref(false);
 const detailData = ref([]);
 
+// ---- Table Select (multiple-table / q-table) ----
+// Reuses the same detail_data + apiOpt config as the other Choose Answer
+// components. Single table answers like radio/select (modelData),
+// multi table answers like checkbox (modelDataArr).
+const tableFilter = ref("");
+const tableSelected = ref([]);
+
+const tableRows = computed(() => {
+  if (detailData.value && detailData.value.length > 0)
+    return detailData.value;
+  return props.detail ?? [];
+});
+
+const HIDDEN_TABLE_FIELDS = ["col_det_id", "col_det_label", "id_trees"];
+
+// multiple-table = single choice, multiple-table-multi = multiple choice.
+// Derived from typeInput so every existing caller works without changes.
+const isTableMulti = computed(
+  () => props.comp === "q-table" && props.typeInput === "multiple-table-multi"
+);
+
+const tableColumns = computed(() => {
+  const rows = tableRows.value ?? [];
+  if (rows.length === 0) return [];
+  const keys = [];
+  rows.forEach((row) => {
+    Object.keys(row ?? {}).forEach((k) => {
+      if (!HIDDEN_TABLE_FIELDS.includes(k) && !keys.includes(k)) keys.push(k);
+    });
+  });
+  // Keep value/label first, extra API/manual fields after
+  keys.sort((a, b) => {
+    const order = (k) => (k === "value" ? 0 : k === "label" ? 1 : 2);
+    return order(a) - order(b);
+  });
+  return keys.map((k) => ({
+    name: k,
+    label: k === "value" ? "Value" : k === "label" ? "Label" : k,
+    field: k,
+    align: "left",
+    sortable: true,
+  }));
+});
+
+const syncTableSelection = () => {
+  const rows = tableRows.value ?? [];
+  if (isTableMulti.value) {
+    const wanted = new Set(
+      (modelDataArr.value ?? []).map((v) => String(v))
+    );
+    const next = rows.filter((r) => wanted.has(String(r?.value)));
+    if (JSON.stringify(tableSelected.value) !== JSON.stringify(next)) {
+      tableSelected.value = next;
+    }
+    return;
+  }
+  const found = rows.find(
+    (r) => String(r?.value) === String(modelData.value)
+  );
+  const next = found ? [found] : [];
+  if (JSON.stringify(tableSelected.value) !== JSON.stringify(next)) {
+    tableSelected.value = next;
+  }
+};
+
+const onTableRowClick = (evt, row) => {
+  if (isReadonlyLocal.value || props.mode == "live-read" || !row) return;
+  if (isTableMulti.value) {
+    const idx = tableSelected.value.findIndex(
+      (r) => String(r?.value) === String(row?.value)
+    );
+    if (idx >= 0) {
+      tableSelected.value.splice(idx, 1);
+    } else {
+      const found = (tableRows.value ?? []).find(
+        (r) => String(r?.value) === String(row?.value)
+      );
+      if (found) tableSelected.value.push(found);
+    }
+  } else {
+    if (JSON.stringify(tableSelected.value) !== JSON.stringify([row])) {
+      tableSelected.value = [row];
+    }
+  }
+};
+
+watch(tableSelected, (val) => {
+  if (isTableMulti.value) {
+    const picked = (val ?? []).map((r) => r?.value ?? "");
+    if (JSON.stringify(picked) !== JSON.stringify(modelDataArr.value)) {
+      modelDataArr.value = picked;
+    }
+    return;
+  }
+  const picked = val && val.length > 0 ? val[0]?.value : "";
+  if (picked !== modelData.value) {
+    modelData.value = picked ?? "";
+  }
+});
+
+watch(tableRows, () => {
+  syncTableSelection();
+});
+
+watch(modelData, () => {
+  syncTableSelection();
+});
+
+watch(
+  () => JSON.stringify(modelDataArr.value),
+  () => {
+    syncTableSelection();
+  }
+);
+
 const onDeleteData = (idx) => {
   detailData.value.splice(idx, 1);
   emit("onDeleted", detailData.value);
+};
+
+// ---- DMS Folder Picker (multiple-dms / q-dms) ----
+const removeDMSPath = (idx) => {
+  modelDataArr.value.splice(idx, 1);
+};
+
+const openDMSBrowser = () => {
+  if (!props.dmsOpt || !props.dmsOpt.root) {
+    $q.notify({ type: "negative", message: "DMS picker is not configured." });
+    return;
+  }
+  $q.dialog({
+    component: dmsFolderBrowser,
+    componentProps: {
+      dmsOpt: props.dmsOpt,
+      initial: [...(modelDataArr.value ?? [])],
+    },
+  }).onOk((val) => {
+    modelDataArr.value = Array.isArray(val) ? val : [];
+  });
 };
 
 onMounted(() => {
@@ -273,7 +508,7 @@ onMounted(() => {
   //   checkAPIData();
   // }
 
-  if (props.ans) {
+  if (props.ans !== undefined && props.ans !== null && props.ans !== "") {
     modelData.value = props.ans;
   }
 
@@ -281,6 +516,38 @@ onMounted(() => {
     // console.log(props.ansArr);
     modelDataArr.value = props.ansArr;
   }
+
+  // Seed manual options so the table renders before any change event
+  if (
+    (!detailData.value || detailData.value.length === 0) &&
+    props.detail &&
+    props.detail.length > 0
+  ) {
+    detailData.value = [...props.detail];
+  }
+
+  // q-table has no @filter trigger like q-select, so fetch API rows on mount
+  if (
+    props.comp === "q-table" &&
+    props.apiOpt &&
+    props.apiOpt.api_url &&
+    (!detailData.value || detailData.value.length === 0)
+  ) {
+    checkAPIData();
+  }
+
+  // q-select only loads API options on filter input; on mount (e.g. editing an
+  // existing answer) fetch them so the current value can resolve to its label.
+  if (
+    props.comp === "q-select" &&
+    props.apiOpt &&
+    props.apiOpt.api_url &&
+    (!detailData.value || detailData.value.length === 0)
+  ) {
+    checkAPIData();
+  }
+
+  syncTableSelection();
 });
 
 const checkAPIData = async (val, update, abort) => {
@@ -376,16 +643,29 @@ const checkAPIData = async (val, update, abort) => {
           return acc[key];
         }, data);
 
-        // Transform the final data into the required format
+        // Transform the final data into the required format.
+        // Table Select may carry extra display columns via apiOpt.selectedColumns.
+        const extraColumns = Array.isArray(props.apiOpt.selectedColumns)
+          ? props.apiOpt.selectedColumns
+          : [];
+        console.log("Table API columns:", extraColumns);
         const resultAPI = Array.isArray(currentData)
-          ? currentData.map((element, index) => ({
-              value:
-                element[props.apiOpt.selectedKeys.value] ??
-                element.value ??
-                index + 1,
-              label:
-                element[props.apiOpt.selectedKeys.label] ?? element.label ?? "",
-            }))
+          ? currentData.map((element, index) => {
+              const row = {
+                value:
+                  element[props.apiOpt.selectedKeys.value] ??
+                  element.value ??
+                  index + 1,
+                label:
+                  element[props.apiOpt.selectedKeys.label] ??
+                  element.label ??
+                  "",
+              };
+              extraColumns.forEach((col) => {
+                if (!(col in row)) row[col] = element[col] ?? "";
+              });
+              return row;
+            })
           : [];
 
         loadingAPI.value = false;

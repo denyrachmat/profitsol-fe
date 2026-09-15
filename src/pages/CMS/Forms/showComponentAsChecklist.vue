@@ -83,6 +83,7 @@
                     :ans="getAnswerData(instanceIdx - 1, flatCol.id)"
                     :ansArr="getAnswerArrData(instanceIdx - 1, flatCol.id)"
                     :apiOpt="flatCol.content?.component?.apiOpt"
+                    :dmsOpt="flatCol.content?.component?.dmsOpt"
                     :readonly="
                       !!blockedReason ||
                       flatCol.readonly ||
@@ -313,16 +314,36 @@ const normalizeAnswer = (val) => {
   return val ?? "";
 };
 
+/**
+ * Array answers (checkbox / DMS / table-multi) are stored in cfm_val as a
+ * JSON string like '["01. PURCHASING","docs"]' and come back from the report
+ * as that raw string. Parse it back into an array; null when not a JSON array.
+ */
+const parseJsonArrayAnswer = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const getAnswerData = (rowIdx, fieldId) => {
   const rowAns = getUserAnswers.value?.[rowIdx];
   const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? "" : normalizeAnswer(val);
+  if (Array.isArray(val) || parseJsonArrayAnswer(val)) return "";
+  return normalizeAnswer(val);
 };
 
 const getAnswerArrData = (rowIdx, fieldId) => {
   const rowAns = getUserAnswers.value?.[rowIdx];
   const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? normalizeAnswer(val) : "";
+  const arr = Array.isArray(val) ? val : parseJsonArrayAnswer(val);
+  return arr ? normalizeAnswer(arr) : "";
 };
 
 const displayCellValue = (rowIdx, col) => {

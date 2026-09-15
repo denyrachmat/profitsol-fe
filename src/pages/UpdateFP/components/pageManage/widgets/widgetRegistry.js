@@ -9,7 +9,7 @@ export default {
   },
   html: {
     meta: { label: "HTML", icon: "code", color: "orange" },
-    defaultContent: () => ({ body: "" }),
+    defaultContent: () => ({ body: "", padding: "", customCss: "" }),
     PropertiesComponent: defineAsyncComponent(() => import("./html/HtmlProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./html/HtmlRenderer.vue")),
   },
@@ -27,6 +27,7 @@ export default {
       variant: "flat", size: "md", align: "left",
       btnWidth: "auto", customWidth: null, customHeight: null,
       icon: null, iconPosition: "left",
+      padding: "", borderRadius: "", customCss: "",
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./button/ButtonProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./button/ButtonRenderer.vue")),
@@ -48,6 +49,9 @@ export default {
     defaultContent: () => ({
       count: 2,
       columns: [{ width: 6, children: [] }, { width: 6, children: [] }],
+      gap: "none",
+      rowGap: "none",
+      colPadding: "",
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./columns/ColumnsProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./columns/ColumnsRenderer.vue")),
@@ -133,5 +137,41 @@ export default {
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./sharepoint/SharePointProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./sharepoint/SharePointRenderer.vue")),
+  },
+  container: {
+    meta: { label: "Container", icon: "dashboard", color: "blue-grey" },
+    defaultContent: () => ({
+      background: "", padding: "", borderRadius: "", children: [],
+      contentAlign: "", containerAlign: "", maxWidth: "", rowGap: "none",
+      bgFullWidth: false,
+      position: "", top: "", left: "", right: "", bottom: "", zIndex: "", width: "",
+    }),
+    PropertiesComponent: defineAsyncComponent(() => import("./container/ContainerProperties.vue")),
+    RendererComponent: defineAsyncComponent(() => import("./container/ContainerRenderer.vue")),
+  },
+  list: {
+    meta: { label: "List", icon: "list", color: "brown" },
+    defaultContent: () => ({
+      items: [{ icon: "", title: "Item 1", desc: "", url: "" }],
+      dividers: true, showIcon: true,
+      bgColor: "", iconColor: "", titleColor: "", descColor: "",
+      dense: true, bordered: false, padding: false, striped: false,
+      dark: false, clickable: false, highlight: false, lines: null,
+      itemPadding: "",
+    }),
+    PropertiesComponent: defineAsyncComponent(() => import("./list/ListProperties.vue")),
+    RendererComponent: defineAsyncComponent(() => import("./list/ListRenderer.vue")),
+  },
+  card: {
+    meta: { label: "Card", icon: "contact_card", color: "deep-orange" },
+    defaultContent: () => ({
+      image: "", imageHeight: "160px", icon: "",
+      title: "Card Title", subtitle: "",
+      buttonLabel: "", buttonUrl: "",
+      background: "#0b3d2e", textColor: "#ffffff",
+      borderRadius: "16px", padding: "20px 16px", align: "left",
+    }),
+    PropertiesComponent: defineAsyncComponent(() => import("./card/CardProperties.vue")),
+    RendererComponent: defineAsyncComponent(() => import("./card/CardRenderer.vue")),
   },
 };

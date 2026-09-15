@@ -71,7 +71,7 @@
       </div>
 
       <div class="row q-gutter-md">
-        <div class="col">
+        <div class="col" v-if="editorMode !== 'code'">
           <editor
             api-key="gw0rtlzda4wpi7l6uncts5jnjh5ftvfw8ncz54ex7maanor4"
             class="full-height"
@@ -80,17 +80,20 @@
           />
         </div>
         <div class="col" v-if="editorMode === 'code' && monacoReady">
-          <CodeEditor
-            v-model:value="editors"
-            language="html"
-            theme="vs-dark"
-            :height="600"
-            :options="{
-              minimap: { enabled: true },
-              wordWrap: 'on',
-              lineNumbers: 'on',
-              fontSize: 14,
-              automaticLayout: true,
+          <div
+            ref="sideMonacoEl"
+            style="height: 600px; border: 1px solid #ddd"
+          ></div>
+        </div>
+        <div class="col" v-else-if="editorMode === 'code'">
+          <q-input
+            v-model="editors"
+            type="textarea"
+            outlined
+            :input-style="{
+              height: '600px',
+              fontFamily: 'monospace',
+              fontSize: '13px',
             }"
           />
         </div>
@@ -100,11 +103,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed } from "vue";
+import { onMounted, onUnmounted, ref, watch, computed, nextTick } from "vue";
 import Editor from "@tinymce/tinymce-vue";
 import { useQuasar } from "quasar";
 import { html as beautifyHtml } from "js-beautify";
-import { CodeEditor } from "monaco-editor-vue3";
+// NOTE: the side code panel intentionally uses the same window.monaco
+// instance loaded by ensureMonaco() below (single version, single AMD
+// loader). Do NOT mount a second monaco loader component here — competing
+// loaders re-point window.require and leave the editor uneditable.
 
 const editorMode = ref("visual"); // 'visual' or 'code'
 const monacoReady = ref(false);
@@ -249,8 +255,19 @@ const applyCustomCss = (urls) => {
 onMounted(async () => {
   if (props.modelValue) editors.value = props.modelValue;
   localCssUrls.value = getSanitizedCssUrls(props.customCssUrls);
-  await ensureMonaco();
-  monacoReady.value = true;
+  try {
+    await ensureMonaco();
+    monacoReady.value = true;
+  } catch (e) {
+    console.error("Monaco failed to load (CDN blocked?):", e);
+  }
+});
+
+onUnmounted(() => {
+  if (sideMonacoEditor) {
+    sideMonacoEditor.dispose();
+    sideMonacoEditor = null;
+  }
 });
 watch(
   () => props.modelValue,
@@ -261,6 +278,60 @@ watch(
 watch(
   () => editors.value,
   (v) => emit("update:modelValue", v)
+);
+
+// ---- Side code panel (own div, same window.monaco instance) ----
+const sideMonacoEl = ref(null);
+let sideMonacoEditor = null;
+
+const createSideEditor = () => {
+  if (sideMonacoEditor || !sideMonacoEl.value || !window.monaco) return;
+  sideMonacoEditor = window.monaco.editor.create(sideMonacoEl.value, {
+    value: editors.value || "",
+    language: "html",
+    theme: "vs-dark",
+    automaticLayout: true,
+    minimap: { enabled: true },
+    wordWrap: "on",
+    lineNumbers: "on",
+    fontSize: 14,
+    scrollBeyondLastLine: false,
+    readOnly: false,
+    domReadOnly: false,
+  });
+  sideMonacoEditor.onDidChangeModelContent(() => {
+    const v = sideMonacoEditor.getValue();
+    if (v !== editors.value) editors.value = v;
+  });
+};
+
+watch(editorMode, async (mode) => {
+  if (mode === "code" && monacoReady.value) {
+    await nextTick();
+    createSideEditor();
+    if (sideMonacoEditor) {
+      if (sideMonacoEditor.getValue() !== (editors.value || "")) {
+        sideMonacoEditor.setValue(editors.value || "");
+      }
+      setTimeout(() => {
+        sideMonacoEditor?.layout();
+        sideMonacoEditor?.focus();
+      }, 100);
+    }
+  }
+});
+
+// External/model changes flow into the side editor (guarded, no loops).
+watch(
+  () => editors.value,
+  (v) => {
+    if (
+      sideMonacoEditor &&
+      sideMonacoEditor.getValue() !== (v || "")
+    ) {
+      sideMonacoEditor.setValue(v || "");
+    }
+  }
 );
 
 watch(mergedContentCss, (urls) => {
@@ -368,11 +439,38 @@ const initEditor = ref({
       icon: "sourcecode",
       tooltip: "Source code (VS Code style)",
       onAction: async () => {
-        const monaco = await ensureMonaco();
+        let monaco = null;
+        try {
+          monaco = await ensureMonaco();
+        } catch (e) {
+          console.error("Monaco failed to load, using plain textarea:", e);
+        }
         const initial = beautifyHtml(editor.getContent({ format: "html" }), {
           indent_size: 2,
           wrap_line_length: 80,
         });
+
+        // Fallback for blocked CDN: plain editable textarea dialog.
+        if (!monaco) {
+          editor.windowManager.open({
+            title: "Source code",
+            size: "large",
+            body: {
+              type: "panel",
+              items: [{ type: "textarea", name: "src" }],
+            },
+            initialData: { src: initial },
+            buttons: [
+              { type: "submit", text: "OK", buttonType: "primary" },
+              { type: "cancel", text: "Cancel" },
+            ],
+            onSubmit(api) {
+              editor.setContent(api.getData().src ?? initial);
+              api.close();
+            },
+          });
+          return;
+        }
 
         let monacoEditor;
         let currentTheme = "vs-dark";
@@ -413,23 +511,25 @@ const initEditor = ref({
           },
           onReady() {
             // Use requestAnimationFrame to ensure DOM is ready
+            let attempts = 0;
             const initMonaco = () => {
+              attempts += 1;
               requestAnimationFrame(() => {
                 const container = document.getElementById("monaco-container");
                 if (!container || !container.isConnected) {
-                  setTimeout(initMonaco, 100);
+                  if (attempts < 50) setTimeout(initMonaco, 100);
                   return;
                 }
 
                 // Ensure container is properly attached to the document
                 if (!document.body.contains(container)) {
-                  setTimeout(initMonaco, 100);
+                  if (attempts < 50) setTimeout(initMonaco, 100);
                   return;
                 }
 
                 const rect = container.getBoundingClientRect();
                 if (rect.width === 0 || rect.height === 0) {
-                  setTimeout(initMonaco, 50);
+                  if (attempts < 50) setTimeout(initMonaco, 50);
                   return;
                 }
 
@@ -449,6 +549,7 @@ const initEditor = ref({
                     lineNumbers: "on",
                     scrollBeyondLastLine: false,
                     readOnly: false,
+                    domReadOnly: false,
                     fontSize: 14,
                     fixedOverflowWidgets: true,
                   });

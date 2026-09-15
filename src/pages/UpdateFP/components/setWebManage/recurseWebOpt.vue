@@ -28,12 +28,11 @@
 
     <div class="col relative-position" v-if="item.config == 'toggle'">
       <q-toggle
-        v-model="item.url"
+        :model-value="item.url === 1 || item.url === '1' || item.url === true"
+        @update:model-value="(v) => (item.url = v ? '1' : '0')"
         :label="item.label"
         color="primary"
         class="full-width"
-        true-value="1"
-        false-value="0"
       />
     </div>
 
@@ -104,7 +103,6 @@
   </template>
 </template>
 <script setup>
-import { onMounted, ref } from "vue";
 import { useQuasar } from "quasar";
 import recurseWebOpt from "./recurseWebOpt.vue";
 
@@ -112,12 +110,6 @@ const $q = useQuasar();
 const props = defineProps({
   rowNavData: Array,
 });
-
-onMounted(() => {
-  console.log("recurseWebOpt mounted with data:", props.rowNavData);
-});
-
-const rowNavData = ref(props.rowNavData || []);
 
 const onImageFileChange = (item, files) => {
   const file = Array.isArray(files) ? files[0] : files;

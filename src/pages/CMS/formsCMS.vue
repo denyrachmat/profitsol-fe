@@ -181,6 +181,7 @@
                   :comp="col.content.component.value.comp"
                   :label="col.content.label"
                   :detail="col.content.detail_data"
+                  :dmsOpt="col.content.component.dmsOpt"
                   mode="live"
                 />
               </template>

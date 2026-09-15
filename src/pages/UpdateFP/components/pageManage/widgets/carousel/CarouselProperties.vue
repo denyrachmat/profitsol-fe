@@ -9,12 +9,13 @@
     <q-input v-if="autoplay" v-model.number="autoplaySpeed" label="Autoplay Speed (sec)" type="number" dense outlined min="1" max="30" class="q-mb-sm" />
     <q-toggle v-model="infinite" label="Infinite Loop" dense class="q-mb-sm" />
     <q-select v-model="transition" :options="transitionOptions" label="Transition" dense outlined emit-value map-options class="q-mb-sm" />
-    <q-input v-model="slideBackground" label="Slide Background Color" dense outlined class="q-mb-sm" hint="e.g. #f5f5f5, white" />
+    <ColorPicker v-model="slideBackground" label="Slide Background Color" />
   </div>
 </template>
 <script setup>
 import { toRef, watch } from "vue";
 import { useBlockField } from "../useBlockField.js";
+import ColorPicker from "../shared/ColorPicker.vue";
 
 const props = defineProps({ block: { type: Object, required: true } });
 const blockRef = toRef(props, "block");

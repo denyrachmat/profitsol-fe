@@ -22,6 +22,7 @@
           :showFormOnly="isShowFormOnlyValue"
           :preventClear="props.preventClear"
           :batchID="props.answersKey"
+          :removeButton="props.removeButton"
         />
         <showQuizComponentVue
           :id="props.id"
@@ -73,6 +74,10 @@ const props = defineProps({
   formsList: {
     type: Array,
     default: () => [],
+  },
+  removeButton: {
+    type: Boolean,
+    default: false,
   },
 });
 

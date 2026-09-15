@@ -1,12 +1,6 @@
 <template>
-  <div class="row q-col-gutter-md">
-    <div
-      v-for="(col, ci) in block.content.columns || []"
-      :key="ci"
-      :class="`col-${
-        col.width || Math.floor(12 / (block.content.columns?.length || 2))
-      }`"
-    >
+  <div class="row" :class="gutterClass">
+    <div v-for="(col, ci) in block.content.columns || []" :key="ci" :class="colClass(col)">
       <draggable
         tag="div"
         :list="col.children"
@@ -16,6 +10,7 @@
         animation="200"
         handle=".drag-handle-nested"
         :class="editMode ? 'column-drop-zone rounded column-drop-zone--edit' : ''"
+        :style="colPadding ? { padding: colPadding } : undefined"
         :disabled="!editMode"
       >
         <template #item="{ element: childBlock }">
@@ -24,6 +19,7 @@
             :class="{
               'nested-block-selected': selectedBlockId === childBlock.id,
             }"
+            :style="rowGapStyle"
             @click.stop="$emit('select-block', childBlock)"
           >
             <div
@@ -80,6 +76,7 @@
               :preview="preview"
               :edit-mode="editMode"
               :selected-block-id="selectedBlockId"
+              :responsive="responsive"
               @select-block="$emit('select-block', $event)"
               @update:children="$emit('update:children', $event)"
               @delete-child="$emit('delete-child', $event)"
@@ -101,18 +98,40 @@
   </div>
 </template>
 <script setup>
+import { computed } from "vue";
 import draggable from "vuedraggable";
 import blockRenderer from "../../blockRenderer.vue";
 import widgetRegistry from "../widgetRegistry.js";
 
-const getBlockMeta = (type) =>
-  widgetRegistry[type]?.meta || { label: type, icon: "help", color: "grey" };
-
-defineProps({
+const props = defineProps({
   block: { type: Object, required: true },
   preview: Boolean,
   editMode: Boolean,
   selectedBlockId: String,
+  responsive: Boolean,
 });
 defineEmits(["select-block", "update:children", "delete-child", "duplicate-child"]);
+
+// When the page is Mobile Friendly, columns stack full-width on small screens
+// (col-12) and only apply their configured width from the md breakpoint up.
+const colClass = (col) => {
+  const w =
+    col.width || Math.floor(12 / (props.block.content.columns?.length || 2));
+  return props.responsive ? ["col-12", `col-md-${w}`] : `col-${w}`;
+};
+
+const getBlockMeta = (type) =>
+  widgetRegistry[type]?.meta || { label: type, icon: "help", color: "grey" };
+
+const GUTTER_MAP = { none: "", sm: "q-col-gutter-sm", md: "q-col-gutter-md", lg: "q-col-gutter-lg" };
+
+// Undefined gap = no gutter (an explicit md/sm/lg is required to add one).
+const gutterClass = computed(() => GUTTER_MAP[props.block.content.gap ?? ""] || "");
+const colPadding = computed(() => props.block.content.colPadding || "");
+
+const ROW_GAP_MAP = { none: "", sm: "8px", md: "16px", lg: "24px" };
+const rowGapStyle = computed(() => {
+  const g = ROW_GAP_MAP[props.block.content.rowGap ?? ""];
+  return g ? { marginBottom: g } : undefined;
+});
 </script>

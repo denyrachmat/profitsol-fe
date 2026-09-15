@@ -681,8 +681,8 @@
                               col.required ? '*' : ''
                             }`"
                             :detail="col.content.detail_data"
-                            mode="live-ans"
-                            @customAnschange="
+                            :dmsOpt="col.content.component.dmsOpt"
+                            mode="live-ans"                            @customAnschange="
                               (val) => onChooseValue(val, index)
                             "
                             :key="index + 'color'"
@@ -737,7 +737,16 @@ const title = ref("");
 const desc = ref("");
 const idRef = ref(null);
 const forms = ref([]);
-const setupTrainingSetup = ref([]);
+const setupTrainingSetup = ref({
+  isRPA: false,
+  isApproval: false,
+  isAPI: false,
+  isNotif: false,
+  rpaId: null,
+  rpaParams: {},
+  apiOpt: [],
+  bulkMode: "once",
+});
 const formStatus = ref("draft");
 const formYear = ref(null);
 const share = ref([]);
@@ -1062,7 +1071,9 @@ const onClickImportBackup = () => {
         formStatus.value = data.status || "draft";
         formYear.value = data.year || null;
         forms.value = data.forms || [];
-        setupTrainingSetup.value = data.setupTraining || {};
+        setupTrainingSetup.value = Array.isArray(data.setupTraining)
+          ? {}
+          : data.setupTraining || {};
         share.value = data.share || [];
         shareMainMenu.value = data.shareMainMenu || false;
         shareIsroles.value = data.shareIsroles || false;
@@ -1132,7 +1143,9 @@ const onClickOpenTraining = () => {
     },
   }).onOk(async (val) => {
     forms.value = updateRowSeqNamesInPlace(val.forms);
-    setupTrainingSetup.value = val.setupTraining;
+    setupTrainingSetup.value = Array.isArray(val.setupTraining)
+      ? {}
+      : val.setupTraining || {};
     title.value = val.title;
     idRef.value = val.id;
     formStatus.value = val.status || "draft";
@@ -1146,15 +1159,50 @@ const onClickOpenTraining = () => {
   });
 };
 
-const openPreview = () => {
+const openPreview = async () => {
+  // Test mode must not create real answers: hide submit button.
+  // Also reload server-fresh definition so preview cols have real ids
+  // (in-memory creator rows from chooseComponent have no id yet).
+  let previewForms = forms.value;
+  if (idRef.value) {
+    try {
+      const fresh = await postData(
+        "get",
+        null,
+        `cms/viewByID/${idRef.value}`,
+        false,
+        false,
+        true
+      );
+      if (fresh?.data?.value?.forms) {
+        previewForms = fresh.data.value.forms;
+      }
+    } catch (e) {
+      console.warn("[FormsCreator] preview reload failed, using local", e);
+    }
+  }
+  const missingIds = (previewForms || []).some((row) =>
+    (Array.isArray(row?.content) ? row.content : []).some(
+      (col) => col?.type === "form" && (col.id === undefined || col.id === null)
+    )
+  );
+  if (missingIds) {
+    $q.notify({
+      message:
+        "Preview has unsaved fields (missing IDs). Save the form and reopen preview for accurate testing.",
+      color: "orange",
+      icon: "warning",
+    });
+  }
   $q.dialog({
     component: previewComponentVue,
     componentProps: {
-      data: forms.value,
+      data: previewForms,
       setup: setupTrainingSetup.value,
       id: idRef.value,
       mode: "form",
       idDet: [],
+      removeButton: true,
     },
   }).onOk(async (val) => {
     console.log(val);
@@ -1168,6 +1216,9 @@ const onSaveQuestion = () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
+    const safeSetup = Array.isArray(setupTrainingSetup.value)
+      ? {}
+      : setupTrainingSetup.value || {};
     const data = await postData(
       "post",
       {
@@ -1178,7 +1229,13 @@ const onSaveQuestion = () => {
         isQuiz: props.mode ?? false,
         status: formStatus.value,
         year: formYear.value,
-        setupTraining: setupTrainingSetup.value,
+        setupTraining: {
+          isRPA: false,
+          isApproval: false,
+          isAPI: false,
+          isNotif: false,
+          ...safeSetup,
+        },
         shareForms: share.value,
         shareFormsIsMainMenu: shareMainMenu.value,
         shareFormsIsRoles: shareIsroles.value,
@@ -1221,7 +1278,7 @@ const onClickSetupTraining = () => {
       formYear: formYear.value,
     },
   }).onOk(async (val) => {
-    setupTrainingSetup.value = val;
+    setupTrainingSetup.value = Array.isArray(val) ? {} : val || {};
     formStatus.value = val.formStatus || "draft";
     formYear.value = val.formYear || null;
   });

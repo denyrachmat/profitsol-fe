@@ -26,6 +26,8 @@
       </q-btn-dropdown>
     </div>
     <tinyEditorVue ref="editorRef" v-model="body" />
+    <PaddingControl v-model="padding" label="Padding" className="q-mt-sm" />
+    <q-input v-model="customCss" label="Custom CSS (e.g. border-radius: 16px;)" type="textarea" dense outlined autogrow placeholder="property: value;" class="q-mt-sm" />
   </div>
 </template>
 <script setup>
@@ -33,10 +35,13 @@ import { ref, computed } from "vue";
 import { toRef } from "vue";
 import tinyEditorVue from "src/components/editors/tinyEditor.vue";
 import { useBlockField } from "../useBlockField.js";
+import PaddingControl from "../shared/PaddingControl.vue";
 import variables, { varToken } from "./variables.js";
 
 const props = defineProps({ block: { type: Object, required: true } });
 const body = useBlockField(toRef(props, "block"), "body");
+const padding = useBlockField(toRef(props, "block"), "padding");
+const customCss = useBlockField(toRef(props, "block"), "customCss");
 
 const editorRef = ref(null);
 

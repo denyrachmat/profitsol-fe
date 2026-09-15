@@ -19,6 +19,37 @@
         max="12"
       />
     </div>
+    <q-select
+      v-model="gap"
+      :options="[
+        { label: 'None', value: 'none' },
+        { label: 'Small', value: 'sm' },
+        { label: 'Medium', value: 'md' },
+        { label: 'Large', value: 'lg' },
+      ]"
+      label="Gap Between Columns"
+      dense
+      outlined
+      emit-value
+      map-options
+      class="q-mb-sm"
+    />
+    <q-select
+      v-model="rowGap"
+      :options="[
+        { label: 'None', value: 'none' },
+        { label: 'Small', value: 'sm' },
+        { label: 'Medium', value: 'md' },
+        { label: 'Large', value: 'lg' },
+      ]"
+      label="Gap Between Rows (stacked widgets)"
+      dense
+      outlined
+      emit-value
+      map-options
+      class="q-mb-sm"
+    />
+    <PaddingControl v-model="colPadding" label="Column Padding" />
     <q-btn
       flat
       dense
@@ -33,10 +64,14 @@
 <script setup>
 import { toRef } from "vue";
 import { useBlockField } from "../useBlockField.js";
+import PaddingControl from "../shared/PaddingControl.vue";
 const props = defineProps({ block: { type: Object, required: true } });
 const blockRef = toRef(props, "block");
 const count = useBlockField(blockRef, "count");
 const columns = useBlockField(blockRef, "columns");
+const gap = useBlockField(blockRef, "gap");
+const rowGap = useBlockField(blockRef, "rowGap");
+const colPadding = useBlockField(blockRef, "colPadding");
 const equalizeColumns = () => {
   const colCount = props.block.content.count;
   const width = Math.floor(12 / colCount);

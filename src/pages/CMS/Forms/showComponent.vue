@@ -56,7 +56,7 @@
       <!-- NEW PAGE BUILDER: delegate to blockRenderer -->
       <div v-if="isNewPageFormat" :key="`page-builder-${refreshedPosts}`">
         <!-- Header card (optional) -->
-        <div class="row" v-if="props.useHeader">
+        <div class="row" v-if="props.useHeader && props.setup?.showHeader !== false">
           <div class="col">
             <q-card class="bg-white shadow-1 rounded-borders" bordered>
               <q-card-section>
@@ -79,6 +79,7 @@
             :key="block.id || `block-${idx}`"
             :block="block"
             :preview="true"
+            :responsive="!!props.setup?.mobileFriendly"
           />
         </div>
 
@@ -137,7 +138,7 @@
 
         <div>
           <!-- Header card (optional) -->
-          <div class="row" v-if="props.useHeader">
+          <div class="row" v-if="props.useHeader && props.setup?.showHeader !== false">
             <div class="col">
               <q-card class="bg-white shadow-1 rounded-borders" bordered>
                 <q-card-section>
@@ -343,6 +344,7 @@
                       :ans="getAnswer(rowIdx, col.id)"
                       :ansArr="getAnswerArr(rowIdx, col.id)"
                       :apiOpt="col.content.component.apiOpt"
+                      :dmsOpt="col.content.component.dmsOpt"
                       :readonly="
                         col.readonly || restrictionMethodFor(col) === 'readonly'
                       "
@@ -1022,9 +1024,11 @@ const contentWrapperStyle = computed(() => {
 const pageBuilderContainerStyle = computed(() => {
   const widthMode = props.setup?.containerWidth || "contained";
   const mobileFriendly = !!props.setup?.mobileFriendly;
+  const pagePadding = props.setup?.pagePadding || "padded";
   const maxWidth =
     widthMode === "wide" ? "1200px" : widthMode === "full" ? "100%" : "900px";
-  const padding = widthMode === "full" ? "0" : "0 16px";
+  const padding =
+    widthMode === "full" || pagePadding === "full" ? "0" : "0 16px";
   let style = `max-width: ${maxWidth}; margin: 0 auto; padding: ${padding};`;
   if (mobileFriendly) {
     style += " width: 100%; box-sizing: border-box;";
@@ -1101,6 +1105,15 @@ const normalizeBlock = (block) => {
           ...slide,
           children: (slide.children || []).map(normalizeBlock),
         })),
+      };
+    }
+  } else if (b.type === "container") {
+    const { detail_data, ...rest } = content || {};
+    content = rest;
+    if (content.children) {
+      content = {
+        ...content,
+        children: content.children.map(normalizeBlock),
       };
     }
   } else if (
@@ -1546,18 +1559,68 @@ const normalizeAnswer = (val) => {
   return val ?? "";
 };
 
+/**
+ * Array answers (checkbox / DMS / table-multi) are stored in cfm_val as a
+ * JSON string like '["01. PURCHASING","docs"]' and come back from the report
+ * as that raw string. Parse it back into an array; null when not a JSON array.
+ */
+const parseJsonArrayAnswer = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * Coerce a stored scalar answer to the matching option's value so
+ * q-select / q-radio (emit-value + map-options) can display it. Report
+ * answers are strings while option values may be numbers (and vice versa).
+ */
+const matchOptionValue = (value, col) => {
+  if (value === undefined || value === null || value === "") return value;
+  const options = col?.content?.detail_data;
+  if (!Array.isArray(options) || options.length === 0) return value;
+
+  const exact = options.find((opt) => opt && opt.value === value);
+  if (exact) return exact.value;
+
+  const normalized = String(value).trim().toLowerCase();
+  const byValue = options.find(
+    (opt) => opt && String(opt.value).trim().toLowerCase() === normalized
+  );
+  if (byValue) return byValue.value;
+
+  const byLabel = options.find(
+    (opt) => opt && String(opt.label).trim().toLowerCase() === normalized
+  );
+  if (byLabel) return byLabel.value;
+
+  return value;
+};
+
 /** Get scalar answer (non-array) for a field */
 const getAnswer = (rowIdx, fieldId) => {
   const rowAns = getUserAnswers.value?.[rowIdx];
   const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? "" : normalizeAnswer(val);
+  // Array answers belong to ansArr, even when the report returns them as a
+  // JSON string — never render them as a scalar value.
+  if (Array.isArray(val) || parseJsonArrayAnswer(val)) return "";
+  const col = formItems.value.find((c) => String(c.id) === String(fieldId));
+  return normalizeAnswer(matchOptionValue(val, col));
 };
 
 /** Get array answer for a field */
 const getAnswerArr = (rowIdx, fieldId) => {
   const rowAns = getUserAnswers.value?.[rowIdx];
   const val = rowAns?.[fieldId];
-  return Array.isArray(val) ? normalizeAnswer(val) : "";
+  const arr = Array.isArray(val) ? val : parseJsonArrayAnswer(val);
+  return arr ? normalizeAnswer(arr) : "";
 };
 
 /**
@@ -1567,6 +1630,14 @@ const getAnswerArr = (rowIdx, fieldId) => {
  * - Trigger logic engine onInput for this field
  */
 const onAnswerChange = (rowIdx, fieldId, value) => {
+  if (fieldId === undefined || fieldId === null || fieldId === "") {
+    console.warn("[showComponent] onAnswerChange missing fieldId, ignored", {
+      rowIdx,
+      fieldId,
+      value,
+    });
+    return;
+  }
   const prev = getUserAnswers.value?.[rowIdx]?.[fieldId];
 
   // normalize previous comparison value
@@ -1794,10 +1865,23 @@ const onSubmitData = () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
+    // Drop corrupt keys ("undefined"/empty) before submit. If col.id was
+    // missing (e.g. preview of unsaved creator data), onAnswerChange stores
+    // nothing now, but old store content may still contain "undefined".
+    const sanitizeRow = (rowAns) => {
+      if (!rowAns || typeof rowAns !== "object" || Array.isArray(rowAns))
+        return rowAns;
+      const clean = {};
+      Object.keys(rowAns).forEach((k) => {
+        if (k === "undefined" || k === "null" || k === "") return;
+        clean[k] = rowAns[k];
+      });
+      return clean;
+    };
     // Map live col IDs → canonical cfmd_id via setup.historyTableList,
     // matched by field label (stable across definition, ids can drift).
     const historyFields = props.setup?.historyTableList || [];
-    const liveAnsRows = getUserAnswers.value || [];
+    const liveAnsRows = (getUserAnswers.value || []).map(sanitizeRow);
 
     const resolveCanonical = (liveId) => {
       const liveCol = formItems.value.find(
@@ -1811,24 +1895,49 @@ const onSubmitData = () => {
         (h) =>
           String(h.forms?.content?.label ?? h.label ?? "").trim() === liveLabel
       );
-      return match ? String(match.forms?.id) : String(liveId);
+      if (!match) return liveId;
+      // historyTableList entries may not carry a nested `forms` object (older
+      // saved setups only have {value,label,...}); fall back to `value`/`id`
+      // and finally the live id so answers are never dropped.
+      const canonicalId = match.forms?.id ?? match.value ?? match.id;
+      if (canonicalId === undefined || canonicalId === null || canonicalId === "")
+        return liveId;
+      return String(canonicalId);
     };
 
     const mappedAnswers = liveAnsRows.map((rowAns) => {
       if (!rowAns || typeof rowAns !== "object") return rowAns;
       const mappedRow = {};
       Object.keys(rowAns).forEach((liveId) => {
-        mappedRow[resolveCanonical(liveId)] = rowAns[liveId];
+        if (liveId === "undefined" || liveId === "null" || liveId === "")
+          return;
+        const canonical = resolveCanonical(liveId);
+        if (canonical === "undefined" || canonical === "null" || !canonical)
+          return;
+        mappedRow[canonical] = rowAns[liveId];
       });
       return mappedRow;
     });
+
+    if (
+      mappedAnswers.length === 0 ||
+      mappedAnswers.every((r) => !r || Object.keys(r).length === 0)
+    ) {
+      $q.notify({
+        message:
+          "No valid answers to submit (missing field IDs). Please save/reload the form before testing submit.",
+        color: "red",
+        icon: "warning",
+      });
+      return;
+    }
 
     const data = await postData(
       "post",
       {
         id: props.id,
         ans: mappedAnswers,
-        batch_id: props.batchID,
+        batch_id: props.batchID || null,
       },
       "cms/storeAnswers",
       false,

@@ -105,9 +105,26 @@ export const useFormStore = defineStore("form", {
       this.userAnswers[idx] = val;
     },
     addAnswersForm(rowIdx, colIdx, val) {
+      if (colIdx === undefined || colIdx === null || colIdx === "") {
+        console.warn("[formStore] ignored answer with missing fieldId", {
+          rowIdx,
+          colIdx,
+          val,
+        });
+        return;
+      }
+      const key = String(colIdx);
+      if (key === "undefined" || key === "null") {
+        console.warn("[formStore] ignored answer with invalid fieldId", {
+          rowIdx,
+          colIdx,
+          val,
+        });
+        return;
+      }
       this.userAnswersForm[rowIdx] = {
         ...this.userAnswersForm[rowIdx],
-        [colIdx]: val,
+        [key]: val,
       };
     },
     restoreDefault() {

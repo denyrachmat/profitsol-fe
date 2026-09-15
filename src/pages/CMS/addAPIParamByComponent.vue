@@ -44,6 +44,17 @@
                   </q-item-section>
                   <q-item-section>
                     <q-select
+                      v-model="item.param_type"
+                      :options="paramTypeOptions"
+                      label="Type"
+                      emit-value
+                      map-options
+                      dense
+                      outlined
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-select
                       filled
                       v-model="item.form_id"
                       :options="props.forms"
@@ -114,6 +125,16 @@ const props = defineProps({
 const listParams = ref([]);
 const listForms = ref([]);
 
+const paramTypeOptions = [
+  { label: "Text", value: "text" },
+  { label: "Number", value: "number" },
+  { label: "Integer", value: "int" },
+  { label: "Float", value: "float" },
+  { label: "Boolean", value: "boolean" },
+  { label: "JSON / Array", value: "json" },
+  { label: "Date", value: "date" },
+];
+
 onMounted(() => {
   if (props.listParam && props.listParam.length > 0) {
     listParams.value = props.listParam;
@@ -124,6 +145,8 @@ onMounted(() => {
         param_type: "text",
         param_default: "",
         id_form: "",
+        form_id: null,
+        default_value: "",
       },
     ];
   }
@@ -135,6 +158,8 @@ const onClickAddParameter = () => {
     param_type: "text",
     param_default: "",
     id_form: "",
+    form_id: null,
+    default_value: "",
   });
 };
 

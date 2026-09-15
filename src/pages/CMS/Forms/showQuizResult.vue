@@ -37,6 +37,7 @@
                   :comp="quiz.content.component.value.comp"
                   :label="quiz.content.label"
                   :detail="quiz.content.detail_data"
+                  :dmsOpt="quiz.content.component.dmsOpt"
                   :ans="
                     answers[idx] &&
                     answers[idx].users &&

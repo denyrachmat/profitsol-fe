@@ -1,5 +1,10 @@
 <template>
-  <div class="post-container">
+  <div
+    class="post-container"
+    :class="{
+      'page-full': choosedPages?.setupTraining?.pagePadding,
+    }"
+  >
     <div v-if="isLoading" class="text-center">
       <q-spinner-dots color="primary" size="40px" />
       <p>Loading Article, please wait...</p>
@@ -114,6 +119,10 @@ watch(
   margin: 0 auto;
   padding: 20px;
   font-family: "Arial", sans-serif;
+}
+
+.post-container.page-full {
+  padding: 0;
 }
 
 h1 {

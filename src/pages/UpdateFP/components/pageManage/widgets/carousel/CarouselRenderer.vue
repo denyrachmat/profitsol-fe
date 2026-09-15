@@ -97,6 +97,7 @@
                   :preview="true"
                   :edit-mode="false"
                   :selected-block-id="selectedBlockId"
+                  :responsive="responsive"
                   @select-block="$emit('select-block', $event)"
                   @update:children="$emit('update:children', $event)"
                   @delete-child="$emit('delete-child', $event)"
@@ -148,6 +149,7 @@
             :preview="true"
             :edit-mode="false"
             :selected-block-id="selectedBlockId"
+            :responsive="responsive"
           />
         </div>
       </q-carousel-slide>
@@ -169,6 +171,7 @@ const props = defineProps({
   preview: Boolean,
   editMode: Boolean,
   selectedBlockId: String,
+  responsive: Boolean,
 });
 
 const emit = defineEmits(["select-block", "update:children", "delete-child", "duplicate-child"]);
