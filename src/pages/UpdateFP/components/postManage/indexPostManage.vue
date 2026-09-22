@@ -31,7 +31,9 @@
               bordered
               :rows="rows"
               :columns="columns"
-              row-key="index"
+              row-key="id"
+              :selection="modes !== 2 ? 'multiple' : 'none'"
+              v-model:selected="selected"
               virtual-scroll
               v-model:pagination="pagination"
               :rows-per-page-options="[0]"
@@ -58,6 +60,15 @@
                       </template>
                     </q-input>
                   </div>
+                  <div class="col-auto" v-if="props.mode !== 2 && selected.length > 0">
+                    <q-btn
+                      color="negative"
+                      label="Bulk Delete"
+                      @click="onClickBulkDelete"
+                      icon-right="delete"
+                      class="q-mr-sm"
+                    />
+                  </div>
                   <div class="col-auto" v-if="props.mode !== 2">
                     <q-btn
                       color="primary"
@@ -71,6 +82,9 @@
 
               <template v-slot:header="props">
                 <q-tr :props="props">
+                  <q-th v-if="modes !== 2" auto-width>
+                    <q-checkbox v-model="props.selected" />
+                  </q-th>
                   <q-th
                     v-for="col in props.cols"
                     :key="col.name"
@@ -83,6 +97,13 @@
 
               <template v-slot:body="props">
                 <q-tr :props="props" @click="onRowClick(props.row)">
+                  <q-td v-if="modes !== 2" auto-width @click.stop>
+                    <q-checkbox
+                      v-model="props.selected"
+                      :val="props.row"
+                      @click.stop
+                    />
+                  </q-td>
                   <q-td
                     v-for="col in props.cols"
                     :key="col.name"
@@ -249,6 +270,7 @@ const props = defineProps({
 const modes = ref(props.mode || 1); // Default to mode 0 if not provided
 const $q = useQuasar();
 const rows = ref([{ cfmt_title: "Page 1", desc: "Description for Page 1" }]);
+const selected = ref([]);
 const columns = ref([
   { name: "id", label: "ID", field: "id", align: "left" },
   {
@@ -396,6 +418,45 @@ const onClickDeleteForm = (id) => {
         type: "negative",
         message: "Failed to delete form",
       });
+    }
+  });
+};
+
+const onClickBulkDelete = () => {
+  $q.dialog({
+    title: "Bulk Delete Posts",
+    message: `Are you sure you want to delete ${selected.value.length} selected post(s)?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    try {
+      const results = await Promise.all(
+        selected.value.map((row) =>
+          postData("delete", null, `cms/forms/${row.id}`)
+        )
+      );
+      const failed = results.filter((r) => !r).length;
+      if (failed) {
+        $q.notify({
+          type: "warning",
+          message: `${selected.value.length - failed} post(s) deleted, ${failed} failed`,
+        });
+      } else {
+        $q.notify({
+          type: "positive",
+          message: "Selected posts deleted successfully",
+        });
+      }
+      selected.value = [];
+      getData();
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Failed to delete posts",
+      });
+    } finally {
+      loading.value = false;
     }
   });
 };

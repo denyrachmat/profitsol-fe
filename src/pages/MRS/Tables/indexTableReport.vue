@@ -180,6 +180,14 @@
             no-caps
             @click="onBulkEditSelected"
           />
+          <q-btn
+            v-if="selectedRows.length > 0"
+            color="red"
+            icon="delete_sweep"
+            label="Bulk Delete"
+            no-caps
+            @click="onBulkDeleteSelected"
+          />
         </q-btn-group>
       </template>
 
@@ -284,6 +292,19 @@
                   "
                 />
               </q-btn-group>
+            </div>
+            <div v-else-if="asArrayValue(props.row[col.name])" class="row q-gutter-xs">
+              <q-chip
+                v-for="(item, i) in asArrayValue(props.row[col.name])"
+                :key="i"
+                dense
+                size="sm"
+                color="primary"
+                text-color="white"
+                class="q-ma-none"
+              >
+                {{ chipLabel(item) }}
+              </q-chip>
             </div>
             <span v-else>
               {{ props.row[col.name] }}
@@ -1370,8 +1391,7 @@ const getGencodeData = async (idCode, selectAs, filter, firstSelect) => {
   }
 };
 
-const onBulkEditSelected = () => {
-  console.log("Data yang dicentang user:", selectedRows.value);
+const onBulkEditSelected = () => {  console.log("Data yang dicentang user:", selectedRows.value);
 
   // 1. Kosongkan store jawaban lama
   formStore.restoreDefault();
@@ -1404,6 +1424,80 @@ const onBulkEditSelected = () => {
   // 6. Bersihkan kembali centangan setelah modal dibuka
   selectedRows.value = [];
 };
+
+// Normalize array-ish cell values: real arrays, or JSON-encoded arrays/objects.
+const asArrayValue = (val) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === "object") return [parsed];
+      } catch (e) {
+        // fall through
+      }
+    }
+  }
+  return null;
+};
+
+const chipLabel = (item) => {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "object") {
+    return item.label ?? item.value ?? item.name ?? item.title ?? JSON.stringify(item);
+  }
+  return String(item);
+};
+
+const onBulkDeleteSelected = () => {
+  const count = selectedRows.value.length;
+  if (count === 0) return;
+
+  $q.dialog({
+    title: "Bulk Delete",
+    message: `Are you sure want to delete ${count} selected row(s) ?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+
+    const checkDatanya = await postData(
+      "post",
+      {
+        items: selectedRows.value.map((row) => ({
+          form_id: row.form_id,
+          batch_id: row.batch_id,
+        })),
+      },
+      "cms/deleteAnswersBulk",
+      false,
+      false,
+      true
+    );
+
+    loading.value = false;
+
+    if (checkDatanya && checkDatanya.status === true) {
+      const deleted = checkDatanya.data?.deleted ?? count;
+      $q.notify({
+        color: "positive",
+        message: `${deleted} row(s) deleted successfully`,
+        icon: "check_circle",
+      });
+      selectedRows.value = [];
+      tableRef.value.requestServerInteraction();
+    } else {
+      $q.notify({
+        color: "negative",
+        message: checkDatanya?.message || "Failed to delete data",
+        icon: "warning",
+      });
+    }
+  });
+};
+
 </script>
 <style lang="sass">
 .my-sticky-header-table

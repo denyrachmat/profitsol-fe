@@ -475,6 +475,46 @@ watch(
   }
 );
 
+/**
+ * Full option list cache. The @filter handler narrows detailData as the user
+ * types; without a cache the dropped options are lost and a saved (edit)
+ * selection can no longer resolve to its label.
+ */
+const fullOptionsCache = ref([]);
+const cacheOptions = (options) => {
+  fullOptionsCache.value = Array.isArray(options) ? [...options] : [];
+};
+
+/**
+ * Coerce a q-select model value to the matching option's native value type.
+ * Backend stores scalar answers as strings, while API/manual options may use
+ * numbers (or vice versa). Without this, Quasar's emit-value/map-options pair
+ * cannot resolve the label when the saved value's type differs from the
+ * option value's type, so edit mode shows an empty selection.
+ */
+const coerceSelectModelToOption = () => {
+  if (props.comp !== "q-select") return;
+  const val = modelData.value;
+  if (val === undefined || val === null || val === "") return;
+
+  const options =
+    (fullOptionsCache.value.length > 0
+      ? fullOptionsCache.value
+      : detailData.value) ?? props.detail ?? [];
+  if (!Array.isArray(options) || options.length === 0) return;
+
+  const found = options.find(
+    (opt) =>
+      opt &&
+      opt.value !== undefined &&
+      opt.value !== null &&
+      String(opt.value).trim() === String(val).trim()
+  );
+  if (found && found.value !== val) {
+    modelData.value = found.value;
+  }
+};
+
 const onDeleteData = (idx) => {
   detailData.value.splice(idx, 1);
   emit("onDeleted", detailData.value);
@@ -510,6 +550,7 @@ onMounted(() => {
 
   if (props.ans !== undefined && props.ans !== null && props.ans !== "") {
     modelData.value = props.ans;
+    coerceSelectModelToOption();
   }
 
   if (props.ansArr && props.ansArr.length > 0) {
@@ -524,6 +565,8 @@ onMounted(() => {
     props.detail.length > 0
   ) {
     detailData.value = [...props.detail];
+    cacheOptions(props.detail);
+    coerceSelectModelToOption();
   }
 
   // q-table has no @filter trigger like q-select, so fetch API rows on mount
@@ -551,37 +594,29 @@ onMounted(() => {
 });
 
 const checkAPIData = async (val, update, abort) => {
-  if (val && detailData.value && detailData.value.length > 0) {
-    // console.log(detailData.value);
-    if (typeof val === "string" || typeof val === "number") {
+  if (val && (typeof val === "string" || typeof val === "number")) {
+    const source =
+      fullOptionsCache.value.length > 0
+        ? fullOptionsCache.value
+        : detailData.value;
+    if (source && source.length > 0) {
+      const filtered = source.filter(
+        (opt) =>
+          (opt.label &&
+            opt.label.toLowerCase().includes(val.toString().toLowerCase())) ||
+          (opt.value &&
+            opt.value
+              .toString()
+              .toLowerCase()
+              .includes(val.toString().toLowerCase()))
+      );
       if (typeof update === "function") {
         update(() => {
-          detailData.value = detailData.value.filter(
-            (opt) =>
-              (opt.label &&
-                opt.label
-                  .toLowerCase()
-                  .includes(val.toString().toLowerCase())) ||
-              (opt.value &&
-                opt.value
-                  .toString()
-                  .toLowerCase()
-                  .includes(val.toString().toLowerCase()))
-          );
+          detailData.value = filtered;
         });
       } else {
-        detailData.value = detailData.value.filter(
-          (opt) =>
-            (opt.label &&
-              opt.label.toLowerCase().includes(val.toString().toLowerCase())) ||
-            (opt.value &&
-              opt.value
-                .toString()
-                .toLowerCase()
-                .includes(val.toString().toLowerCase()))
-        );
+        detailData.value = filtered;
       }
-
       return;
     }
   }
@@ -673,10 +708,14 @@ const checkAPIData = async (val, update, abort) => {
         if (typeof update === "function") {
           update(() => {
             detailData.value = resultAPI;
+            cacheOptions(resultAPI);
           });
         } else {
           detailData.value = resultAPI;
+          cacheOptions(resultAPI);
         }
+        coerceSelectModelToOption();
+        syncTableSelection();
         return;
       } else {
         console.error("API request failed");
@@ -688,9 +727,18 @@ const checkAPIData = async (val, update, abort) => {
         return;
       }
     } else {
-      update(() => {
-        detailData.value = props.detail;
-      });
+      // Options are already loaded (API or manual). Restore the full list
+      // instead of dropping back to props.detail, which would wipe the API
+      // options and with them the saved selection's label.
+      const reset =
+        fullOptionsCache.value.length > 0
+          ? fullOptionsCache.value
+          : props.detail;
+      const apply = () => {
+        detailData.value = Array.isArray(reset) ? [...reset] : reset;
+      };
+      if (typeof update === "function") update(apply);
+      else apply();
     }
 
     // fetch(props.apiOpt.api_url, fetchOptions)
@@ -880,7 +928,18 @@ watch(
   (val) => {
     // console.log("masuk cek jawaban 1");
     modelData.value = val;
+    coerceSelectModelToOption();
   }
+);
+
+// Options can arrive after the saved answer (async API fetch), so re-run the
+// type coercion once they are available to resolve the label on edit.
+watch(
+  () => detailData.value,
+  () => {
+    coerceSelectModelToOption();
+  },
+  { deep: true }
 );
 
 watch(

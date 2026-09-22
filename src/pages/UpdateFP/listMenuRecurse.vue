@@ -48,8 +48,12 @@
 </template>
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import listMenuRecurse from "./listMenuRecurse.vue";
 import { useFormStore } from "src/stores/formStore";
+import { scrollToSection } from "src/components/scrollToSection.js";
+
+const router = useRouter();
 
 const props = defineProps({
   listMenu: {
@@ -69,6 +73,27 @@ const formStore = useFormStore();
 const onClickMenu = (item) => {
   // Handle menu item click
   console.log("Menu item clicked:", item);
+
+  const target = item.page || item.url || item.linkto || "";
+
+  // "#section"           -> scroll within the current page
+  // "/pages/slug#section" -> navigate; the page route scrolls on hash change
+  if (typeof target === "string" && target.includes("#")) {
+    const [pathPart, hashPart] = target.split("#");
+    if (!pathPart.trim()) {
+      if (scrollToSection(hashPart)) return;
+    } else {
+      // A "page"-type item stores a page id, not a route — convert it.
+      if (item.type === "page") {
+        const url = item.url ? String(item.url) : "";
+        router.push(`/pages/${url}#${hashPart}`);
+      } else {
+        router.push(target);
+      }
+      return;
+    }
+  }
+
   if (item.page && !item.page.includes("#")) {
     formStore.setCMSPageChoosed(item);
   }

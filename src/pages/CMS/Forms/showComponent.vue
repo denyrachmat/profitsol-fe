@@ -73,7 +73,11 @@
           </div>
         </div>
 
-        <div class="page-builder-render" :style="pageBuilderContainerStyle">
+        <div
+          class="page-builder-render"
+          :class="{ 'snap-sections': !!props.setup?.fullPageSections }"
+          :style="pageBuilderContainerStyle"
+        >
           <blockRenderer
             v-for="(block, idx) in forms"
             :key="block.id || `block-${idx}`"
@@ -1451,9 +1455,25 @@ onMounted(async () => {
   }
 });
 
+// Full-page sections: snap the window scroller to each section. Toggling a
+// class on <html> is required because the scroller is the document, not the
+// page-builder wrapper (Quasar layout scrolls the window here).
+const snapSectionsEnabled = computed(() => !!props.setup?.fullPageSections);
+watch(
+  snapSectionsEnabled,
+  (on) => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("snap-sections-page", on);
+  },
+  { immediate: true }
+);
+
 onBeforeUnmount(() => {
   isMountedTriggered.value = false;
   nestedLoadingCount.value = 0;
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("snap-sections-page");
+  }
   emit("loading-state", false);
 });
 
@@ -1578,6 +1598,71 @@ const parseJsonArrayAnswer = (value) => {
 };
 
 /**
+ * Map live field IDs to the canonical IDs used by the connected MRS report.
+ *
+ * Answers loaded for editing (from indexTableReport) and history prefill are
+ * keyed by the canonical IDs from setup.historyTableList. When the form was
+ * edited after being connected, its live field IDs drift from those canonical
+ * IDs, so a plain lookup by col.id misses the stored value. Resolve by label
+ * (the same strategy onSubmitData uses when mapping live → canonical).
+ */
+const liveToStoredFieldId = computed(() => {
+  const map = {};
+  const historyFields = props.setup?.historyTableList || [];
+  if (!Array.isArray(historyFields) || historyFields.length === 0) return map;
+
+  formItems.value.forEach((col) => {
+    const liveId = col?.id;
+    if (liveId === undefined || liveId === null || liveId === "") return;
+    const liveLabel = String(
+      col?.content?.label ?? col?.label ?? ""
+    ).trim();
+    if (!liveLabel) return;
+    const match = historyFields.find(
+      (h) =>
+        String(h.forms?.content?.label ?? h.label ?? "").trim() === liveLabel
+    );
+    if (!match) return;
+    const canonicalId = match.forms?.id ?? match.value ?? match.id;
+    if (
+      canonicalId === undefined ||
+      canonicalId === null ||
+      canonicalId === ""
+    )
+      return;
+    if (String(canonicalId) !== String(liveId)) {
+      map[String(liveId)] = String(canonicalId);
+    }
+  });
+  return map;
+});
+
+/**
+ * Read a stored answer for a field, tolerating both the live field ID and its
+ * canonical report ID, and falling back to any row. Edit-from-report loads the
+ * whole batch into row 0, while the form may render its fields across rows.
+ */
+const findStoredAnswer = (rowIdx, fieldId) => {
+  const answers = getUserAnswers.value || [];
+  const storedId = liveToStoredFieldId.value[String(fieldId)];
+  const ids = [fieldId];
+  if (storedId && String(storedId) !== String(fieldId)) ids.push(storedId);
+
+  for (const id of ids) {
+    const val = answers?.[rowIdx]?.[id];
+    if (val !== undefined) return val;
+  }
+
+  for (const id of ids) {
+    for (const rowAns of answers) {
+      const val = rowAns?.[id];
+      if (val !== undefined) return val;
+    }
+  }
+  return undefined;
+};
+
+/**
  * Coerce a stored scalar answer to the matching option's value so
  * q-select / q-radio (emit-value + map-options) can display it. Report
  * answers are strings while option values may be numbers (and vice versa).
@@ -1606,8 +1691,7 @@ const matchOptionValue = (value, col) => {
 
 /** Get scalar answer (non-array) for a field */
 const getAnswer = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
+  const val = findStoredAnswer(rowIdx, fieldId);
   // Array answers belong to ansArr, even when the report returns them as a
   // JSON string — never render them as a scalar value.
   if (Array.isArray(val) || parseJsonArrayAnswer(val)) return "";
@@ -1617,8 +1701,7 @@ const getAnswer = (rowIdx, fieldId) => {
 
 /** Get array answer for a field */
 const getAnswerArr = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
+  const val = findStoredAnswer(rowIdx, fieldId);
   const arr = Array.isArray(val) ? val : parseJsonArrayAnswer(val);
   return arr ? normalizeAnswer(arr) : "";
 };

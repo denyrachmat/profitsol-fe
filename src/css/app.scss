@@ -1,1 +1,16 @@
 // app global css in SCSS form
+
+/* Full-page sections (per-page setting "Full-page sections / snap scroll").
+   Only blocks that carry a Section ID (rendered with an id) become snap
+   targets; each fills the screen and the window scroller snaps to it. */
+html.snap-sections-page {
+  scroll-snap-type: y mandatory;
+}
+
+html.snap-sections-page .page-builder-render > .block-renderer[id] {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  /* Leaves room for a fixed header so a section title is not hidden under it. */
+  scroll-margin-top: var(--snap-header-offset, 0px);
+}

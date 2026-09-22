@@ -23,7 +23,9 @@
               bordered
               :rows="rows"
               :columns="columns"
-              row-key="index"
+              row-key="id"
+              selection="multiple"
+              v-model:selected="selected"
               virtual-scroll
               v-model:pagination="pagination"
               :rows-per-page-options="[0]"
@@ -50,6 +52,15 @@
                       </template>
                     </q-input>
                   </div>
+                  <div class="col-auto" v-if="selected.length > 0">
+                    <q-btn
+                      color="negative"
+                      label="Bulk Delete"
+                      @click="onClickBulkDelete"
+                      icon-right="delete"
+                      class="q-mr-sm"
+                    />
+                  </div>
                   <div class="col-auto">
                     <q-btn
                       color="primary"
@@ -62,6 +73,9 @@
               </template>
               <template v-slot:header="props">
                 <q-tr :props="props">
+                  <q-th auto-width>
+                    <q-checkbox v-model="props.selected" />
+                  </q-th>
                   <q-th
                     v-for="col in props.cols"
                     :key="col.name"
@@ -93,21 +107,36 @@
                     @click="onClickAddPage(props.row)"
                     size="sm"
                     class="q-mr-xs"
-                  />
+                  >
+                    <q-tooltip anchor="top middle" self="bottom middle">
+                      Edit Page
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    icon="content_copy"
+                    color="warning"
+                    @click="onClickCopyPage(props.row)"
+                    size="sm"
+                    class="q-mr-xs"
+                  >
+                    <q-tooltip anchor="top middle" self="bottom middle">
+                      Copy Page
+                    </q-tooltip>
+                  </q-btn>
                   <q-btn
                     flat
                     round
                     icon="delete"
                     color="negative"
-                    @click="
-                      () =>
-                        $q.notify({
-                          type: 'negative',
-                          message: 'Delete action for ' + props.row.name,
-                        })
-                    "
+                    @click="onClickDeletePage(props.row)"
                     size="sm"
-                  />
+                  >
+                    <q-tooltip anchor="top middle" self="bottom middle">
+                      Delete Page
+                    </q-tooltip>
+                  </q-btn>
                 </q-td>
               </template>
               <template v-slot:body-cell-is_main="props">
@@ -148,6 +177,7 @@ onMounted(() => {
 
 const $q = useQuasar();
 const rows = ref([{ cfmt_title: "Page 1", desc: "Description for Page 1" }]);
+const selected = ref([]);
 const columns = ref([
   { name: "id", label: "ID", field: "id", align: "left" },
   { name: "cfmt_title", label: "Name", field: "cfmt_title", align: "left" },
@@ -220,6 +250,120 @@ const onUpdateMainPage = (id, val) => {
         type: "negative",
         message: "Failed to update main page",
       });
+    }
+  });
+};
+
+const onClickCopyPage = (row) => {
+  $q.dialog({
+    title: "Copy Page",
+    message: `Are you sure you want to copy "${row.cfmt_title}"?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    try {
+      const response = await postData(
+        "post",
+        {
+          id: row.id,
+          title: `${row.cfmt_title} (Copy)`,
+        },
+        "cms/cloneForm"
+      );
+      if (response && response.status) {
+        $q.notify({
+          type: "positive",
+          message: response.message || "Page copied successfully",
+        });
+        selected.value = [];
+        getData();
+      } else {
+        $q.notify({
+          type: "negative",
+          message: "Failed to copy page",
+        });
+      }
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Failed to copy page",
+      });
+    } finally {
+      loading.value = false;
+    }
+  });
+};
+
+const onClickDeletePage = (row) => {
+  $q.dialog({
+    title: "Delete Page",
+    message: `Are you sure you want to delete "${row.cfmt_title}"?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    try {
+      const response = await postData("delete", null, `cms/forms/${row.id}`);
+      if (response) {
+        $q.notify({
+          type: "positive",
+          message: "Page deleted successfully",
+        });
+        selected.value = [];
+        getData();
+      } else {
+        $q.notify({
+          type: "negative",
+          message: "Failed to delete page",
+        });
+      }
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Failed to delete page",
+      });
+    } finally {
+      loading.value = false;
+    }
+  });
+};
+
+const onClickBulkDelete = () => {
+  $q.dialog({
+    title: "Bulk Delete Pages",
+    message: `Are you sure you want to delete ${selected.value.length} selected page(s)?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    loading.value = true;
+    try {
+      const results = await Promise.all(
+        selected.value.map((row) =>
+          postData("delete", null, `cms/forms/${row.id}`)
+        )
+      );
+      const failed = results.filter((r) => !r).length;
+      if (failed) {
+        $q.notify({
+          type: "warning",
+          message: `${selected.value.length - failed} page(s) deleted, ${failed} failed`,
+        });
+      } else {
+        $q.notify({
+          type: "positive",
+          message: "Selected pages deleted successfully",
+        });
+      }
+      selected.value = [];
+      getData();
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Failed to delete pages",
+      });
+    } finally {
+      loading.value = false;
     }
   });
 };

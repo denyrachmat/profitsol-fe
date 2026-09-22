@@ -5,6 +5,111 @@
     <q-select v-model="shape" :options="buttonShapeOptions" label="Shape" dense outlined emit-value map-options class="q-mb-sm" />
     <q-input v-model="url" label="Link URL" dense outlined class="q-mb-sm" />
 
+    <!-- Dropdown menu items -->
+    <q-expansion-item
+      icon="menu"
+      label="Dropdown Menu (optional)"
+      caption="When items exist, the button becomes a dropdown."
+      dense
+      header-class="text-primary"
+      class="q-mb-sm"
+    >
+      <div class="q-pt-sm">
+        <div
+          v-for="(item, idx) in safeMenuItems"
+          :key="idx"
+          class="q-pa-sm q-mb-sm"
+          style="border: 1px solid #e0e0e0; border-radius: 8px"
+        >
+          <div class="row items-center">
+            <div class="col text-caption text-grey-7">Item {{ idx + 1 }}</div>
+            <q-btn
+              flat
+              dense
+              round
+              icon="delete"
+              color="negative"
+              size="sm"
+              @click="removeMenuItem(idx)"
+            />
+          </div>
+          <q-select
+            v-model="item.type"
+            :options="menuTypeOptions"
+            label="Type"
+            dense
+            outlined
+            emit-value
+            map-options
+            class="q-mb-xs"
+          />
+          <q-input
+            v-model="item.label"
+            label="Label"
+            dense
+            outlined
+            class="q-mb-xs"
+          />
+          <q-input
+            v-model="item.icon"
+            label="Icon (optional)"
+            dense
+            outlined
+            class="q-mb-xs"
+          />
+          <q-select
+            v-if="item.type === 'portalApp'"
+            :model-value="item.appCode"
+            :options="portalAppOptions"
+            label="Portal Menu"
+            dense
+            outlined
+            emit-value
+            map-options
+            option-value="code"
+            option-label="label"
+            class="q-mb-xs"
+            @update:model-value="(val) => onPickPortalApp(item, val)"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section avatar>
+                  <q-icon :name="scope.opt.icon || 'apps'" />
+                </q-item-section>
+                <q-item-section>{{ scope.opt.label }}</q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+          <q-input
+            v-else-if="item.type === 'section'"
+            :model-value="item.sectionId || ''"
+            @update:model-value="(val) => onPickSection(item, val)"
+            label="Section ID"
+            hint="Matches a block's Section ID on this page"
+            dense
+            outlined
+            class="q-mb-xs"
+          />
+          <q-input
+            v-else
+            v-model="item.url"
+            label="URL"
+            dense
+            outlined
+            class="q-mb-xs"
+          />
+        </div>
+        <q-btn
+          outline
+          color="primary"
+          icon="add"
+          label="Add Menu Item"
+          size="sm"
+          @click="addMenuItem"
+        />
+      </div>
+    </q-expansion-item>
+
     <!-- Color -->
     <div class="q-mb-sm">
       <div class="text-caption text-grey-7 q-mb-xs">Background Color</div>
@@ -102,12 +207,13 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { toRef } from "vue";
 import { colorOptions, variantOptions, sizeOptions, alignOptions, buttonWidthOptions, iconPositionOptions, labelDisplayOptions, buttonShapeOptions } from "../options.js";
 import { useBlockField } from "../useBlockField.js";
 import PaddingControl from "../shared/PaddingControl.vue";
 import iconList from "src/assets/icon_list.json";
+import { useAuthStore } from "src/stores/authStore";
 
 const props = defineProps({ block: { type: Object, required: true } });
 const blockRef = toRef(props, "block");
@@ -130,6 +236,73 @@ const customLabelColor = useBlockField(blockRef, "customLabelColor");
 const padding = useBlockField(blockRef, "padding");
 const borderRadius = useBlockField(blockRef, "borderRadius");
 const customCss = useBlockField(blockRef, "customCss");
+const menuItems = useBlockField(blockRef, "menuItems");
+
+const authStore = useAuthStore();
+
+const menuTypeOptions = [
+  { label: "Custom URL", value: "url" },
+  { label: "Section (scroll in page)", value: "section" },
+  { label: "Portal Menu", value: "portalApp" },
+];
+
+const safeMenuItems = computed(() =>
+  Array.isArray(menuItems.value) ? menuItems.value : []
+);
+
+// The author picks from their own role's portal menus. At render time each
+// item is re-checked against the viewer's role, so this list is only a helper.
+const portalAppOptions = computed(() => {
+  const map = authStore.getChoosedRole?.role?.role_app_map || [];
+  return map
+    .filter((entry) => entry.apps)
+    .map((entry) => ({
+      code: entry.apps.am_app_code || entry.am_app_id,
+      label: entry.apps.am_app_name || entry.am_app_id,
+      icon: entry.apps.am_app_icon || "apps",
+      url: entry.apps.am_app_url || "",
+    }));
+});
+
+const onPickPortalApp = (item, code) => {
+  item.appCode = code;
+  const opt = portalAppOptions.value.find((o) => o.code === code);
+  if (opt) {
+    if (!item.label) item.label = opt.label;
+    if (!item.icon) item.icon = opt.icon;
+    item.url = opt.url || item.url;
+  }
+};
+
+const onPickSection = (item, val) => {
+  const clean = String(val || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/^-+/, "");
+  const sectionId = /^[a-z]/.test(clean) ? clean : "";
+  item.sectionId = sectionId;
+  item.url = sectionId ? `#${sectionId}` : "";
+};
+
+const addMenuItem = () => {
+  const items = Array.isArray(menuItems.value) ? menuItems.value.slice() : [];
+  items.push({
+    type: "url",
+    label: "",
+    icon: "",
+    url: "",
+    appCode: "",
+    sectionId: "",
+  });
+  menuItems.value = items;
+};
+
+const removeMenuItem = (idx) => {
+  const items = Array.isArray(menuItems.value) ? menuItems.value.slice() : [];
+  items.splice(idx, 1);
+  menuItems.value = items;
+};
 
 const colorHexMap = {
   primary: "#1976d2",

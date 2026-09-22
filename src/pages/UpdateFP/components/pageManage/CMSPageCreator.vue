@@ -51,6 +51,18 @@
               <q-item-section avatar><q-icon name="settings" /></q-item-section>
               <q-item-section>Page Settings</q-item-section>
             </q-item>
+            <q-item clickable v-close-popup @click="aiDialog = true">
+              <q-item-section avatar
+                ><q-icon name="auto_awesome"
+              /></q-item-section>
+              <q-item-section>AI Assistant</q-item-section>
+            </q-item>
+            <q-item clickable v-close-popup @click="onHeaderSetup">
+              <q-item-section avatar
+                ><q-icon name="web_asset"
+              /></q-item-section>
+              <q-item-section>Header Setup (domain)</q-item-section>
+            </q-item>
           </q-list>
         </q-menu>
       </q-btn>
@@ -112,10 +124,35 @@
 
       <q-btn
         flat
+        round
+        dense
+        icon="undo"
+        color="grey-8"
+        class="q-ml-md"
+        :disable="!canUndo"
+        @click="undo"
+      >
+        <q-tooltip>Undo (Ctrl + Z)</q-tooltip>
+      </q-btn>
+      <q-btn
+        flat
+        round
+        dense
+        icon="redo"
+        color="grey-8"
+        :disable="!canRedo"
+        @click="redo"
+      >
+        <q-tooltip>Redo (Ctrl + Shift + Z)</q-tooltip>
+      </q-btn>
+
+      <q-btn
+        flat
         no-caps
         color="green"
         icon="save"
         label="Save"
+        class="q-ml-sm"
         @click="onSavePage"
         :disable="!pageTitle"
       >
@@ -138,32 +175,113 @@
         class="widget-palette bg-grey-1"
         style="width: 220px; min-width: 220px"
       >
-        <div class="q-pa-sm text-subtitle2 text-grey-7 text-weight-bold">
-          <q-icon name="widgets" class="q-mr-xs" /> Widgets
-        </div>
-        <draggable
-          tag="div"
-          :list="widgetCatalog"
-          :group="{ name: 'widgets', pull: 'clone', put: false }"
-          :sort="false"
-          item-key="type"
-          class="q-pa-xs"
-          :clone="cloneWidget"
+        <q-tabs
+          v-model="leftPanelTab"
+          dense
+          no-caps
+          class="text-grey-7"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
         >
-          <template #item="{ element }">
+          <q-tab name="widgets" icon="widgets" label="Widgets" />
+          <q-tab name="outline" icon="account_tree" label="Outline" />
+        </q-tabs>
+        <q-separator />
+        <div v-if="leftPanelTab === 'widgets'" class="q-px-sm q-pt-sm q-pb-sm">
+          <q-input
+            v-model="widgetSearch"
+            dense
+            outlined
+            clearable
+            debounce="0"
+            placeholder="Search widget…"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
+        <template v-if="leftPanelTab === 'widgets'">
+          <draggable
+            tag="div"
+            :list="filteredWidgetCatalog"
+            :group="{ name: 'widgets', pull: 'clone', put: false }"
+            :sort="false"
+            item-key="type"
+            class="q-pa-xs"
+            :clone="cloneWidget"
+          >
+            <template #item="{ element }">
+              <div
+                class="widget-palette-item q-pa-sm q-mb-xs cursor-pointer row items-center no-wrap"
+              >
+                <q-icon
+                  :name="element.icon"
+                  :color="element.color"
+                  size="sm"
+                  class="q-mr-sm"
+                />
+                <span class="text-caption">{{ element.label }}</span>
+              </div>
+            </template>
+          </draggable>
+          <div
+            v-if="filteredWidgetCatalog.length === 0"
+            class="text-caption text-grey-5 q-pa-sm"
+          >
+            No widget found
+          </div>
+        </template>
+
+        <!-- Outline tree -->
+        <div v-else class="outline-panel q-py-xs">
+          <div
+            v-if="outlineRows.length === 0"
+            class="text-caption text-grey-5 q-pa-sm"
+          >
+            No blocks yet. Add widgets to see the structure.
+          </div>
+          <template v-for="row in outlineRows" :key="row.key">
             <div
-              class="widget-palette-item q-pa-sm q-mb-xs cursor-pointer row items-center no-wrap"
+              v-if="row.block"
+              class="outline-row row items-center no-wrap cursor-pointer"
+              :class="{
+                'outline-row--selected': row.block.id === selectedBlockId,
+              }"
+              :style="{ paddingLeft: 8 + row.depth * 16 + 'px' }"
+              @click="selectBlock(row.block)"
             >
               <q-icon
-                :name="element.icon"
-                :color="element.color"
-                size="sm"
-                class="q-mr-sm"
+                :name="getBlockMeta(row.block.type).icon"
+                :color="getBlockMeta(row.block.type).color"
+                size="xs"
+                class="q-mr-xs"
               />
-              <span class="text-caption">{{ element.label }}</span>
+              <span class="text-caption ellipsis">
+                {{ getBlockMeta(row.block.type).label }}
+              </span>
+              <q-icon
+                v-if="row.block.content?.anchorId"
+                name="anchor"
+                size="10px"
+                color="teal"
+                class="q-ml-xs"
+              >
+                  <q-tooltip>Section: {{ row.block.content.anchorId }}</q-tooltip>
+              </q-icon>
+            </div>
+            <div
+              v-else
+              class="outline-row outline-row--group row items-center no-wrap"
+              :style="{ paddingLeft: 8 + row.depth * 16 + 'px' }"
+            >
+              <span class="text-caption text-grey-5 text-italic">{{
+                row.label
+              }}</span>
             </div>
           </template>
-        </draggable>
+        </div>
       </div>
 
       <!-- Center: Canvas -->
@@ -179,15 +297,38 @@
           }"
           :style="canvasInnerStyle"
         >
+          <!-- Header preview (matches the live frontpage header) -->
+          <div v-if="showPreviewHeader" class="preview-header">
+            <HeaderBar
+              v-if="effectivePreviewHeader && effectivePreviewHeader.enabled"
+              :config="effectivePreviewHeader"
+            />
+            <div
+              v-else
+              class="preview-header-default row items-center no-wrap q-px-md"
+            >
+              <q-icon name="home" size="sm" />
+              <div class="text-subtitle2 q-ml-sm">Default Header</div>
+            </div>
+          </div>
+
           <!-- Empty state (shown inside draggable when no blocks) -->
           <div v-if="blocks.length === 0" class="canvas-empty">
             <q-icon name="widgets" size="64px" color="grey-4" />
             <div class="text-h6 text-grey-5 q-mt-md">
               Drag widgets here to start building
             </div>
-            <div class="text-caption text-grey-5">
-              Or click the + button below
+            <div class="text-caption text-grey-5 q-mb-md">
+              Or pick one from the catalog
             </div>
+            <q-btn
+              color="primary"
+              icon="add"
+              label="Add your first widget"
+              unelevated
+              no-caps
+              @click="fabMenuOpen = true"
+            />
           </div>
 
           <!-- Draggable blocks (always rendered so palette has a drop target) -->
@@ -339,6 +480,28 @@
             />
           </div>
           <q-separator />
+          <!-- Breadcrumb for nested selections (e.g. Columns › Button) -->
+          <div
+            v-if="selectedBlockPath.length > 1"
+            class="q-px-sm q-py-xs bg-grey-2 text-caption text-grey-7 ellipsis"
+          >
+            <template v-for="(crumb, ci) in selectedBlockPath" :key="crumb.id">
+              <q-icon v-if="ci > 0" name="chevron_right" size="12px" />
+              <q-icon
+                :name="getBlockMeta(crumb.type).icon"
+                :color="getBlockMeta(crumb.type).color"
+                size="12px"
+                class="q-mx-xs"
+              />
+              <span
+                :class="{
+                  'text-weight-bold text-dark':
+                    ci === selectedBlockPath.length - 1,
+                }"
+                >{{ getBlockMeta(crumb.type).label }}</span
+              >
+            </template>
+          </div>
           <div class="props-content q-pa-sm">
             <!-- Width -->
             <q-select
@@ -350,6 +513,25 @@
               emit-value
               map-options
               class="q-mb-sm"
+            />
+
+            <!-- Shared: section anchor, available on every widget -->
+            <q-input
+              :model-value="selectedBlock.content?.anchorId || ''"
+              @update:model-value="
+                (val) => onUpdateAnchorId(val || '')
+              "
+              label="Section ID"
+              hint="Letters, numbers, - and _. Buttons can scroll here (e.g. agenda)."
+              dense
+              outlined
+              clearable
+              class="q-mb-sm"
+              :rules="[
+                (val) =>
+                  !val || /^[A-Za-z][A-Za-z0-9_-]*$/.test(val) ||
+                  'Must start with a letter; letters, numbers, - and _ only',
+              ]"
             />
 
             <!-- Dynamic properties component -->
@@ -382,27 +564,210 @@
       </template>
     </div>
 
-    <!-- Floating Widget FAB -->
-    <q-fab
+    <!-- Floating Add Widget button (menu so a long catalog never overflows) -->
+    <q-btn
       v-if="previewMode === 'edit'"
-      v-model="fabOpen"
+      fab
       icon="add"
-      direction="up"
       color="primary"
       class="fab-add-widget"
     >
-      <q-fab-action
-        v-for="widget in widgetCatalog"
-        :key="widget.type"
-        :icon="widget.icon"
-        :color="widget.color"
-        @click="addBlock(widget.type)"
+      <q-tooltip>Add widget</q-tooltip>
+      <q-menu
+        v-model="fabMenuOpen"
+        anchor="top left"
+        self="bottom right"
+        :offset="[0, 12]"
       >
-        <q-tooltip anchor="center left" self="center right">{{
-          widget.label
-        }}</q-tooltip>
-      </q-fab-action>
-    </q-fab>
+        <div class="bg-white" style="width: 240px">
+          <q-input
+            v-model="fabWidgetSearch"
+            dense
+            outlined
+            clearable
+            autofocus
+            placeholder="Search widget…"
+            class="q-pa-sm"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+          <q-list dense style="max-height: 320px; overflow-y: auto">
+            <q-item
+              v-for="widget in filteredFabCatalog"
+              :key="widget.type"
+              clickable
+              v-close-popup
+              @click="addBlock(widget.type)"
+            >
+              <q-item-section avatar>
+                <q-icon :name="widget.icon" :color="widget.color" />
+              </q-item-section>
+              <q-item-section>{{ widget.label }}</q-item-section>
+            </q-item>
+            <q-item v-if="filteredFabCatalog.length === 0" disable>
+              <q-item-section class="text-grey-5"
+                >No widget found</q-item-section
+              >
+            </q-item>
+          </q-list>
+        </div>
+      </q-menu>
+    </q-btn>
+
+    <!-- AI Builder Dialog -->
+    <q-dialog v-model="aiDialog" persistent>
+      <q-card style="min-width: min(520px, 90vw)">
+        <q-card-section class="row items-center q-pb-none">
+          <q-icon name="auto_awesome" color="primary" size="sm" class="q-mr-sm" />
+          <div class="text-h6">AI Page Assistant</div>
+          <q-space />
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <div
+            v-if="aiMessages.length === 0"
+            class="text-caption text-grey-7 q-mb-sm"
+          >
+            Describe the page you want. The assistant proposes blocks; apply
+            them to the canvas only when you are happy. Applying never saves —
+            press Save to persist.
+          </div>
+
+          <div
+            ref="aiScroll"
+            class="q-pa-sm q-mb-sm bg-grey-1 rounded-borders"
+            style="max-height: 260px; overflow-y: auto"
+          >
+            <div
+              v-for="(msg, i) in aiMessages"
+              :key="i"
+              class="q-mb-sm"
+              :class="msg.role === 'user' ? 'text-right' : ''"
+            >
+              <q-chip
+                :color="msg.role === 'user' ? 'primary' : msg.failed ? 'negative' : 'green'"
+                text-color="white"
+                :icon="msg.role === 'user' ? 'person' : msg.failed ? 'error' : 'auto_awesome'"
+              >
+                {{ msg.role === "user" ? "You" : "Assistant" }}
+              </q-chip>
+              <div class="text-body2 q-mt-xs" style="white-space: pre-wrap">
+                {{ msg.text }}
+              </div>
+              <div v-if="msg.blocks" class="text-caption text-grey-7">
+                Proposed {{ msg.blocks.length }} block(s)
+                <template v-if="msg.title"> — "{{ msg.title }}"</template>
+              </div>
+            </div>
+            <div v-if="aiWorking" class="row items-center q-gutter-sm">
+              <q-spinner-dots color="primary" size="24px" />
+              <span class="text-caption text-grey-7">Generating…</span>
+            </div>
+            <div
+              v-if="!aiWorking && aiMessages.length === 0"
+              class="text-caption text-grey-5"
+            >
+              e.g. “A landing page for our company gathering: hero banner,
+              agenda in two columns, location QR code and a registration
+              button.”
+            </div>
+          </div>
+
+          <q-input
+            v-model="aiInput"
+            type="textarea"
+            autogrow
+            dense
+            outlined
+            label="Describe your page (Ctrl+Enter to generate)"
+            :disable="aiWorking"
+            maxlength="6000"
+            counter
+            @keydown.ctrl.enter.prevent="onAskAi('replace')"
+          />
+
+          <div class="row q-mt-sm q-gutter-sm">
+            <q-btn
+              color="primary"
+              label="Generate"
+              icon="auto_awesome"
+              :loading="aiWorking"
+              :disable="!aiInput.trim()"
+              @click="onAskAi('replace')"
+            />
+            <q-btn
+              outline
+              color="primary"
+              label="Add to page"
+              icon="add"
+              :loading="aiWorking"
+              :disable="!aiInput.trim() || blocks.length === 0"
+              @click="onAskAi('append')"
+            />
+          </div>
+
+          <!-- Rendered proposal preview -->
+          <div v-if="lastProposal" class="q-mt-md">
+            <q-separator class="q-mb-sm" />
+            <div class="row items-center q-mb-xs">
+              <div class="text-subtitle2 text-grey-8">
+                Proposal preview
+                <span class="text-caption text-grey-6">
+                  ({{ lastProposal.blocks.length }} block{{
+                    lastProposal.blocks.length !== 1 ? "s" : ""
+                  }})
+                </span>
+              </div>
+              <q-space />
+              <q-btn
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="primary"
+                :label="aiShowPreview ? 'Hide' : 'Show'"
+                :icon="aiShowPreview ? 'expand_less' : 'expand_more'"
+                @click="aiShowPreview = !aiShowPreview"
+              />
+            </div>
+            <div
+              v-show="aiShowPreview"
+              class="ai-proposal-preview rounded-borders"
+            >
+              <blockRenderer
+                v-for="block in proposalPreviewBlocks"
+                :key="block.id"
+                :block="block"
+                :preview="true"
+                :responsive="pageMobileFriendly"
+              />
+            </div>
+            <div class="row q-mt-sm q-gutter-sm">
+              <q-btn
+                color="secondary"
+                label="Apply (replace page)"
+                icon="check"
+                @click="applyProposal('replace')"
+              />
+              <q-btn
+                outline
+                color="secondary"
+                label="Apply (add to page)"
+                icon="playlist_add"
+                @click="applyProposal('append')"
+              />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Close" color="negative" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Preview Dialog -->
     <q-dialog v-model="previewDialog" full-width full-height persistent>
@@ -426,16 +791,32 @@
         <q-separator />
         <q-card-section class="col scroll q-pa-none">
           <div
-            class="preview-container"
+            class="preview-viewport"
             :class="{ 'preview-mobile': dialogPreviewMode === 'mobile' }"
           >
-            <blockRenderer
-              v-for="block in blocks"
-              :key="block.id"
-              :block="block"
-              :preview="true"
-              :responsive="pageMobileFriendly"
-            />
+            <div v-if="showPreviewHeaderInDialog" class="preview-header">
+              <HeaderBar
+                v-if="effectivePreviewHeader && effectivePreviewHeader.enabled"
+                :config="effectivePreviewHeader"
+              />
+              <div
+                v-else
+                class="preview-header-default row items-center no-wrap q-px-md"
+              >
+                <q-icon name="home" size="sm" />
+                <div class="text-subtitle2 q-ml-sm">Default Header</div>
+              </div>
+            </div>
+
+            <div :style="previewContainerStyle">
+              <blockRenderer
+                v-for="block in blocks"
+                :key="block.id"
+                :block="block"
+                :preview="true"
+                :responsive="pageMobileFriendly"
+              />
+            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -484,6 +865,35 @@
             class="q-mt-sm"
           />
           <q-select
+            v-model="pageHeaderMode"
+            :options="headerModeOptions"
+            label="Page Header"
+            dense
+            outlined
+            emit-value
+            map-options
+            class="q-mt-sm"
+          />
+          <div
+            v-if="pageHeaderMode === 'custom'"
+            class="row items-center q-mt-sm"
+          >
+            <q-btn
+              color="primary"
+              outline
+              icon="edit"
+              label="Edit Custom Header"
+              @click="onPageHeaderSetup"
+            />
+            <span class="text-caption text-grey-7 q-ml-sm">
+              {{
+                pageHeaderConfig
+                  ? "Custom header set for this page"
+                  : "No custom header yet"
+              }}
+            </span>
+          </div>
+          <q-select
             v-model="pageContainerWidth"
             :options="[
               { label: 'Contained (900px)', value: 'contained' },
@@ -515,12 +925,45 @@
             map-options
             class="q-mt-sm"
           />
+          <q-toggle
+            v-model="pageFullPageSections"
+            label="Full-page sections (snap scroll)"
+            hint="Each block with a Section ID fills one screen; scrolling snaps between them."
+            class="q-mt-sm"
+          />
+          <q-select
+            v-model="pageRoles"
+            :options="roleOptions"
+            label="Visible to Roles"
+            hint="Leave empty to show for everyone. Otherwise only these roles can view this page."
+            dense
+            outlined
+            multiple
+            use-chips
+            emit-value
+            map-options
+            option-value="id"
+            option-label="rm_role_name"
+            :loading="rolesLoading"
+            class="q-mt-sm"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.rm_role_name }}</q-item-label>
+                  <q-item-label caption>{{
+                    scope.opt.rm_role_desc
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="negative" v-close-popup />
           <q-btn
             flat
-            label="Save"
+            label="Done"
             color="primary"
             @click="pageSettingsDialog = false"
           />
@@ -531,7 +974,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useQuasar } from "quasar";
 import draggable from "vuedraggable";
 import apiRequest from "src/components/apiRequest";
@@ -539,6 +982,9 @@ import { useAuthStore } from "src/stores/authStore";
 import blockRenderer from "./blockRenderer.vue";
 import widgetRegistry from "./widgets/widgetRegistry.js";
 import { statusOptions, widthOptions } from "./widgets/options.js";
+import HeaderBuilder from "../setWebManage/header/HeaderBuilder.vue";
+import HeaderBar from "../setWebManage/header/HeaderBar.vue";
+import { normalizeHeaderConfig } from "../setWebManage/header/useHeaderConf.js";
 
 const $q = useQuasar();
 const { postData } = apiRequest();
@@ -555,15 +1001,40 @@ const props = defineProps({
 const BLOCK_ID_COUNTER = ref(0);
 const generateBlockId = () => `block-${Date.now()}-${++BLOCK_ID_COUNTER.value}`;
 
+// Role allowlists can arrive as an array, a JSON string or null. Always hand
+// the select an array of string ids so it matches the loaded role options.
+const normalizeRoles = (roles) => {
+  if (typeof roles === "string") {
+    try {
+      roles = JSON.parse(roles);
+    } catch {
+      roles = roles ? [roles] : [];
+    }
+  }
+  return Array.isArray(roles) ? roles.map(String) : [];
+};
+
 const pageIdLocal = ref(props.pageId || null);
 const pageTitle = ref("");
 const pageDesc = ref("");
 const pageSlug = ref("");
 const pageStatus = ref("draft");
 const pageShowHeader = ref(true);
+const pageHeaderMode = ref("inherit");
+const pageHeaderConfig = ref(null);
+const headerModeOptions = [
+  { label: "Inherit from domain", value: "inherit" },
+  { label: "Custom for this page", value: "custom" },
+  { label: "Hidden", value: "hidden" },
+];
 const pageContainerWidth = ref("contained");
 const pageMobileFriendly = ref(false);
 const pagePadding = ref("padded");
+const pageRoles = ref([]);
+const roleOptions = ref([]);
+const rolesLoading = ref(false);
+const pageFullPageSections = ref(false);
+const headerConf = ref(null);
 const blocks = ref([]);
 const selectedBlockId = ref(null);
 // True when canvas differs from the last loaded/saved server state.
@@ -576,7 +1047,7 @@ const suspendDirty = ref(false);
 // Any canvas/title mutation marks the page dirty (deletes included —
 // they only persist after Save + server delete-sync).
 watch(
-  [blocks, pageTitle, pageDesc],
+  [blocks, pageTitle, pageDesc, pageRoles, pageFullPageSections],
   () => {
     if (suspendDirty.value) {
       suspendDirty.value = false;
@@ -586,6 +1057,86 @@ watch(
   },
   { deep: true }
 );
+
+// Undo/redo history. Snapshots are JSON of the blocks array; commits are
+// debounced so a drag or a burst of typing collapses into one step.
+const HISTORY_LIMIT = 60;
+const undoStack = ref([]);
+const redoStack = ref([]);
+const canUndo = computed(() => undoStack.value.length > 0);
+const canRedo = computed(() => redoStack.value.length > 0);
+let committedSnapshot = "[]";
+let historyTimer = null;
+let applyingHistory = false;
+
+const commitHistory = () => {
+  const snap = JSON.stringify(blocks.value);
+  if (snap === committedSnapshot) return;
+  undoStack.value.push(committedSnapshot);
+  if (undoStack.value.length > HISTORY_LIMIT) undoStack.value.shift();
+  redoStack.value = [];
+  committedSnapshot = snap;
+};
+
+const flushHistory = () => {
+  if (!historyTimer) return;
+  clearTimeout(historyTimer);
+  historyTimer = null;
+  commitHistory();
+};
+
+watch(
+  blocks,
+  () => {
+    if (applyingHistory) return;
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(() => {
+      historyTimer = null;
+      commitHistory();
+    }, 400);
+  },
+  { deep: true }
+);
+
+const applySnapshot = (snap) => {
+  applyingHistory = true;
+  blocks.value = JSON.parse(snap);
+  committedSnapshot = snap;
+  if (
+    selectedBlockId.value &&
+    !findBlockById(selectedBlockId.value, blocks.value)
+  ) {
+    selectedBlockId.value = null;
+  }
+  nextTick(() => {
+    applyingHistory = false;
+  });
+};
+
+const undo = () => {
+  flushHistory();
+  const prev = undoStack.value.pop();
+  if (prev === undefined) return;
+  redoStack.value.push(committedSnapshot);
+  applySnapshot(prev);
+};
+
+const redo = () => {
+  flushHistory();
+  const next = redoStack.value.pop();
+  if (next === undefined) return;
+  undoStack.value.push(committedSnapshot);
+  applySnapshot(next);
+};
+
+const resetHistory = () => {
+  clearTimeout(historyTimer);
+  historyTimer = null;
+  undoStack.value = [];
+  redoStack.value = [];
+  committedSnapshot = JSON.stringify(blocks.value);
+};
+
 const propsPanelOpen = ref(true);
 const propsPanelWidth = ref(340);
 const previewMode = ref("edit");
@@ -602,10 +1153,17 @@ const canvasInnerStyle = computed(() =>
     ? undefined
     : { maxWidth: canvasWidth.value, margin: "0 auto" }
 );
-const fabOpen = ref(false);
+const fabMenuOpen = ref(false);
+const leftPanelTab = ref("widgets");
 const previewDialog = ref(false);
 const dialogPreviewMode = ref("desktop");
 const pageSettingsDialog = ref(false);
+const aiDialog = ref(false);
+const aiInput = ref("");
+const aiWorking = ref(false);
+const aiMessages = ref([]);
+const lastProposal = ref(null);
+const aiScroll = ref(null);
 const categoryOptions = ref([
   { label: "All Categories", value: "" },
   { label: "News", value: "news" },
@@ -652,12 +1210,49 @@ const selectedBlockWidth = computed({
   },
 });
 
+const normalizeAnchorId = (val) => {
+  const raw = String(val || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/^-+/, "");
+  return /^[a-z]/.test(raw) ? raw : "";
+};
+
+const onUpdateAnchorId = (val) => {
+  if (!selectedBlock.value) return;
+  const clean = normalizeAnchorId(val);
+  if (!selectedBlock.value.content) selectedBlock.value.content = {};
+  selectedBlock.value.content.anchorId = clean || null;
+};
+
 const widgetCatalog = ref(
-  Object.entries(widgetRegistry).map(([type, def]) => ({
-    type,
-    ...def.meta,
-  }))
+  Object.entries(widgetRegistry)
+    .map(([type, def]) => ({
+      type,
+      ...def.meta,
+    }))
+    .sort((a, b) => (a.label || a.type).localeCompare(b.label || b.type))
 );
+
+const widgetSearch = ref("");
+
+const filteredWidgetCatalog = computed(() => {
+  const query = widgetSearch.value.trim().toLowerCase();
+  if (!query) return widgetCatalog.value;
+  return widgetCatalog.value.filter((w) =>
+    (w.label || w.type).toLowerCase().includes(query)
+  );
+});
+
+const fabWidgetSearch = ref("");
+const filteredFabCatalog = computed(() => {
+  const query = fabWidgetSearch.value.trim().toLowerCase();
+  if (!query) return widgetCatalog.value;
+  return widgetCatalog.value.filter((w) =>
+    (w.label || w.type).toLowerCase().includes(query)
+  );
+});
 
 const getBlockMeta = (type) =>
   widgetRegistry[type]?.meta || { label: type, icon: "help", color: "grey" };
@@ -681,9 +1276,75 @@ const addBlock = (type) => {
   const meta = widgetCatalog.value.find((w) => w.type === type);
   if (!meta) return;
   blocks.value.push(cloneWidget(meta));
-  fabOpen.value = false;
   selectedBlockId.value = blocks.value[blocks.value.length - 1].id;
 };
+
+// Flattened tree of the canvas for the Outline tab. Group rows (column /
+// slide headers) have no block and are not selectable.
+const outlineRows = computed(() => {
+  const rows = [];
+  const walk = (list, depth) => {
+    for (const b of list) {
+      rows.push({ key: b.id, block: b, depth });
+      if (b.type === "columns" && b.content?.columns) {
+        b.content.columns.forEach((col, ci) => {
+          rows.push({
+            key: `grp-${b.id}-col-${ci}`,
+            block: null,
+            depth: depth + 1,
+            label: `Column ${ci + 1}`,
+          });
+          walk(col.children || [], depth + 2);
+        });
+      } else if (b.type === "container" && b.content?.children) {
+        walk(b.content.children, depth + 1);
+      } else if (b.type === "carousel" && b.content?.slides) {
+        b.content.slides.forEach((slide, si) => {
+          rows.push({
+            key: `grp-${b.id}-slide-${si}`,
+            block: null,
+            depth: depth + 1,
+            label: `Slide ${si + 1}`,
+          });
+          walk(slide.children || [], depth + 2);
+        });
+      }
+    }
+  };
+  walk(blocks.value, 0);
+  return rows;
+});
+
+// Root-to-selected block path for the properties panel breadcrumb.
+const selectedBlockPath = computed(() => {
+  if (!selectedBlockId.value) return [];
+  const path = [];
+  const walk = (list, trail) => {
+    for (const b of list) {
+      const t = [...trail, b];
+      if (b.id === selectedBlockId.value) {
+        path.push(...t);
+        return true;
+      }
+      const childSets = [];
+      if (b.type === "columns" && b.content?.columns) {
+        b.content.columns.forEach((c) => childSets.push(c.children || []));
+      }
+      if (b.type === "container" && b.content?.children) {
+        childSets.push(b.content.children);
+      }
+      if (b.type === "carousel" && b.content?.slides) {
+        b.content.slides.forEach((s) => childSets.push(s.children || []));
+      }
+      for (const set of childSets) {
+        if (walk(set, t)) return true;
+      }
+    }
+    return false;
+  };
+  walk(blocks.value, []);
+  return path;
+});
 
 const selectBlock = (block) => {
   if (previewMode.value !== "edit") return;
@@ -723,6 +1384,20 @@ const deleteBlock = (index) => {
   const block = blocks.value[index];
   if (selectedBlockId.value === block.id) selectedBlockId.value = null;
   blocks.value.splice(index, 1);
+  const label = getBlockMeta(block.type).label;
+  $q.notify({
+    message: `${label} deleted`,
+    color: "dark",
+    icon: "delete",
+    timeout: 5000,
+    actions: [
+      {
+        label: "Undo",
+        color: "white",
+        handler: () => undo(),
+      },
+    ],
+  });
 };
 
 const moveBlock = (index, direction) => {
@@ -956,30 +1631,25 @@ const onDuplicateNestedChild = ({ colIndex, slideIndex, blockId }) => {
 };
 
 const onNewPage = () => {
-  $q.dialog({
-    title: "New Page",
-    message: "Create a new page? Unsaved changes will be lost.",
-    cancel: true,
-    persistent: true,
-  }).onOk(() => {
+  confirmDiscardChanges("Creating a new page", () => {
     pageIdLocal.value = null;
     pageTitle.value = "";
     pageDesc.value = "";
     pageSlug.value = "";
     pageStatus.value = "draft";
+    pageRoles.value = [];
+    pageFullPageSections.value = false;
     blocks.value = [];
     selectedBlockId.value = null;
+    resetHistory();
+    suspendDirty.value = true;
+    hasUnsavedChanges.value = false;
     $q.notify({ message: "New page created", color: "green", icon: "check" });
   });
 };
 
 const onLoadPage = () => {
-  $q.dialog({
-    title: "Open Page",
-    message: "Load page data? Unsaved changes will be lost.",
-    cancel: true,
-    persistent: true,
-  }).onOk(() => {
+  confirmDiscardChanges("Loading page data", () => {
     const src = lastSavedSnapshot.value || props.dataPage;
     if (src) {
       loadPageData(src);
@@ -1001,6 +1671,7 @@ const loadPageData = (data) => {
   // fires async for this assignment, so arm the guard first.
   suspendDirty.value = true;
   hasUnsavedChanges.value = false;
+  resetHistory();
 
   if (data.setupTraining) {
     if (data.setupTraining.containerWidth) {
@@ -1014,6 +1685,26 @@ const loadPageData = (data) => {
     }
     if (data.setupTraining.pagePadding) {
       pagePadding.value = data.setupTraining.pagePadding;
+    }
+    if (data.setupTraining.pageRoles !== undefined) {
+      pageRoles.value = normalizeRoles(data.setupTraining.pageRoles);
+    }
+    pageFullPageSections.value = !!data.setupTraining.fullPageSections;
+
+    // Per-page header override: { mode: inherit|custom|hidden, config }
+    pageHeaderMode.value = "inherit";
+    pageHeaderConfig.value = null;
+    let headerSetting = data.setupTraining.header || null;
+    if (typeof headerSetting === "string") {
+      try {
+        headerSetting = JSON.parse(headerSetting);
+      } catch (e) {
+        headerSetting = null;
+      }
+    }
+    if (headerSetting) {
+      pageHeaderMode.value = headerSetting.mode || "inherit";
+      pageHeaderConfig.value = headerSetting.config || null;
     }
   }
 };
@@ -1250,6 +1941,13 @@ const onSavePage = () => {
         mobileFriendly: pageMobileFriendly.value,
         showHeader: pageShowHeader.value,
         pagePadding: pagePadding.value,
+        pageRoles: pageRoles.value,
+        fullPageSections: pageFullPageSections.value,
+        header: {
+          mode: pageHeaderMode.value,
+          config:
+            pageHeaderMode.value === "custom" ? pageHeaderConfig.value : null,
+        },
       },
     };
 
@@ -1305,6 +2003,184 @@ const onPageSettings = () => {
   pageSettingsDialog.value = true;
 };
 
+const scrollAiToBottom = () => {
+  nextTick(() => {
+    const el = aiScroll.value;
+    if (el) el.scrollTop = el.scrollHeight;
+  });
+};
+
+const proposalPreviewBlocks = computed(() =>
+  lastProposal.value && Array.isArray(lastProposal.value.blocks)
+    ? transformBlocksFromBackend(lastProposal.value.blocks)
+    : []
+);
+const aiShowPreview = ref(true);
+
+const applyProposal = (mode) => {
+  const proposal = lastProposal.value;
+  if (!proposal || !Array.isArray(proposal.blocks)) return;
+
+  if (mode === "append") {
+    blocks.value = [
+      ...blocks.value,
+      ...transformBlocksFromBackend(proposal.blocks),
+    ];
+  } else {
+    blocks.value = transformBlocksFromBackend(proposal.blocks);
+  }
+
+  if (proposal.title && typeof proposal.title === "string") {
+    pageTitle.value = proposal.title;
+  }
+
+  selectedBlockId.value = null;
+  lastProposal.value = null;
+  aiMessages.value.push({
+    role: "assistant",
+    text: "The proposal has been applied to the canvas. Press Save when ready.",
+  });
+  scrollAiToBottom();
+  $q.notify({ color: "positive", message: "AI proposal applied" });
+};
+
+const onAskAi = async (mode) => {
+  const prompt = aiInput.value.trim();
+  if (!prompt || aiWorking.value) return;
+
+  aiMessages.value.push({ role: "user", text: prompt });
+  aiInput.value = "";
+  aiWorking.value = true;
+  lastProposal.value = null;
+  scrollAiToBottom();
+
+  const payload = { description: prompt, mode };
+  if (mode === "append") {
+    payload.blocks = transformBlocksToBackend(blocks.value);
+  }
+
+  try {
+    const response = await postData("post", payload, "cms/aiPageBuild");
+
+    if (response && response.status === true) {
+      const data = response.data || {};
+      const blocks = data.blocks;
+
+      if (Array.isArray(blocks) && blocks.length > 0) {
+        lastProposal.value = {
+          blocks,
+          title: data.title,
+          mode,
+        };
+        aiShowPreview.value = true;
+        aiMessages.value.push({
+          role: "assistant",
+          text: "Here is a proposed layout. Check the preview below, then apply it as a replacement or an addition.",
+          blocks,
+          title: data.title,
+        });
+      } else {
+        aiMessages.value.push({
+          role: "assistant",
+          text: response.message || "AI returned no blocks.",
+          failed: true,
+        });
+      }
+    } else {
+      aiMessages.value.push({
+        role: "assistant",
+        text: response?.message || "AI failed to generate a page.",
+        failed: true,
+      });
+    }
+  } catch (error) {
+    aiMessages.value.push({
+      role: "assistant",
+      text: "Something went wrong while calling the AI. Please try again.",
+      failed: true,
+    });
+    console.error(error);
+  } finally {
+    aiWorking.value = false;
+    scrollAiToBottom();
+  }
+};
+
+const onHeaderSetup = () => {
+  // Domain-wide header.
+  $q.dialog({
+    component: HeaderBuilder,
+    persistent: true,
+  }).onOk((cfg) => {
+    if (cfg) headerConf.value = cfg;
+  });
+};
+
+const onPageHeaderSetup = () => {
+  // Per-page custom header (not persisted here; saved with the page).
+  if (pageHeaderMode.value !== "custom") {
+    pageHeaderMode.value = "custom";
+  }
+  $q.dialog({
+    component: HeaderBuilder,
+    persistent: true,
+    componentProps: {
+      initialConfig: pageHeaderConfig.value || headerConf.value || undefined,
+      persist: false,
+    },
+  }).onOk((cfg) => {
+    if (cfg) {
+      pageHeaderConfig.value = cfg;
+      hasUnsavedChanges.value = true;
+    }
+  });
+};
+
+const getHeaderConf = async () => {
+  try {
+    const res = await postData("get", null, "fpmanager/getHeaderConf");
+    headerConf.value = res?.data ? normalizeHeaderConfig(res.data) : null;
+  } catch (e) {
+    headerConf.value = null;
+  }
+};
+
+// Header preview shows in desktop/mobile preview when the page allows it.
+const effectivePreviewHeader = computed(() => {
+  if (pageHeaderMode.value === "hidden") return null;
+  if (pageHeaderMode.value === "custom") {
+    return pageHeaderConfig.value
+      ? normalizeHeaderConfig(pageHeaderConfig.value)
+      : null;
+  }
+  return headerConf.value; // inherit from domain (may be null)
+});
+
+const showPreviewHeader = computed(
+  () =>
+    previewMode.value !== "edit" &&
+    pageShowHeader.value !== false &&
+    pageHeaderMode.value !== "hidden"
+);
+
+const showPreviewHeaderInDialog = computed(
+  () => pageShowHeader.value !== false && pageHeaderMode.value !== "hidden"
+);
+
+const previewContainerStyle = computed(() => {
+  const widthMode = pageContainerWidth.value || "contained";
+  const pagePad = pagePadding.value || "padded";
+  const maxWidth =
+    widthMode === "wide" ? "1200px" : widthMode === "full" ? "100%" : "900px";
+  const padding =
+    widthMode === "full" || pagePad === "full" ? "0" : "0 16px";
+  let style = `max-width: ${maxWidth}; margin: 0 auto; padding: ${padding};`;
+  if (pageMobileFriendly.value) {
+    style += " width: 100%; box-sizing: border-box;";
+  }
+  return style;
+});
+
 const handleKeyDown = (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
@@ -1315,17 +2191,76 @@ const handleKeyDown = (e) => {
   const isEditing =
     tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable;
   if (isEditing) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    if (e.shiftKey) redo();
+    else undo();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "y") {
+    e.preventDefault();
+    redo();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "d") {
+    e.preventDefault();
+    duplicateSelectedBlock();
+    return;
+  }
   if (e.key === "Delete" && selectedBlock.value) {
-    const idx = blocks.value.findIndex((b) => b.id === selectedBlockId.value);
-    if (idx !== -1) deleteBlock(idx);
+    deleteSelectedBlock();
   }
   if (e.key === "Escape") {
     selectedBlockId.value = null;
   }
 };
 
+const duplicateSelectedBlock = () => {
+  if (!selectedBlockId.value) return;
+  const idx = blocks.value.findIndex((b) => b.id === selectedBlockId.value);
+  if (idx !== -1) {
+    duplicateBlock(idx);
+    return;
+  }
+  onDuplicateNestedChild({ blockId: selectedBlockId.value });
+};
+
+const deleteSelectedBlock = () => {
+  if (!selectedBlockId.value) return;
+  const idx = blocks.value.findIndex((b) => b.id === selectedBlockId.value);
+  if (idx !== -1) {
+    deleteBlock(idx);
+    return;
+  }
+  onDeleteColumnChild({ blockId: selectedBlockId.value });
+};
+
+const confirmDiscardChanges = (actionLabel, onConfirm) => {
+  if (!hasUnsavedChanges.value) {
+    onConfirm();
+    return;
+  }
+  $q.dialog({
+    title: "Unsaved changes",
+    message: `You have unsaved changes. ${actionLabel} will discard them. Continue?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(onConfirm);
+};
+
+const onBeforeUnload = (e) => {
+  if (!hasUnsavedChanges.value) return;
+  e.preventDefault();
+  e.returnValue = "";
+};
+
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("beforeunload", onBeforeUnload);
+
+  getHeaderConf();
+  getRoleOptions();
 
   if (props.mode === "edit" && props.dataPage) {
     loadPageData(props.dataPage);
@@ -1334,10 +2269,35 @@ onMounted(() => {
   getDataTags();
 });
 
+const getRoleOptions = async () => {
+  rolesLoading.value = true;
+  try {
+    const response = await postData(
+      "get",
+      null,
+      "portal/roles",
+      false,
+      false,
+      true
+    );
+    roleOptions.value = (response?.data || []).map((role) => ({
+      ...role,
+      id: String(role.id),
+    }));
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    roleOptions.value = [];
+  } finally {
+    rolesLoading.value = false;
+  }
+};
+
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("beforeunload", onBeforeUnload);
   window.removeEventListener("mousemove", onPropsResizeMove);
   window.removeEventListener("mouseup", onPropsResizeEnd);
+  clearTimeout(historyTimer);
 });
 
 const getDataTags = async () => {
@@ -1437,6 +2397,28 @@ watch(
   padding: 0;
 }
 
+.preview-header {
+  margin: 0 0 12px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.canvas-preview .preview-header {
+  margin: 0;
+  border-radius: 0;
+}
+
+.preview-viewport .preview-header {
+  margin: 0;
+  border-radius: 0;
+}
+
+.preview-header-default {
+  min-height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
 .canvas-desktop {
   max-width: 960px;
   margin: 0 auto;
@@ -1533,13 +2515,38 @@ watch(
   bottom: 24px;
   right: 24px;
   z-index: 1000;
-  padding: 20px;
 }
 
-.preview-container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
+.outline-panel {
+  overflow-y: auto;
+}
+
+.outline-row {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-right: 8px;
+  border-radius: 4px;
+  margin: 0 4px;
+}
+
+.outline-row:not(.outline-row--group):hover {
+  background: #e3f2fd;
+}
+
+.outline-row--selected {
+  background: #bbdefb;
+}
+
+.ai-proposal-preview {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.preview-viewport {
+  background: #ffffff;
 }
 
 .preview-mobile {
@@ -1551,41 +2558,45 @@ watch(
 </style>
 
 <style>
-.column-drop-zone {
+/* Editor-only styles for nested blocks/drop zones. They MUST stay scoped
+   under .cms-page-creator: these classes also render on live pages (columns/
+   container renderers always emit them), so unscoped rules would leak blue
+   hover boxes onto the front page once the editor chunk loads. */
+.cms-page-creator .column-drop-zone {
   min-height: 60px;
   border: 1px dashed #ccc;
   transition: all 0.2s;
 }
 
-.column-drop-zone--edit {
+.cms-page-creator .column-drop-zone--edit {
   border-color: #90caf9;
 }
 
-.column-drop-zone--empty {
+.cms-page-creator .column-drop-zone--empty {
   background: rgba(0, 0, 0, 0.02);
 }
 
-.column-drop-zone--edit.sortable-ghost {
+.cms-page-creator .column-drop-zone--edit.sortable-ghost {
   background: #bbdefb;
   opacity: 0.4;
 }
 
-.nested-block-wrapper {
+.cms-page-creator .nested-block-wrapper {
   border: 1px solid transparent;
   border-radius: 4px;
   margin-bottom: 4px;
   transition: border-color 0.15s;
 }
 
-.nested-block-wrapper:hover {
+.cms-page-creator .nested-block-wrapper:hover {
   border-color: #90caf9;
 }
 
-.nested-block-wrapper.nested-block-selected {
+.cms-page-creator .nested-block-wrapper.nested-block-selected {
   border-color: #1976d2;
 }
 
-.nested-block-toolbar {
+.cms-page-creator .nested-block-toolbar {
   padding: 2px 6px;
   background: #e8f5e9;
   border-radius: 4px 4px 0 0;
@@ -1593,7 +2604,7 @@ watch(
   min-height: 22px;
 }
 
-.column-empty-hint {
+.cms-page-creator .column-empty-hint {
   border: 1px dashed #ccc;
   border-radius: 6px;
   opacity: 0.7;

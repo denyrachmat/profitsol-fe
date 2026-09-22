@@ -131,7 +131,13 @@
 
         <div class="row q-gutter-md q-pt-md" v-else>
           <div class="col">
-            <q-input v-model="formData.url" label="URL" dense outlined />
+            <q-input
+              v-model="formData.url"
+              label="URL"
+              dense
+              outlined
+              hint="Use #section-id to scroll to a section on this page (e.g. #agenda), or /pages/slug#section-id for another page."
+            />
           </div>
         </div>
 
@@ -144,6 +150,37 @@
               left-label
               :loading="loading"
             />
+          </div>
+        </div>
+
+        <div class="row q-gutter-md q-pt-md">
+          <div class="col">
+            <q-select
+              v-model="formData.roles"
+              :options="roleOptions"
+              label="Visible to Roles"
+              hint="Leave empty to show for everyone. Otherwise only these roles see this menu."
+              dense
+              outlined
+              multiple
+              use-chips
+              emit-value
+              map-options
+              option-value="id"
+              option-label="rm_role_name"
+              :loading="rolesLoading"
+            >
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.rm_role_name }}</q-item-label>
+                    <q-item-label caption>{{
+                      scope.opt.rm_role_desc
+                    }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </div>
         </div>
       </q-card-section>
@@ -193,9 +230,13 @@ onMounted(async () => {
       ? String(props.navData.parent)
       : null;
     formData.value.dmsShared = props.navData.dmsShared || false;
+    formData.value.roles = Array.isArray(props.navData.roles)
+      ? props.navData.roles.map(String)
+      : [];
     console.log("Form data set from props:", formData.value);
   }
   await getPageOptions();
+  await getRoleOptions();
   isLoaded.value = true;
 });
 
@@ -209,7 +250,10 @@ const formData = ref({
   type: "link", // default type
   parent: null, // default parent
   dmsShared: false,
+  roles: [],
 });
+const roleOptions = ref([]);
+const rolesLoading = ref(false);
 const pageOptions = ref([]);
 const listNav = ref([]);
 
@@ -223,6 +267,29 @@ const getPageOptions = async () => {
   } else {
     console.error("Error fetching data");
     loading.value = false;
+  }
+};
+
+const getRoleOptions = async () => {
+  rolesLoading.value = true;
+  try {
+    const response = await postData(
+      "get",
+      null,
+      "portal/roles",
+      false,
+      false,
+      true
+    );
+    roleOptions.value = (response?.data || []).map((role) => ({
+      ...role,
+      id: String(role.id),
+    }));
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    roleOptions.value = [];
+  } finally {
+    rolesLoading.value = false;
   }
 };
 

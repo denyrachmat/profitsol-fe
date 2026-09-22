@@ -6,15 +6,25 @@
     transition-hide="slide-down"
     full-width
   >
-    <q-card class="bg-white text-black">
-      <q-card-section class="q-pa-md">
-        <div class="text-h6">Frontpage Setup</div>
-        <div class="text-subtitle2">Setting your frontpage here</div>
+    <q-card class="bg-white text-black" style="width: 100%; max-width: 1100px">
+      <q-card-section class="q-pa-md row items-center">
+        <div>
+          <div class="text-h6">Frontpage Setup</div>
+          <div class="text-subtitle2">Setting your frontpage here</div>
+        </div>
+        <q-space />
+        <q-btn
+          color="primary"
+          outline
+          icon="web_asset"
+          label="Header Setup"
+          @click="onClickHeaderSetup"
+        />
       </q-card-section>
 
       <q-separator />
 
-      <q-card-section class="q-pa-md">
+      <q-card-section class="q-pa-md scroll" style="max-height: 65vh">
         <recurse-web-opt :rowNavData="data" v-if="!loading" />
         <span v-else>Please wait, setup being populated</span>
       </q-card-section>
@@ -43,6 +53,7 @@ import { useDialogPluginComponent, useQuasar } from "quasar";
 import apiRequest from "src/components/apiRequest";
 
 import recurseWebOpt from "./recurseWebOpt.vue";
+import HeaderBuilder from "./header/HeaderBuilder.vue";
 
 const { postData } = apiRequest();
 const $q = useQuasar();
@@ -72,6 +83,15 @@ const getData = async () => {
   } catch (error) {
     console.error("Error fetching data:", error);
   }
+};
+
+const onClickHeaderSetup = () => {
+  $q.dialog({
+    component: HeaderBuilder,
+    persistent: true,
+  }).onOk(() => {
+    // Header config is saved inside HeaderBuilder.
+  });
 };
 
 const onClickSave = async () => {

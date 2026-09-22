@@ -53,6 +53,7 @@ import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import showComponent from "../CMS/Forms/showComponent.vue";
 import apiRequest from "src/components/apiRequest";
+import { scrollToHashRetry } from "src/components/scrollToSection.js";
 
 import { useFormStore } from "src/stores/formStore";
 
@@ -86,6 +87,9 @@ const fetchPost = async () => {
     error.value = err.message;
   } finally {
     isLoading.value = false;
+    // Deep links like /pages/slug#agenda: blocks render async, so retry
+    // until the section exists instead of scrolling once too early.
+    if (route.hash) scrollToHashRetry(route.hash);
   }
 };
 
@@ -109,6 +113,14 @@ watch(
   () => isLoading.value,
   (newVal) => {
     formStore.setLoadingArticle(newVal);
+  }
+);
+
+// In-page anchor changes (e.g. clicking a "#section" link or editing the URL).
+watch(
+  () => route.hash,
+  (hash) => {
+    if (hash) scrollToHashRetry(hash);
   }
 );
 </script>

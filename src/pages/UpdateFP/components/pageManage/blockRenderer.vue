@@ -1,5 +1,5 @@
 <template>
-  <div class="block-renderer" :style="blockStyle">
+  <div :id="anchorId" class="block-renderer" :style="blockStyle">
     <component
       :is="rendererComponent"
       v-if="rendererComponent"
@@ -37,6 +37,14 @@ defineEmits(["select-block", "update:children", "delete-child", "duplicate-child
 const rendererComponent = computed(() =>
   widgetRegistry[props.block.type]?.RendererComponent || null
 );
+
+// Section anchors: any block can name itself, so buttons can scroll to it.
+// Only word chars/dashes make it to the DOM to keep ids selector-safe.
+const anchorId = computed(() => {
+  const raw = String(props.block.content?.anchorId || "").trim();
+  if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(raw)) return undefined;
+  return `section-${raw}`;
+});
 
 const blockWidth = computed(() => {
   if (!props.block.width || props.block.width === 12) return "100%";

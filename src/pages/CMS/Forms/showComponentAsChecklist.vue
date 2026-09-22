@@ -332,16 +332,75 @@ const parseJsonArrayAnswer = (value) => {
   }
 };
 
+/**
+ * Map live field IDs to the canonical IDs used by the connected MRS report.
+ * Answers loaded for editing are keyed by canonical IDs from
+ * setup.historyTableList. When the form was edited after being connected,
+ * live IDs drift, so a plain lookup by col.id misses the stored value.
+ */
+const liveToStoredFieldId = computed(() => {
+  const map = {};
+  const historyFields = props.setup?.historyTableList || [];
+  if (!Array.isArray(historyFields) || historyFields.length === 0) return map;
+
+  flattenedFields.value.forEach((col) => {
+    const liveId = col?.id;
+    if (liveId === undefined || liveId === null || liveId === "") return;
+    const liveLabel = String(
+      col?.content?.label ?? col?.label ?? ""
+    ).trim();
+    if (!liveLabel) return;
+    const match = historyFields.find(
+      (h) =>
+        String(h.forms?.content?.label ?? h.label ?? "").trim() === liveLabel
+    );
+    if (!match) return;
+    const canonicalId = match.forms?.id ?? match.value ?? match.id;
+    if (
+      canonicalId === undefined ||
+      canonicalId === null ||
+      canonicalId === ""
+    )
+      return;
+    if (String(canonicalId) !== String(liveId)) {
+      map[String(liveId)] = String(canonicalId);
+    }
+  });
+  return map;
+});
+
+/**
+ * Read a stored answer for a field, tolerating both the live field ID and its
+ * canonical report ID, and falling back to any row.
+ */
+const findStoredAnswer = (rowIdx, fieldId) => {
+  const answers = getUserAnswers.value || [];
+  const storedId = liveToStoredFieldId.value[String(fieldId)];
+  const ids = [fieldId];
+  if (storedId && String(storedId) !== String(fieldId)) ids.push(storedId);
+
+  for (const id of ids) {
+    const val = answers?.[rowIdx]?.[id];
+    if (val !== undefined) return val;
+  }
+
+  for (const id of ids) {
+    for (const rowAns of answers) {
+      const val = rowAns?.[id];
+      if (val !== undefined) return val;
+    }
+  }
+  return undefined;
+};
+
 const getAnswerData = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
+  const val = findStoredAnswer(rowIdx, fieldId);
   if (Array.isArray(val) || parseJsonArrayAnswer(val)) return "";
   return normalizeAnswer(val);
 };
 
 const getAnswerArrData = (rowIdx, fieldId) => {
-  const rowAns = getUserAnswers.value?.[rowIdx];
-  const val = rowAns?.[fieldId];
+  const val = findStoredAnswer(rowIdx, fieldId);
   const arr = Array.isArray(val) ? val : parseJsonArrayAnswer(val);
   return arr ? normalizeAnswer(arr) : "";
 };

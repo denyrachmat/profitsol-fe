@@ -76,8 +76,22 @@
                 >
                   {{ post.bodyPreview }}
                 </div>
-                <div class="text-caption text-grey-5 q-mt-sm">
-                  {{ formatDate(post.created_at) }}
+                <div class="row items-center q-mt-sm">
+                  <div class="text-caption text-grey-5">
+                    {{ formatDate(post.created_at) }}
+                  </div>
+                  <q-space />
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="print"
+                    size="sm"
+                    color="grey-8"
+                    @click.stop="printPost(post)"
+                  >
+                    <q-tooltip>Print this post</q-tooltip>
+                  </q-btn>
                 </div>
               </q-card-section>
             </q-card-section>
@@ -130,16 +144,33 @@
                     No Photo provided
                   </div>
                   <q-card-section>
-                    <div class="text-subtitle2 text-weight-bold">
-                      {{
-                        post.title || post.cfmt_title || post.label || "Untitled"
-                      }}
+                    <div class="row items-start no-wrap">
+                      <div class="text-subtitle2 text-weight-bold col">
+                        {{
+                          post.title || post.cfmt_title || post.label || "Untitled"
+                        }}
+                      </div>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="print"
+                        size="sm"
+                        color="grey-8"
+                        class="q-ml-xs"
+                        @click.stop="printPost(post)"
+                      >
+                        <q-tooltip>Print this post</q-tooltip>
+                      </q-btn>
                     </div>
                     <div
                       v-if="post.bodyPreview"
                       class="text-caption text-grey-7 q-mt-xs"
                     >
                       {{ post.bodyPreview }}
+                    </div>
+                    <div class="text-caption text-grey-5 q-mt-xs">
+                      {{ formatDate(post.created_at) }}
                     </div>
                   </q-card-section>
                 </q-card>
@@ -178,6 +209,7 @@ import {
 } from "vue";
 import { useRouter } from "vue-router";
 import apiRequest from "src/components/apiRequest";
+import { printHtml, escapeHtml } from "src/components/printHtml.js";
 
 const { postData } = apiRequest();
 const router = useRouter();
@@ -280,6 +312,25 @@ const navigateToPost = (post) => {
   }
 };
 
+// Opens the browser print dialog with just this post (title, date, image,
+// full body). Uses a hidden iframe so nothing navigates away.
+const printPost = (post) => {
+  const title = post.title || post.cfmt_title || post.label || "Untitled";
+  const date = formatDate(post.created_at);
+  const image = post.image
+    ? `<img src="${escapeHtml(post.image)}" alt="" />`
+    : "";
+  const content =
+    post.bodyHtml ||
+    (post.bodyPreview ? `<p>${escapeHtml(post.bodyPreview)}</p>` : "");
+  const body =
+    `<div class="print-title">${escapeHtml(title)}</div>` +
+    (date ? `<div class="print-meta">${escapeHtml(date)}</div>` : "") +
+    image +
+    `<div class="print-content">${content}</div>`;
+  printHtml({ title, body });
+};
+
 const extractPostImage = (html) => {
   if (!html) return null;
   const imageRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
@@ -338,10 +389,11 @@ const loadPostDetails = async () => {
 
       const image = extractPostImage(html);
       const bodyPreview = truncateToWords(extractPostDesc(html));
-      if (image || bodyPreview) {
+      if (image || bodyPreview || html) {
         const updated = { ...post };
         if (image) updated.image = image;
         if (bodyPreview) updated.bodyPreview = bodyPreview;
+        if (html) updated.bodyHtml = html;
         postsList.value[i] = updated;
       }
     } catch (err) {

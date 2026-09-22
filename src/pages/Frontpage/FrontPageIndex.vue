@@ -1,61 +1,119 @@
 <template>
   <q-layout class="shadow-2" view="hHh Lpr lFf">
     <q-header
-      :elevated="mainConfData.headerElevated == 1"
+      :reveal="
+        activeHeaderConfig && activeHeaderConfig.enabled
+          ? !activeHeaderConfig.sticky
+          : false
+      "
+      :elevated="
+        activeHeaderConfig && activeHeaderConfig.enabled
+          ? !!activeHeaderConfig.elevated
+          : mainConfData.headerElevated == 1
+      "
       :style="{
-        backgroundColor: mainConfData.headerColor || '#ffffff',
+        backgroundColor:
+          activeHeaderConfig && activeHeaderConfig.enabled
+            ? activeHeaderConfig.background || '#ffffff'
+            : mainConfData.headerColor || '#ffffff',
+        color:
+          activeHeaderConfig && activeHeaderConfig.enabled
+            ? activeHeaderConfig.textColor || undefined
+            : undefined,
       }"
-      v-if="mainConfData && mainConfData.isHeader == 1 && pageHeaderVisible"
+      v-if="
+        mainConfData &&
+        mainConfData.isHeader == 1 &&
+        pageHeaderVisible &&
+        !pageHeaderHidden
+      "
     >
-      <q-toolbar>
+        <q-toolbar class="header-toolbar" :style="headerToolbarStyle">
+        <!-- Custom background layer (HTML / image / etc.) -->
+        <div v-if="hasHeaderBackground" class="header-bg-layer">
+          <HeaderSlot
+            :key="`fp-header-bg-${headerRenderKey}`"
+            :blocks="activeHeaderConfig.slots.background"
+            justify="center"
+          />
+        </div>
+
         <q-btn
           flat
           round
           dense
           icon="menu"
           class="q-mr-sm"
-          v-if="mainConfData.headerSideBarBtn == 1"
+          v-if="mainConfData.headerSideBarBtn == 1 && defaultButtons.menu"
+          :style="defaultButtonStyle"
           @click="drawerLeft = !drawerLeft"
           id="btn-toggle-menu"
         />
-        <div class="q-pa-sm">
-          <q-avatar
-            :size="mainConfData.headerLogoSize ?? '10vh'"
-            rounded
-            v-if="
-              mainConfData.headerLogoAvatar &&
-              mainConfData.headerLogoAvatar == 1
-            "
-          >
+
+        <!-- Effective custom header slots (left / center / right) -->
+        <template v-if="hasAnyCustomHeader">
+          <HeaderSlot
+            :key="`fp-header-left-${headerRenderKey}`"
+            :blocks="activeHeaderConfig.slots.left"
+            justify="start"
+            class="col"
+          />
+          <HeaderSlot
+            :key="`fp-header-center-${headerRenderKey}`"
+            :blocks="activeHeaderConfig.slots.center"
+            justify="center"
+            class="col-auto"
+          />
+          <HeaderSlot
+            :key="`fp-header-right-${headerRenderKey}`"
+            :blocks="activeHeaderConfig.slots.right"
+            justify="end"
+            class="col"
+          />
+        </template>
+
+        <!-- Default branding (logo + title) -->
+        <template v-else>
+          <div class="q-pa-sm">
+            <q-avatar
+              :size="mainConfData.headerLogoSize ?? '10vh'"
+              rounded
+              v-if="
+                mainConfData.headerLogoAvatar &&
+                mainConfData.headerLogoAvatar == 1
+              "
+            >
+              <img
+                :src="
+                  mainConfData.headerLogo ||
+                  'https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg'
+                "
+              />
+            </q-avatar>
             <img
               :src="
                 mainConfData.headerLogo ||
                 'https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg'
               "
+              :style="`width: ${mainConfData.headerLogoSize ?? '10vh'}`"
+              v-else
             />
-          </q-avatar>
-          <img
-            :src="
-              mainConfData.headerLogo ||
-              'https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg'
-            "
-            :style="`width: ${mainConfData.headerLogoSize ?? '10vh'}`"
-            v-else
-          />
-        </div>
+          </div>
 
-        <q-toolbar-title
-          :style="`color: ${mainConfData.headerTextColor || '#000000'}`"
-          >{{ mainConfData.headerName || "Default Title" }}</q-toolbar-title
-        >
+          <q-toolbar-title
+            :style="`color: ${mainConfData.headerTextColor || '#000000'}`"
+            >{{ mainConfData.headerName || "Default Title" }}</q-toolbar-title
+          >
+        </template>
 
         <q-space />
         <q-btn
-          color="white"
+          :color="defaultButtonsColor ? undefined : 'white'"
+          :style="defaultButtonStyle"
           label="Account Settings"
           outline
           icon="account_circle"
-          v-if="mainConfData.headerSideBarBtn == 1"
+          v-if="mainConfData.headerSideBarBtn == 1 && defaultButtons.account"
           id="btn-settings"
         >
           <q-menu>
@@ -144,7 +202,9 @@
           flat
           :icon="isSubscribed ? 'notifications' : 'notifications_off'"
           @click="requestPermissionAndSubscribe"
-          :color="isSubscribed ? 'white' : 'red-7'"
+          :color="defaultButtonsColor ? undefined : isSubscribed ? 'white' : 'red-7'"
+          :style="defaultButtonStyle"
+          v-if="defaultButtons.notifications"
           id="btn-subscribe"
         >
           <q-tooltip>{{
@@ -158,7 +218,9 @@
           round
           icon="help"
           @click="startTutorial"
-          color="white"
+          :color="defaultButtonsColor ? undefined : 'white'"
+          :style="defaultButtonStyle"
+          v-if="defaultButtons.help"
           id="btn-help-tour"
         >
           <q-tooltip>Start Front Page Tutorial</q-tooltip>
@@ -288,6 +350,11 @@ import { buildTourSteps } from "@/tours/useTourSteps";
 
 import apiRequest from "src/components/apiRequest";
 import listMenuRecurse from "../UpdateFP/listMenuRecurse.vue";
+import HeaderSlot from "../UpdateFP/components/setWebManage/header/HeaderSlot.vue";
+import {
+  normalizeHeaderConfig,
+  cssSize,
+} from "../UpdateFP/components/setWebManage/header/useHeaderConf.js";
 
 import { useAuthStore } from "src/stores/authStore";
 import { route } from "quasar/wrappers";
@@ -312,6 +379,9 @@ const refreshKeysContent = ref(0);
 const loadingDrawer = ref(false);
 const showComponentLoadingCount = ref(0);
 const loadingShowComponent = ref(false);
+const loadingHeader = ref(false);
+const headerLoadedOnce = ref(false);
+const initialLoadDone = ref(false);
 const initialOverlayLock = ref(true);
 const hasShowComponentLoadingSignal = ref(false);
 const viewMode = ref("view");
@@ -323,6 +393,7 @@ const SHOW_COMPONENT_OVERLAY_HIDE_DELAY_MS = 250;
 
 const choosedPages = ref([]);
 const listMainConf = ref([]);
+const headerConf = ref(null);
 
 const isChromiumLike = () => {
   const ua = navigator.userAgent.toLowerCase();
@@ -356,6 +427,214 @@ const pageHeaderVisible = computed(() => {
   return !(v === false || v === 0 || v === "0" || v === "false");
 });
 
+// Per-page header override: { mode: inherit|custom|hidden, config }.
+const pageHeaderSetting = computed(() => {
+  const raw = choosedPages.value?.forms?.setupTraining?.header;
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+  return raw;
+});
+
+// Resolve which header config to render: page override -> domain -> default.
+const resolvedHeaderConfig = computed(() => {
+  const setting = pageHeaderSetting.value;
+  if (setting && setting.mode === "custom" && setting.config) {
+    return normalizeHeaderConfig(setting.config);
+  }
+  return headerConf.value; // domain config (may be null)
+});
+
+const pageHeaderHidden = computed(
+  () => pageHeaderSetting.value?.mode === "hidden"
+);
+
+// On-scroll variant: switch the header config once the page is scrolled past
+// the configured threshold. Reads the actual scrolled position on scroll,
+// since no single element is guaranteed to be the scroller.
+const isScrolled = ref(false);
+// The on-scroll header variant is only allowed once scrolling is known to be
+// user-driven. Load-time scroll (browser restore, scroll anchoring, layout
+// shift) must never switch the header on first paint.
+const scrollArmed = ref(false);
+
+const scrollThreshold = computed(
+  () => Number(resolvedHeaderConfig.value?.scrolled?.threshold) || 80
+);
+
+const readScrollY = () => {
+  if (typeof window === "undefined") return 0;
+  const doc = document.documentElement;
+  const body = document.body;
+  const container =
+    document.querySelector(".q-page-container") || document.querySelector("main");
+  return Math.max(
+    window.scrollY || window.pageYOffset || 0,
+    doc ? doc.scrollTop || 0 : 0,
+    body ? body.scrollTop || 0 : 0,
+    container ? container.scrollTop || 0 : 0
+  );
+};
+
+const updateScrollState = () => {
+  // While the initial overlay is up, or before any user-driven scroll has
+  // happened, the page is not "scrolled" as far as the header is concerned.
+  // Browsers restore the last position and re-anchor on layout change; both
+  // trigger scroll events that would otherwise switch the header on first paint.
+  if (initialOverlayLock.value || !scrollArmed.value) {
+    isScrolled.value = false;
+    return;
+  }
+  isScrolled.value = readScrollY() > scrollThreshold.value;
+};
+
+const armScroll = () => {
+  if (scrollArmed.value) return;
+  scrollArmed.value = true;
+  updateScrollState();
+};
+
+const onScrollKeyDown = (e) => {
+  if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(e.key)) {
+    armScroll();
+  }
+};
+
+const setupScrollListener = () => {
+  if (typeof window === "undefined") return;
+  window.removeEventListener("scroll", updateScrollState, true);
+  window.addEventListener("scroll", updateScrollState, true);
+
+  // Arm on any genuine user input that can scroll the page.
+  ["wheel", "touchstart", "touchmove"].forEach((ev) =>
+    window.addEventListener(ev, armScroll, { passive: true, capture: true })
+  );
+  window.addEventListener("keydown", onScrollKeyDown, true);
+
+  resetScrollPosition();
+  updateScrollState();
+};
+
+const teardownScrollListener = () => {
+  if (typeof window === "undefined") return;
+  window.removeEventListener("scroll", updateScrollState, true);
+  ["wheel", "touchstart", "touchmove"].forEach((ev) =>
+    window.removeEventListener(ev, armScroll, true)
+  );
+  window.removeEventListener("keydown", onScrollKeyDown, true);
+};
+
+// Pin the page to the top for the initial render. Browsers restore the last
+// scroll position on refresh and the address bar shrink/layout shifts produce
+// transient non-zero values, either of which would otherwise be read as
+// "scrolled" the moment the overlay lifts and flip the header.
+const resetScrollPosition = () => {
+  if (typeof window === "undefined") return;
+  try {
+    window.scrollTo(0, 0);
+  } catch (e) {
+    // ignore
+  }
+  [document.documentElement, document.body, document.querySelector(".q-page-container")]
+    .filter(Boolean)
+    .forEach((el) => {
+      el.scrollTop = 0;
+    });
+  isScrolled.value = false;
+};
+
+watch(scrollThreshold, () => updateScrollState());
+
+const activeHeaderConfig = computed(() => {
+  const base = resolvedHeaderConfig.value;
+  if (
+    base &&
+    base.enabled &&
+    base.scrolled?.enabled &&
+    headerLoadedOnce.value &&
+    !initialOverlayLock.value &&
+    isScrolled.value &&
+    base.scrolled.config
+  ) {
+    return normalizeHeaderConfig(base.scrolled.config);
+  }
+  return base;
+});
+
+// The header first paints from the domain config, then switches to the page's
+// own custom header (and later between normal/on-scroll) once the page data is
+// loaded. Those configs can share widget keys, so Vue reuses the slot nodes and
+// keeps the stale HTML. Bumping this key on every active-config change forces
+// the header content to re-create with the right variant.
+const headerRenderKey = ref(0);
+watch(activeHeaderConfig, () => {
+  headerRenderKey.value += 1;
+});
+
+
+
+// True when the effective header has at least one configured widget.
+// The background layer counts too, so a background-only custom header still
+// replaces the default logo/title.
+const hasAnyCustomHeader = computed(() => {
+  const cfg = activeHeaderConfig.value;
+  if (!cfg || !cfg.enabled) return false;
+  const slots = cfg.slots || {};
+  return (
+    (slots.left?.length || 0) +
+      (slots.center?.length || 0) +
+      (slots.right?.length || 0) +
+      (slots.background?.length || 0) >
+    0
+  );
+});
+
+const hasHeaderBackground = computed(() => {
+  const cfg = activeHeaderConfig.value;
+  return !!cfg && cfg.enabled && (cfg.slots?.background?.length || 0) > 0;
+});
+
+// Built-in header buttons; all on unless the effective header turns one off.
+const defaultButtons = computed(() => {
+  const fallback = { menu: true, account: true, notifications: true, help: true };
+  const cfg = activeHeaderConfig.value;
+  if (!cfg || !cfg.enabled) return fallback;
+  return { ...fallback, ...(cfg.defaultButtons || {}) };
+});
+
+const defaultButtonsColor = computed(
+  () => activeHeaderConfig.value?.defaultButtonsColor || ""
+);
+
+// Inline style so hex/rgb/rgba work too (q-btn's `color` only takes theme names).
+const defaultButtonStyle = computed(() =>
+  defaultButtonsColor.value ? { color: defaultButtonsColor.value } : {}
+);
+
+const headerToolbarStyle = computed(() => {
+  const style = {};
+  const cfg = activeHeaderConfig.value;
+  if (!cfg || !cfg.enabled) return style;
+  if (cfg.height) style.minHeight = cssSize(cfg.height);
+  if (cfg.padding !== undefined && cfg.padding !== null) {
+    style.padding = cfg.padding || "0";
+  }
+  if (cfg.transition) {
+    style.transition = `background-color ${cfg.transition}, color ${cfg.transition}, min-height ${cfg.transition}`;
+  }
+  if (cfg.maxWidth) {
+    style.maxWidth = cfg.maxWidth;
+    style.margin = "0 auto";
+    style.width = "100%";
+  }
+  return style;
+});
+
 const shouldRenderMainShowComponent = computed(
   () =>
     ((choosedPages.value?.forms &&
@@ -370,7 +649,8 @@ const showHomeOverlay = computed(
     initialOverlayLock.value ||
     loading.value ||
     loadingDrawer.value ||
-    loadingShowComponent.value
+    loadingShowComponent.value ||
+    loadingHeader.value
 );
 
 const onShowComponentLoading = (val) => {
@@ -395,6 +675,9 @@ const onShowComponentLoading = (val) => {
   if (showComponentLoadingCount.value === 0) {
     hideShowComponentOverlayTimer = setTimeout(() => {
       if (showComponentLoadingCount.value === 0) {
+        // Reset before releasing so a restored scroll position can't flip the
+        // header the instant the overlay disappears.
+        resetScrollPosition();
         loadingShowComponent.value = false;
         initialOverlayLock.value = false;
       }
@@ -407,6 +690,7 @@ watch(
     loading.value,
     loadingDrawer.value,
     loadingShowComponent.value,
+    loadingHeader.value,
     shouldRenderMainShowComponent.value,
     hasShowComponentLoadingSignal.value,
   ],
@@ -414,26 +698,26 @@ watch(
     isLoading,
     isDrawerLoading,
     isShowCompLoading,
+    isHeaderLoading,
     shouldRenderShowComp,
     hasSignal,
   ]) => {
-    if (
-      !isLoading &&
-      !isDrawerLoading &&
-      !isShowCompLoading &&
-      !shouldRenderShowComp
-    ) {
+    // Never release the overlay before the initial fetch sequence is done —
+    // otherwise the gap between getMainConf and getHeaderConf/getNavMenu would
+    // hide it while the header and page are still empty.
+    if (!initialLoadDone.value) return;
+
+    const baseReady =
+      !isLoading && !isDrawerLoading && !isShowCompLoading && !isHeaderLoading;
+
+    if (baseReady && !shouldRenderShowComp) {
+      resetScrollPosition();
       initialOverlayLock.value = false;
       return;
     }
 
-    if (
-      !isLoading &&
-      !isDrawerLoading &&
-      !isShowCompLoading &&
-      shouldRenderShowComp &&
-      hasSignal
-    ) {
+    if (baseReady && shouldRenderShowComp && hasSignal) {
+      resetScrollPosition();
       initialOverlayLock.value = false;
     }
   }
@@ -497,7 +781,19 @@ onMounted(async () => {
   tour.setSteps(buildTourSteps({ tour, formStore }));
   // For tour guide End
 
+  // Stop the browser from restoring the previous scroll position during the
+  // initial load; otherwise the header can flip to its on-scroll variant right
+  // as the overlay lifts. Restored to auto once the page is loaded.
+  const prevScrollRestoration =
+    typeof history !== "undefined" ? history.scrollRestoration : null;
+  if (prevScrollRestoration !== null) {
+    history.scrollRestoration = "manual";
+  }
+
   await getMainConf();
+  await getHeaderConf();
+
+  setupScrollListener();
 
   if (!formStore.getIsFrontPageTourDone && authStore.getStatusLog) {
     // startTutorial();
@@ -513,6 +809,8 @@ onMounted(async () => {
   if (props.mode === "edit") {
     intervalId = setInterval(async () => {
       await getMainConf();
+      // Background refresh must not retrigger the loading overlay.
+      await getHeaderConf(false);
       await getDataNav();
       refreshKeys.value += 1;
     }, 60000);
@@ -541,12 +839,23 @@ onMounted(async () => {
     // You can perform additional logic here if needed
   }
   refreshKeys.value += 1;
+
+  // All initial config (main conf, header conf, nav) plus the first page (if
+  // any) are in place — release the loading overlay only from here.
+  initialLoadDone.value = true;
+  updateScrollState();
+
+  if (prevScrollRestoration !== null && typeof history !== "undefined") {
+    history.scrollRestoration = prevScrollRestoration;
+  }
 });
 
 onUnmounted(() => {
   if (intervalId) {
     clearInterval(intervalId);
   }
+
+  teardownScrollListener();
 
   if (hideShowComponentOverlayTimer) {
     clearTimeout(hideShowComponentOverlayTimer);
@@ -568,7 +877,11 @@ const flattenMenu = (arr) => {
 const getDataNav = async () => {
   loadingDrawer.value = true;
   try {
-    const response = await postData("get", null, "fpmanager/getNavMenu");
+    const response = await postData(
+      "get",
+      null,
+      "fpmanager/getNavMenu?rolefilter=1"
+    );
     if (response.data) {
       console.log("Navigation Data:", response.data);
       listPreviewMenu.value = response.data;
@@ -584,6 +897,23 @@ const getDataNav = async () => {
     loading.value = false;
     loadingDrawer.value = false;
     refreshKeys.value += 1;
+  }
+};
+
+const getHeaderConf = async (trackLoading = true) => {
+  if (trackLoading) loadingHeader.value = true;
+  try {
+    const response = await postData("get", null, "fpmanager/getHeaderConf");
+    const raw = response?.data;
+    headerConf.value = raw ? normalizeHeaderConfig(raw) : null;
+  } catch (error) {
+    console.error("Error fetching header configuration:", error);
+    headerConf.value = null;
+  } finally {
+    if (trackLoading) {
+      loadingHeader.value = false;
+      headerLoadedOnce.value = true;
+    }
   }
 };
 
@@ -1042,5 +1372,38 @@ body.driver-active .driver-popover * {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Per-domain header background layer (behind the toolbar content) */
+.header-toolbar {
+  position: relative;
+}
+
+.header-toolbar > *:not(.header-bg-layer) {
+  position: relative;
+  z-index: 1;
+}
+
+.header-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Let background widgets stretch flush to fill the header bar */
+.header-bg-layer :deep(.header-slot) {
+  width: 100%;
+  height: 100%;
+  margin: 0 !important;
+}
+.header-bg-layer :deep(.header-slot__item) {
+  width: 100%;
+  height: 100%;
+  margin: 0 !important;
 }
 </style>

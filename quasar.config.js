@@ -25,7 +25,8 @@ export default configure((ctx) => {
       'fontawesome-v6',
       'line-awesome',
       'roboto-font',
-      'material-icons'
+      'material-icons',
+      'material-symbols-outlined'
     ],
 
     build: {

@@ -28,6 +28,9 @@ export default {
       btnWidth: "auto", customWidth: null, customHeight: null,
       icon: null, iconPosition: "left",
       padding: "", borderRadius: "", customCss: "",
+      // Dropdown items. type: "url" (custom link) or "portalApp" (a /portal
+      // menu entry, gated at render by the viewer's role).
+      menuItems: [],
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./button/ButtonProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./button/ButtonRenderer.vue")),
@@ -173,5 +176,13 @@ export default {
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./card/CardProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./card/CardRenderer.vue")),
+  },
+  dashboard: {
+    meta: { label: "Dashboard", icon: "insert_chart", color: "deep-purple" },
+    defaultContent: () => ({
+      dashboardCode: "", mode: "whole", chartId: "", showTitle: true,
+    }),
+    PropertiesComponent: defineAsyncComponent(() => import("./dashboard/DashboardProperties.vue")),
+    RendererComponent: defineAsyncComponent(() => import("./dashboard/DashboardRenderer.vue")),
   },
 };
