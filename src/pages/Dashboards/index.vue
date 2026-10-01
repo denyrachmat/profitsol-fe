@@ -4,7 +4,10 @@
     <div class="row">
       <div class="col-12 col-md-4 q-pa-sm">
         <q-card class="my-card" v-if="store.getDetail">
-          <q-img src="~assets/Logo_STXI 1.png" height="36vh">
+          <q-img
+            :src="store.choosedDomain?.pd_img || getRuntimeConfig('APP_LOGO') || defaultLogo"
+            height="36vh"
+          >
             <div class="text-center full-width full-height">
               <q-avatar
                 size="150px"
@@ -162,6 +165,8 @@ import eventList from "./eventList.vue";
 import informationList from "./informationList.vue";
 import viewApps from "./viewApps.vue";
 import { date, useQuasar } from "quasar";
+import { getRuntimeConfig } from "src/runtimeConfig";
+import defaultLogo from "src/assets/logo-new.png";
 
 import { authHelper, sharePointService } from "@/components/msHelpers";
 

@@ -70,7 +70,7 @@
               v-if="!list.AppRole"
             />
             <q-icon name="done_all" color="green" v-else>
-              <q-tooltip>This macro already sent to STX-I Web System</q-tooltip>
+              <q-tooltip>This macro has already been sent to the portal</q-tooltip>
             </q-icon>
           </q-item-section>
           <q-item-section avatar>

@@ -169,7 +169,7 @@
               <div class="q-gutter-sm">
                 <q-radio
                   v-model="formnya.pd_is_cms"
-                  label="Generate CMS (Using Statami CMS)"
+                  label="Generate CMS (Internal)"
                   dense
                   val="1"
                 />
@@ -228,6 +228,28 @@
             </div>
           </div>
         </fieldset>
+
+        <q-expansion-item
+          label="Frontend Runtime Settings"
+          caption="Optional overrides for this domain"
+          icon="tune"
+          class="q-mt-md"
+          bordered
+        >
+          <q-inner-loading :showing="loadingFrontend" />
+          <div class="row q-col-gutter-sm q-pa-md">
+            <div class="col-12 col-md-6" v-for="field in frontendFields" :key="field.key">
+              <q-input
+                v-model="frontendConfig[field.key]"
+                :label="field.label"
+                :type="field.type || 'text'"
+                dense
+                outlined
+                clearable
+              />
+            </div>
+          </div>
+        </q-expansion-item>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -238,12 +260,15 @@
   </q-dialog>
 </template>
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { useQuasar, useDialogPluginComponent } from "quasar";
+import { useAuthStore } from "stores/authStore";
+import axios from "axios";
 import apiRequest from "src/components/apiRequest";
 import viewApps from "../../Dashboards/viewApps.vue";
 
 const { postData } = apiRequest();
+const store = useAuthStore();
 const $q = useQuasar();
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
@@ -252,6 +277,109 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 const props = defineProps({
   dataEdit: Object,
 });
+
+const frontendFields = [
+  { key: "APP_NAME", label: "App Name" },
+  { key: "APP_LOGO", label: "App Logo (URL)" },
+  { key: "BASE_COLOR", label: "Base Color" },
+  { key: "MS_CLIENTID", label: "Microsoft Client ID" },
+  { key: "MS_AUTHORITY", label: "Microsoft Authority URL" },
+  { key: "GRAPH_API", label: "Graph API Base URL" },
+  { key: "SHAREPOINT_URL", label: "SharePoint URL" },
+  { key: "SOCKET_URL", label: "Socket URL" },
+  { key: "INTRANET_URL", label: "Intranet URL" },
+  { key: "VAPID_KEY", label: "VAPID Public Key" },
+];
+const emptyFrontendConfig = () =>
+  Object.fromEntries(frontendFields.map((field) => [field.key, ""]));
+
+const frontendConfig = ref(emptyFrontendConfig());
+const globalFrontendConfig = ref(emptyFrontendConfig());
+const loadingFrontend = ref(false);
+
+const loadGlobalFrontendDefaults = async () => {
+  try {
+    const res = await axios.get(`${process.env.API}portal/frontend-config`, {
+      headers: { Accept: "application/json" },
+    });
+    globalFrontendConfig.value = {
+      ...emptyFrontendConfig(),
+      ...(res?.data?.data || {}),
+    };
+  } catch (e) {
+    globalFrontendConfig.value = emptyFrontendConfig();
+  }
+};
+
+const loadFrontendConfig = async (id) => {
+  if (!id) return;
+  loadingFrontend.value = true;
+  try {
+    const res = await axios.get(
+      `${process.env.API}domain/${id}/frontend-config`,
+      { headers: { Accept: "application/json" } }
+    );
+    const data = res?.data?.data || {};
+    frontendConfig.value = {
+      ...emptyFrontendConfig(),
+      ...Object.fromEntries(
+        Object.entries(data).filter(
+          ([key, value]) => key !== "pd_password" && key !== "password" && value !== ""
+        )
+      ),
+    };
+  } catch (e) {
+    if (e.response?.status === 403) {
+      $q.notify({
+        type: "negative",
+        message: "You need admin access to load these settings.",
+      });
+    } else if (e.response?.status !== 404) {
+      console.error(e);
+    }
+  } finally {
+    loadingFrontend.value = false;
+  }
+};
+
+const saveFrontendConfig = async (id) => {
+  const payload = Object.fromEntries(
+    Object.entries(frontendConfig.value)
+      .filter(([key, value]) => value !== globalFrontendConfig.value[key])
+      .map(([key, value]) => [key, value === "" ? null : value])
+  );
+  if (Object.keys(payload).length > 0) {
+    try {
+      await axios.put(
+        `${process.env.API}domain/${id}/frontend-config`,
+        { config: payload },
+        {
+          headers: {
+            authorization: `Bearer ${store.authDet.token}`,
+            username: store.authDet.username,
+            Accept: "application/json",
+          },
+        }
+      );
+      $q.notify({ type: "positive", message: "Frontend settings saved." });
+    } catch (e) {
+      if (e.response?.status === 403) {
+        $q.notify({
+          type: "negative",
+          message: "You need admin access to save these settings.",
+        });
+      } else {
+        $q.notify({
+          type: "negative",
+          message:
+            e.response?.data?.message || "Failed to save frontend settings.",
+        });
+      }
+      return false;
+    }
+  }
+  return true;
+};
 
 const formnya = ref({
   id: "",
@@ -293,9 +421,12 @@ const listDB = ref([
   },
 ]);
 
-onMounted(() => {
+onMounted(async () => {
+  await loadGlobalFrontendDefaults();
+  frontendConfig.value = { ...globalFrontendConfig.value };
   if (props.dataEdit) {
     formnya.value = props.dataEdit;
+    await loadFrontendConfig(props.dataEdit.id);
   }
 });
 
@@ -373,6 +504,10 @@ const onOKClick = () => {
     message: `Are you sure want to save this domain?`,
     cancel: true,
   }).onOk(async () => {
+    if (formnya.value.id) {
+      const saved = await saveFrontendConfig(formnya.value.id);
+      if (!saved) return;
+    }
     onDialogOK(formnya.value);
   });
 };

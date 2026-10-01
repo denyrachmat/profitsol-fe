@@ -1,46 +1,30 @@
-import { PublicClientApplication, InteractionRequiredAuthError } from '@azure/msal-browser';
+import { InteractionRequiredAuthError } from '@azure/msal-browser';
+import {
+  getMsalInstance,
+  configureMsal,
+  buildMsalConfig,
+  resetMsal,
+} from './msalFactory';
 
-// 🔧 Updated MSAL config with Edge compatibility
-// const msalConfig = {
-//   auth: {
-//     clientId: process.env.MS_CLIENTID,
-//     authority: process.env.MS_AUTHORITY,
-//     knownAuthorities: ["login.microsoftonline.com"],
-//     redirectUri: window.location.origin,
-//     navigateToLoginRequestUrl: false, // Critical for Edge popup flows
-//   },
-//   cache: {
-//     cacheLocation: 'localStorage',
-//     storeAuthStateInCookie: true, // Already added - good!
-//     secureCookies: window.location.protocol === "https:",
-//   },
-//   system: {
-//     allowNativeBroker: false, // Disable native broker for Edge compatibility
-//     windowHashTimeout: 60000, // Longer timeout for Edge
-//   }
-// };
-
-const msalConfig = {
-  auth: {
-    clientId: process.env.MS_CLIENTID,
-    authority: process.env.MS_AUTHORITY,
-    redirectUri: `${window.location.origin}/auth-popup`, // atau /auth-popup
-    navigateToLoginRequestUrl: false,
-  },
-  cache: {
-    cacheLocation: "localStorage",
-    storeAuthStateInCookie: true,
-  }
-};
-
-const msalInstance = new PublicClientApplication(msalConfig);
 let activeAccount = null;
 
 // 🔧 Edge detection utility
 const isEdge = () => /Edg/.test(navigator.userAgent);
 
 export const authHelper = {
-  instance: msalInstance,
+  get instance() {
+    return getMsalInstance();
+  },
+
+  configure(settings = {}) {
+    configureMsal(settings);
+    return getMsalInstance();
+  },
+
+  reset() {
+    activeAccount = null;
+    resetMsal();
+  },
 
   // 🔧 Hash cleanup method for Edge
   cleanupEdgeHashState() {
@@ -52,7 +36,7 @@ export const authHelper = {
       }
 
       // Clear any MSAL-specific storage that might be corrupted
-      const clientId = msalConfig.auth.clientId;
+      const clientId = buildMsalConfig().auth.clientId;
       const keysToRemove = [];
 
       for (let i = 0; i < localStorage.length; i++) {
@@ -70,13 +54,13 @@ export const authHelper = {
   clearMsalCache() {
     try {
       // Remove all accounts
-      const accounts = msalInstance.getAllAccounts();
+      const accounts = this.instance.getAllAccounts();
       for (const account of accounts) {
-        msalInstance.removeAccount(account);
+        this.instance.removeAccount(account);
       }
 
       // Clear all MSAL-related localStorage entries
-      const clientId = msalConfig.auth.clientId;
+      const clientId = buildMsalConfig().auth.clientId;
       const keysToRemove = [];
 
       for (let i = 0; i < localStorage.length; i++) {
@@ -128,7 +112,7 @@ export const authHelper = {
       //   };
       // }
 
-      const response = await msalInstance.loginPopup(loginConfig);
+      const response = await this.instance.loginPopup(loginConfig);
       this.setActiveAccount(response.account);
 
       // 🔧 Force popup window closure for Edge
@@ -158,7 +142,7 @@ export const authHelper = {
       // Wait a moment for cleanup
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const response = await msalInstance.loginPopup({
+      const response = await this.instance.loginPopup({
         scopes,
         prompt: "login",
         extraQueryParameters: {
@@ -188,14 +172,14 @@ export const authHelper = {
     }
 
     try {
-      return await msalInstance.acquireTokenSilent({
+      return await this.instance.acquireTokenSilent({
         scopes,
         account,
         forceRefresh: isEdge(), // Force refresh on Edge to prevent stale tokens
       });
     } catch (silentError) {
       if (silentError instanceof InteractionRequiredAuthError) {
-        return await msalInstance.acquireTokenPopup({
+        return await this.instance.acquireTokenPopup({
           scopes,
           account,
           prompt: isEdge() ? "consent" : "none", // Edge-specific prompt
@@ -206,19 +190,19 @@ export const authHelper = {
   },
 
   getActiveAccount() {
-    const accounts = msalInstance.getAllAccounts();
+    const accounts = this.instance.getAllAccounts();
     if (accounts.length === 0) return null;
     return activeAccount || accounts[0];
   },
 
   setActiveAccount(account) {
     activeAccount = account;
-    msalInstance.setActiveAccount(account);
+    this.instance.setActiveAccount(account);
   },
 
   // 🔧 Updated interaction check using localStorage for Edge compatibility
   async handleInteractionInProgress() {
-    const interactionKey = `msal.${msalConfig.auth.clientId}.interaction.status`;
+    const interactionKey = `msal.${buildMsalConfig().auth.clientId}.interaction.status`;
     // Use localStorage instead of sessionStorage for Edge compatibility
     const interactionState = localStorage.getItem(interactionKey);
     return !!interactionState;
@@ -250,7 +234,7 @@ export const authHelper = {
     try {
       const account = this.getActiveAccount();
       if (account) {
-        await msalInstance.logoutPopup({ account });
+        await this.instance.logoutPopup({ account });
       }
     } catch (error) {
       console.error('Logout error:', error);

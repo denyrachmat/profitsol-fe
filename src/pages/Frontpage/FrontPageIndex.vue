@@ -341,6 +341,7 @@ import { useRouter } from "vue-router";
 import { buildTourSteps } from "@/tours/useTourSteps";
 
 import apiRequest from "src/components/apiRequest";
+import { getRuntimeConfig } from "src/runtimeConfig";
 import listMenuRecurse from "../UpdateFP/listMenuRecurse.vue";
 import HeaderSlot from "../UpdateFP/components/setWebManage/header/HeaderSlot.vue";
 import {
@@ -1187,7 +1188,7 @@ const executeSubscription = async () => {
   const registration = await navigator.serviceWorker.ready;
   console.log("--- [STEP 2] Service Worker Ready ---", registration);
 
-  const vapidPublicKey = process.env.VAPID_KEY || "";
+  const vapidPublicKey = getRuntimeConfig("VAPID_KEY");
 
   // OPTIONAL: kalau sudah ada subscription, pakai itu aja
   const existingSub = await registration.pushManager.getSubscription();

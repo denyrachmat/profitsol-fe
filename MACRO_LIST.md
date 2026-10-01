@@ -4,7 +4,7 @@ Browse, download, and distribute macro (Excel) files to portal groups.
 
 ## What It Does
 
-Lets users navigate a folder tree of macro files, download individual macros, and send selected macros to portal user groups so they appear in the STX-I web system.
+Lets users navigate a folder tree of macro files, download individual macros, and send selected macros to portal user groups so they appear in the portal.
 
 ## Main List — `src/pages/MacroList/macroListIndex.vue`
 

@@ -1,6 +1,6 @@
 # Mobile — Label Print Manager
 
-Manage label print templates (ZPL/SBPL) consumed by the STX-I mobile apps for barcode/label printing.
+Manage label print templates (ZPL/SBPL) consumed by compatible mobile apps for barcode/label printing.
 
 ## What It Does
 

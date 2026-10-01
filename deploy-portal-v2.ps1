@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Build the Quasar SPA (stx-new-portal-apps) and deploy it to the portal_v2 web share.
+    Build the Quasar SPA (enterprise-portal) and deploy it to the portal_v2 web share.
 
 .DESCRIPTION
     Runs `quasar build`, then robocopy-copies dist\spa to the destination share.

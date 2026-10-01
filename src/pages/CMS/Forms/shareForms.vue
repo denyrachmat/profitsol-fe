@@ -52,7 +52,7 @@
                 <q-expansion-item
                   icon="perm_identity"
                   label="Portal Account"
-                  caption="Registered STXI Portal Account"
+                  caption="Registered Portal Account"
                 >
                   <q-card v-if="rows.length > 0">
                     <q-card-section>
@@ -92,7 +92,7 @@
                 <q-expansion-item
                   icon="group"
                   label="Portal Roles"
-                  caption="Registered STXI Portal Roles"
+                  caption="Registered Portal Roles"
                 >
                   <q-card v-if="rowsRoles.length > 0">
                     <q-card-section>

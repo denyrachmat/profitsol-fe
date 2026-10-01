@@ -1,7 +1,7 @@
 {
-  "name": "STX-I Portal v2",
-  "short_name": "STX-I Portal v2",
-  "description": "STX-I Portal Application",
+  "name": "Enterprise Portal",
+  "short_name": "Enterprise Portal",
+  "description": "Enterprise Portal Application",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",

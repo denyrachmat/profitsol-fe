@@ -2,7 +2,7 @@
   <div>
     <q-input v-model="title" label="Title" dense outlined class="q-mb-sm" />
     <q-select v-model="source" :options="sourceOptions" label="Source" dense outlined emit-value map-options class="q-mb-sm" />
-    <q-input v-if="source === 'site'" v-model="siteName" label="Site Name" dense outlined class="q-mb-sm" hint="e.g. 'my-site' from stxgmail.sharepoint.com/sites/my-site" />
+    <q-input v-if="source === 'site'" v-model="siteName" label="Site Name" dense outlined class="q-mb-sm" hint="e.g. 'my-site' from your-tenant.sharepoint.com/sites/my-site" />
     <q-input v-if="source !== 'sites'" v-model="folderPath" label="Folder Path (optional)" dense outlined class="q-mb-sm" hint="e.g. Documents/Reports" />
     <q-select v-model="layout" :options="layoutOptions" label="Layout" dense outlined emit-value map-options class="q-mb-sm" />
     <template v-if="source === 'sites'">

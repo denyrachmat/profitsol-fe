@@ -954,7 +954,7 @@ const props = defineProps({
     default: () => ({
       title: "Component",
       description: "Component for Forms",
-      author: "STX Team",
+      author: "Portal Team",
       date: new Date().toLocaleDateString(),
     }),
   },

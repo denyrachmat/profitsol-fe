@@ -1,8 +1,8 @@
 {
-  "name": "stxi-portal-v2",
+  "name": "enterprise-portal",
   "version": "0.0.1",
-  "description": "STX-I Portal Application",
-  "productName": "STX-I Portal v2",
+  "description": "Enterprise Portal Application",
+  "productName": "Enterprise Portal",
   "author": "Deny Rachmat <denyrachmat22@gmail.com>",
   "private": true,
   "scripts": {

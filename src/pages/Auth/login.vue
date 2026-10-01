@@ -95,10 +95,6 @@
 /* eslint-disable */
 import { HelpersComponent } from "../../components/HelpersComponent";
 import { defineComponent, ref } from "vue";
-import {
-  PublicClientApplication,
-  InteractionStatus,
-} from "@azure/msal-browser";
 import { useAuthStore } from "stores/authStore";
 import { Providers, Msal2Provider } from "@microsoft/mgt";
 import { authHelper } from "src/components/msHelpers";
@@ -187,7 +183,7 @@ export default defineComponent({
 
       if (user === "guest") {
         var data = {
-          username: "gueststxsmt",
+          username: "guest",
           password: "guest",
         };
       } else {

@@ -8,7 +8,7 @@
   >
     <q-card class="q-dialog-plugin bg-white q-pa-md">
       <q-card-section>
-        <div class="text-h6">Send to STX-I Web System Group</div>
+        <div class="text-h6">Send to Portal Group</div>
       </q-card-section>
 
       <hr />

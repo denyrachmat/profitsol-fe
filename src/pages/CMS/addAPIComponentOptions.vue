@@ -312,7 +312,9 @@ import { useQuasar, useDialogPluginComponent } from "quasar";
 
 import addAPIParamByComponent from "./addAPIParamByComponent.vue";
 
-const api_url = ref("http://localhost/STX/stx-api/public/api/cms/forms/forms");
+const api_url = ref(
+  (process.env.API || "http://localhost/api/") + "cms/forms/forms"
+);
 const api_method = ref("GET");
 const api_params = ref("");
 const api_headers = ref("");

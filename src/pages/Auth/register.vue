@@ -119,7 +119,6 @@
 <script>
 /* eslint-disable */
 import { HelpersComponent } from "../../components/HelpersComponent";
-import { PublicClientApplication } from "@azure/msal-browser";
 
 export default {
   name: "register",
@@ -133,17 +132,6 @@ export default {
       c_password: "",
       email: "",
     };
-  },
-  created() {
-    this.$msalInstance = new PublicClientApplication({
-      auth: {
-        clientId: process.env.MS_CLIENTID,
-        authority: process.env.MS_AUTHORITY,
-      },
-      cache: {
-        cacheLocation: "localStorage",
-      },
-    });
   },
   methods: {
     async onSubmit() {

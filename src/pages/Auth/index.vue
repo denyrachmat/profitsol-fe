@@ -5,9 +5,8 @@
         <q-page-container>
           <q-page id="troublemaker">
             <div class="center q-pa-sm text-center">
-              <q-img :src="domain.pd_img" v-if="domain.pd_img" />
-              <q-img :src="'~assets/logo-new.png'" v-else />
-              <div class="text-h4">Application Portal</div>
+              <q-img :src="domain.pd_img || runtimeConfig.APP_LOGO || defaultLogo" />
+              <div class="text-h4">{{ runtimeConfig.APP_NAME || 'Application Portal' }}</div>
               <div class="text-h6">v2.0.1</div>
               <div class="q-pt-md">
                 <q-select
@@ -43,7 +42,14 @@
               leave-active-class="animated fadeOut"
             >
               <div>
-                <component :is="choosedcomp" v-on:getrouted="routedto" />
+                <component
+                  v-if="configReady"
+                  :is="choosedcomp"
+                  v-on:getrouted="routedto"
+                />
+                <div v-else class="absolute-center">
+                  <q-spinner color="white" size="3em" />
+                </div>
               </div>
             </transition>
           </q-page>
@@ -64,6 +70,14 @@ import reset from "./resetPassword.vue";
 import { HelpersComponent } from "../../components/HelpersComponent";
 import { useAuthStore } from "stores/authStore";
 import { useQuasar } from "quasar";
+import {
+  getRuntimeSettings,
+  loadGlobalConfig,
+  loadDomainConfig,
+} from "src/runtimeConfig";
+import { connectSocket } from "src/boot/socket";
+import { authHelper } from "src/components/msHelpers";
+import defaultLogo from "src/assets/logo-new.png";
 
 export default {
   name: "Auth",
@@ -76,9 +90,11 @@ export default {
       domain: "",
       store: useAuthStore(),
       $q: useQuasar(),
+      runtimeConfig: getRuntimeSettings(),
+      configReady: false,
     };
   },
-  mounted() {
+  async mounted() {
     if (this.$route.name) {
       this.choosedcomp = this.$route.name;
     }
@@ -106,19 +122,32 @@ export default {
 
       if (hasil) {
         this.options = [];
-        hasil.data.map((val) => {
+        hasil.data.forEach((val, index) => {
           this.options.push(val);
         });
 
         this.domain = this.options[0];
-        this.onSelectStore(this.domain);
+        await this.onSelectStore(this.domain);
+      } else {
+        this.configReady = true;
       }
     },
-    onSelectStore(val) {
-      console.log("change domain");
+    async onSelectStore(val) {
       this.store.storeDomain(val);
 
-      if (val.pd_is_cms == 1 && val.urlCMS) {
+      if (val && val.id) {
+        await loadDomainConfig(val.id);
+      } else {
+        await loadGlobalConfig();
+      }
+
+      this.runtimeConfig = getRuntimeSettings();
+      authHelper.configure(this.runtimeConfig);
+      connectSocket();
+      document.title = this.runtimeConfig.APP_NAME || "Application Portal";
+      this.configReady = true;
+
+      if (val && val.pd_is_cms == 1 && val.urlCMS) {
         this.$q
           .dialog({
             title: "Confirm",

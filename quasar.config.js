@@ -16,7 +16,7 @@ export default configure((ctx) => {
   return {
     supportTS: true,
 
-    boot: ['axios', 'prismBoot', 'pinia', 'msalBoot'],
+    boot: ['axios', 'prismBoot', 'pinia', 'runtimeConfig', 'msalBoot', 'socket'],
 
     css: ['app.scss'],
 
@@ -33,22 +33,11 @@ export default configure((ctx) => {
       vueRouterMode: 'history',
 
       env: {
-        API: ctx.dev
-          ? 'http://stx-api.test/api/'
-          : 'https://api.sumitronics-indonesia.com/api/',
-        API_DOWNLOAD: ctx.dev
-          ? 'http://stx-api.test'
-          : 'https://api.sumitronics-indonesia.com',
-        API_DMS: ctx.dev
-          ? 'http://stx-api.test/api/dms/documentsRoots/getSharedFilesFolder'
-          : 'https://api.sumitronics-indonesia.com/api/dms/documentsRoots/getSharedFilesFolder',
-        MS_CLIENTID: 'fad753b2-465c-4663-b44b-50aabeb3a4ed',
-        MS_AUTHORITY:
-          'https://login.microsoftonline.com/0891bc2a-866c-4709-950d-c2d0ef23bbe7',
+        API: 'https://api.example.com/api/',
+        API_DOWNLOAD: 'https://api.example.com',
+        API_DMS: 'https://api.example.com/api/dms/documentsRoots/getSharedFilesFolder',
         GRAPH_API: 'https://graph.microsoft.com/v1.0/',
-        SHAREPOINT_URL:
-          'https://graph.microsoft.com/v1.0/sites/root?select=id,drive',
-        VAPID_KEY: "BM0tMAVJecCe_wr3jM-A7i5Vo7X6wUSMpUGV6AmNnfnDNBZRR5_kP3jgseT4NxrpeTk5ipsXuxbEdmBCkPc6-l8"
+        SHAREPOINT_URL: 'https://graph.microsoft.com/v1.0/sites/root?select=id,drive'
       },
 
       transpile: true,
@@ -118,9 +107,9 @@ export default configure((ctx) => {
       workboxOptions: {},
 
       manifest: {
-        name: 'STX-I Portal v2',
-        short_name: 'STX-I Portal v2',
-        description: 'STX-I Portal Application',
+        name: 'Enterprise Portal',
+        short_name: 'Enterprise Portal',
+        description: 'Enterprise Portal Application',
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#ffffff',
@@ -142,7 +131,7 @@ export default configure((ctx) => {
     electron: {
       bundler: 'packager',
       packager: {},
-      builder: { appId: 'stxi-portal-v2' }
+      builder: { appId: 'enterprise-portal' }
     }
   }
 })

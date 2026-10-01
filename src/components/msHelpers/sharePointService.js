@@ -1,11 +1,16 @@
 import { authHelper } from './authHelper';
 import { useAuthStore } from 'src/stores/authStore';
+import { getRuntimeConfig } from 'src/runtimeConfig';
 
 const store = useAuthStore();
 
 const graphConfig = {
-  graphEndpoint: "https://graph.microsoft.com/v1.0",
-  sharePointSiteUrl: "https://graph.microsoft.com/v1.0/sites/root?select=id,drive"
+  get graphEndpoint() {
+    return getRuntimeConfig('GRAPH_API') || "https://graph.microsoft.com/v1.0";
+  },
+  get sharePointSiteUrl() {
+    return getRuntimeConfig('SHAREPOINT_URL') || "https://graph.microsoft.com/v1.0/sites/root?select=id,drive";
+  }
 };
 
 // Must use named export (not default)
@@ -109,7 +114,7 @@ export const sharePointService = {
   },
   async getSiteDetails(siteName) {
     const response = await this.makeGraphRequest(
-      `sites/stxgmail.sharepoint.com:/sites/${siteName}`
+      `sites/${siteName}`
     );
     return response;
   },

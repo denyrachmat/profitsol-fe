@@ -1,6 +1,6 @@
-# STX-I Portal v2 (stxi-portal-v2)
+# Enterprise Portal
 
-STX-I Portal Application - A unified enterprise workplace portal developed for Sumitronics Indonesia.
+A configurable, unified workplace portal built with Vue 3 and Quasar.
 
 ## Documentation Index
 
@@ -104,10 +104,11 @@ The frontend builds to static files (SPA, with optional PWA mode). There is **no
 
 For each environment:
 
-1. Set `API`, `API_DOWNLOAD`, and `API_DMS` in `quasar.config.js` to the target backend URLs. These are currently hardcoded in `build.env`; the sample `.env` values are not wired into these settings.
-2. Build with `quasar build` (SPA) or `quasar build -m pwa` (PWA). Configuration is embedded in the build, so rebuild after changing environment URLs.
+1. Set `API`, `API_DOWNLOAD`, and `API_DMS` in `quasar.config.js` to the target backend URLs, replacing the example values. These are required bootstrap settings; every other runtime setting is fetched from the backend.
+2. Build with `quasar build` (SPA) or `quasar build -m pwa` (PWA). The bootstrap settings are embedded in the build, so rebuild after changing them.
 3. Publish the generated `dist/` files to a static web host. Since the app uses Vue Router history mode, configure the host to serve `index.html` for app routes.
 4. Configure the host with the correct SPA/PWA caching behavior and enable HTTPS.
+5. Configure global runtime settings (branding, Microsoft auth, sockets, keys) in the backend installer or later via the portal admin UI.
 
 Keep secrets out of frontend configuration: values bundled into a browser application are visible to users.
 
@@ -174,20 +175,13 @@ Keep secrets out of frontend configuration: values bundled into a browser applic
 
 ## Configuration
 
-Environment/build settings live in `quasar.config.js` under `build.env`:
+The frontend build/host configuration supplies only the API bootstrap endpoints (`API`, `API_DOWNLOAD`, `API_DMS`) in `quasar.config.js`. Replace the example API URLs with the target environment before each build; they are embedded in the bundle and must be available before runtime settings can be fetched. Do not put secrets in frontend build values.
 
-| Variable | Dev default | Prod default | Purpose |
-|----------|-------------|--------------|---------|
-| `API` | `http://stx-api.test/api/` | `https://api.sumitronics-indonesia.com/api/` | Base API endpoint |
-| `API_DOWNLOAD` | `http://stx-api.test` | `https://api.sumitronics-indonesia.com` | Download base URL |
-| `API_DMS` | `http://stx-api.test/api/dms/...` | `https://api.sumitronics-indonesia.com/api/dms/...` | DMS shared-files endpoint |
-| `MS_CLIENTID` | Azure AD app client ID | MSAL authentication |
-| `MS_AUTHORITY` | `https://login.microsoftonline.com/<tenant>` | MSAL authority |
-| `GRAPH_API` | `https://graph.microsoft.com/v1.0/` | Microsoft Graph |
-| `SHAREPOINT_URL` | Graph sites root | SharePoint drive lookup |
-| `VAPID_KEY` | Web push VAPID key | PWA push notifications |
+Branding and integration settings are stored in the backend database. During backend installation, configure the global defaults for `APP_NAME`, `APP_LOGO`, `BASE_COLOR`, `MS_CLIENTID`, `MS_AUTHORITY`, `GRAPH_API`, `SHAREPOINT_URL`, `SOCKET_URL`, `INTRANET_URL`, and `VAPID_KEY`. The frontend loads public global defaults from `GET /api/portal/frontend-config` at startup. Per-domain settings override those defaults via `GET /api/domain/{id}/frontend-config` when a user selects a domain.
 
-Values are read at build time and embedded in the bundle. The root `.env` file currently holds only placeholder `VITE_MS_CLIENT_ID` / `VITE_MS_AUTHORITY` entries and is **not** consumed by `build.env`; set the real values in `quasar.config.js` instead.
+Portal admins can update per-domain overrides in Settings → Domain → Edit Domain → Frontend Runtime Settings. Saving uses `PUT /api/domain/{id}/frontend-config` with a Sanctum bearer token. The backend must enforce admin authorization; hiding/editing controls in the frontend is not a security boundary. Cleared fields are saved as null values so the domain inherits the global default again. Domain logo (`pd_img`) takes precedence over `APP_LOGO` on the pre-login selector; dashboard branding uses `APP_LOGO`.
+
+If the runtime settings endpoints are unavailable, the app continues with the generic branding and empty optional integration settings. Microsoft login and Socket.IO realtime features require valid global or per-domain settings. The public Microsoft Graph endpoint remains the generic Graph API; tenant-specific SharePoint selection is configured in the backend settings.
 
 ## Install the dependencies
 ```bash

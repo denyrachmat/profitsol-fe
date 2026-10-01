@@ -77,6 +77,7 @@ import { useDialogPluginComponent, useQuasar } from "quasar";
 import { useAuthStore } from "src/stores/authStore";
 import apiRequest from "../apiRequest";
 import { authHelper, sharePointService } from "@/components/msHelpers";
+import { getRuntimeConfig } from "src/runtimeConfig";
 
 import { GoogleSignInButton } from "vue3-google-signin";
 
@@ -264,7 +265,7 @@ const uploadFileToSharepointToRead = async (rootUrl, fileName, files) => {
     true,
     false,
     false,
-    process.env.GRAPH_API + `me/drive/root:/Graph API/${fileName}:/content`,
+    getRuntimeConfig("GRAPH_API") + `me/drive/root:/Graph API/${fileName}:/content`,
     true
   );
 

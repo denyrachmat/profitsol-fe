@@ -3,7 +3,9 @@
     <q-header
       elevated
       :style="`background-color:${
-        store.choosedDomain ? store.choosedDomain.pd_base_color : 'cyan'
+        (store.choosedDomain && store.choosedDomain.pd_base_color) ||
+        getRuntimeConfig('BASE_COLOR') ||
+        'cyan'
       }`"
     >
       <q-toolbar>
@@ -71,7 +73,7 @@
           </q-select>
         </q-toolbar-title>
 
-        <div>Portal Application v2.26.9.2</div>
+        <div>{{ getRuntimeConfig("APP_NAME") || "Portal Application" }} v2.26.9.2</div>
 
         <q-btn flat dense aria-label="Roles" icon-right="group">
           <q-menu>
@@ -309,6 +311,12 @@ import { socket } from "src/boot/socket";
 import appListRows from "src/pages/Dashboards/appListRows.vue";
 import dataFilter from "src/pages/AMS/dataFilter.vue";
 import { authHelper } from "src/components/msHelpers";
+import {
+  getRuntimeConfig,
+  getRuntimeSettings,
+  loadDomainConfig,
+} from "src/runtimeConfig";
+import { connectSocket } from "src/boot/socket";
 
 window.onbeforeunload = function (e) {
   return "Please press the Logout button to logout.";
@@ -341,19 +349,6 @@ const linksList = [
 
 // List of routes that should not trigger beforeunload warning
 const allowedRoutes = ["/settings/users", "/settings/menu", "/settings/role"];
-
-const msalConfig = {
-  auth: {
-    clientId: process.env.MS_CLIENTID,
-    authority: process.env.MS_AUTHORITY,
-    redirectUri: window.location.origin, // Must match app registration
-    postLogoutRedirectUri: window.location.origin, // 👈 Critical for logout
-    navigateToLoginRequestUrl: false, // Prevents unexpected redirects
-  },
-  cache: {
-    cacheLocation: "sessionStorage",
-  },
-};
 
 export default defineComponent({
   name: "MainLayout",
@@ -462,6 +457,7 @@ export default defineComponent({
       domain,
       initPage,
       isInteractionInProgress: ref(false),
+      getRuntimeConfig,
     };
   },
   beforeCreate() {
@@ -679,7 +675,7 @@ export default defineComponent({
 
           // props forwarded to your custom component
           componentProps: {
-            dataProps: `https://intranet.sumitronics-indonesia.com/ams/approvalAction/${tokenAprv}/${token}`,
+            dataProps: `${getRuntimeConfig("INTRANET_URL")}/ams/approvalAction/${tokenAprv}/${token}`,
             // dataProps: `http://192.168.100.32:8081/portal_v2/#/ams/approvalAction/${tokenAprv}/${token}`,
             // dataProps: `http://localhost:8080/#/ams/approvalAction/${tokenAprv}/${token}`,
             title: "Approval Action",
@@ -730,9 +726,15 @@ export default defineComponent({
         this.onSelectStore(this.domain);
       }
     },
-    onSelectStore(val) {
+    async onSelectStore(val) {
       console.log("change domain");
       this.store.storeDomain(val);
+      if (val && val.id) {
+        await loadDomainConfig(val.id);
+      }
+      authHelper.configure(getRuntimeSettings());
+      connectSocket();
+      document.title = getRuntimeConfig("APP_NAME") || "Application Portal";
     },
     onClickMoreNotif() {
       this.initPage = this.initPage + 1;
