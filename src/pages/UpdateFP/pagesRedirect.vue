@@ -40,16 +40,25 @@
       </article>
       <div v-else class="error-message">
         <q-icon name="error" color="negative" size="50px" />
-        <h4>Oops! Article Not Found</h4>
+        <h4>Oops! Page Not Loaded</h4>
         <p>{{ error }}</p>
-        <q-btn to="/" label="Kembali ke Beranda" color="primary" unelevated />
+        <div class="q-gutter-sm">
+          <q-btn
+            label="Try Again"
+            color="primary"
+            unelevated
+            icon="refresh"
+            @click="fetchPost"
+          />
+          <q-btn to="/" label="Kembali ke Beranda" color="primary" outline />
+        </div>
       </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
 import showComponent from "../CMS/Forms/showComponent.vue";
 import apiRequest from "src/components/apiRequest";
@@ -71,21 +80,62 @@ const refreshKey = ref(0);
 
 defineEmits(["isLoadingChange"]);
 
-// --- FUNGSI UNTUK MENGAMBIL DATA ---
+// --- FETCH POST ---
+// Load-critical: bounded request + a watchdog so a stalled network can never
+// leave this page spinning forever (a pending axios request logs nothing).
+const REQUEST_TIMEOUT_MS = 20000;
+const WATCHDOG_MS = REQUEST_TIMEOUT_MS + 5000;
+let watchdog = null;
+
+const clearWatchdog = () => {
+  if (watchdog) {
+    clearTimeout(watchdog);
+    watchdog = null;
+  }
+};
+
+const startWatchdog = () => {
+  clearWatchdog();
+  watchdog = setTimeout(() => {
+    if (isLoading.value) {
+      isLoading.value = false;
+      error.value =
+        "Request timed out. Please check your internet connection and try again.";
+    }
+  }, WATCHDOG_MS);
+};
+
 const fetchPost = async () => {
   const slug = route.params.slug;
   const url = route.params.url;
 
   isLoading.value = true;
   error.value = null;
+  startWatchdog();
 
   try {
-    const response = await postData("get", null, `cms/viewBySlug/${url ?? slug}`);
+    const response = await postData(
+      "get",
+      null,
+      `cms/viewBySlug/${url ?? slug}`,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      REQUEST_TIMEOUT_MS
+    );
     choosedPages.value = response?.data?.value || null;
+    if (!response) {
+      error.value = error.value || "Failed to load this page.";
+    }
   } catch (err) {
     console.error("Failed to fetch article:", err);
     error.value = err.message;
   } finally {
+    clearWatchdog();
     isLoading.value = false;
     // Deep links like /pages/slug#agenda: blocks render async, so retry
     // until the section exists instead of scrolling once too early.
@@ -95,10 +145,13 @@ const fetchPost = async () => {
 
 // --- LIFECYCLE HOOK ---
 // Panggil fungsi fetchPost() saat komponen pertama kali di-mount (ditampilkan)
-onMounted(() => {
-  fetchPost();
+onBeforeUnmount(() => {
+  clearWatchdog();
 });
 
+// Fetch on mount and whenever the routed slug/url changes. `immediate: true`
+// covers the first load, so onMounted must NOT fetch again — doing both fired
+// two identical viewBySlug requests on every page open.
 watch(
   [() => route.params.slug, () => route.params.url],
   ([newSlug, newUrl], [oldSlug, oldUrl]) => {
@@ -106,7 +159,8 @@ watch(
       refreshKey.value++;
       fetchPost();
     }
-  }
+  },
+  { immediate: true }
 );
 
 watch(

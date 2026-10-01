@@ -1,5 +1,38 @@
 <template>
-  <div :style="containerStyle">
+  <div :style="containerStyle" :class="{ 'container-has-bg': hasPinned }">
+    <!-- Pinned background layer (image/html children flagged pinBackground).
+         Rendered only outside edit mode; in edit mode pinned children show
+         as slim labeled bars in the drag list instead. -->
+    <div
+      v-if="hasPinned && !editMode"
+      class="container-bg-layer"
+      :style="bgLayerStyle"
+    >
+      <div
+        v-for="child in pinnedChildren"
+        :key="child.id"
+        class="container-bg-item"
+      >
+        <blockRenderer
+          :block="child"
+          :preview="preview"
+          :edit-mode="false"
+          :selected-block-id="selectedBlockId"
+          :responsive="responsive"
+          @select-block="$emit('select-block', $event)"
+          @update:children="$emit('update:children', $event)"
+          @delete-child="$emit('delete-child', $event)"
+          @duplicate-child="$emit('duplicate-child', $event)"
+        />
+      </div>
+      <!-- Readability scrim above the background, below the content -->
+      <div
+        v-if="bgScrim"
+        class="container-bg-scrim"
+        :style="{ background: bgScrim }"
+      />
+    </div>
+
     <draggable
       tag="div"
       :list="block.content.children || []"
@@ -11,19 +44,21 @@
       :class="[
         'container-content',
         contentAlign ? 'content-align' : 'content-stretch',
+        hasPinned ? 'container-content--above' : '',
         editMode ? 'column-drop-zone rounded column-drop-zone--edit' : '',
       ]"
       :disabled="!editMode"
     >
       <template #item="{ element: childBlock }">
-        <div
-          class="nested-block-wrapper"
-          :class="{
-            'nested-block-selected': selectedBlockId === childBlock.id,
-          }"
-          :style="childWrapperStyle"
-          @click.stop="$emit('select-block', childBlock)"
-        >
+          <div
+            class="nested-block-wrapper"
+            :class="{
+              'nested-block-selected': selectedBlockId === childBlock.id,
+              'nested-block--pinned': isPinned(childBlock),
+            }"
+            :style="childWrapperStyle"
+            @click.stop="$emit('select-block', childBlock)"
+          >
           <div
             v-if="editMode"
             class="nested-block-toolbar row items-center no-wrap q-gutter-xs"
@@ -41,14 +76,29 @@
             <span class="text-caption">{{
               getBlockMeta(childBlock.type).label
             }}</span>
-            <q-space />
-            <q-btn
-              flat
-              dense
-              round
-              icon="content_copy"
-              size="xs"
-              color="grey-7"
+          <q-space />
+          <q-btn
+            flat
+            dense
+            round
+            :icon="isPinned(childBlock) ? 'layers_clear' : 'layers'"
+            size="xs"
+            :color="isPinned(childBlock) ? 'teal' : 'grey-7'"
+            @click.stop="togglePin(childBlock)"
+          >
+            <q-tooltip>{{
+              isPinned(childBlock)
+                ? "Unpin from background"
+                : "Pin as background (behind content)"
+            }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            dense
+            round
+            icon="content_copy"
+            size="xs"
+            color="grey-7"
               @click.stop="
                 $emit('duplicate-child', {
                   colIndex: 0,
@@ -73,7 +123,37 @@
               "
             />
           </div>
+          <!-- Pinned children render as a labeled bar in edit mode (the live
+               layer is hidden while editing), and render nothing in flow in
+               preview/live — their real copy lives in the bg layer above. -->
+          <div
+            v-if="editMode && isPinned(childBlock)"
+            class="container-bg-bar row items-center no-wrap q-px-sm q-py-xs"
+            @click.stop="$emit('select-block', childBlock)"
+          >
+            <q-icon name="layers" size="xs" color="teal" class="q-mr-xs" />
+            <span class="text-caption text-grey-8 ellipsis">
+              Background — {{ getBlockMeta(childBlock.type).label }}
+            </span>
+            <q-space />
+            <q-btn
+              flat
+              dense
+              round
+              icon="layers_clear"
+              size="xs"
+              color="teal"
+              @click.stop="togglePin(childBlock)"
+            >
+              <q-tooltip>Unpin from background</q-tooltip>
+            </q-btn>
+          </div>
+          <div
+            v-else-if="!editMode && isPinned(childBlock)"
+            style="display: none"
+          ></div>
           <blockRenderer
+            v-else
             :block="childBlock"
             :preview="preview"
             :edit-mode="editMode"
@@ -115,6 +195,30 @@ defineEmits(["select-block", "update:children", "delete-child", "duplicate-child
 
 const getBlockMeta = (type) =>
   widgetRegistry[type]?.meta || { label: type, icon: "help", color: "grey" };
+
+// Pinned children (content.pinBackground) render in the absolute background
+// layer instead of the flow. Single source list is kept — the split happens
+// at render time only, so draggable write-back can never lose blocks.
+const isPinned = (child) => !!(child && child.content && child.content.pinBackground);
+
+const pinnedChildren = computed(() =>
+  (props.block.content?.children || []).filter(isPinned)
+);
+const hasPinned = computed(() => pinnedChildren.value.length > 0);
+
+const bgScrim = computed(() => props.block.content?.bgScrim || "");
+
+const togglePin = (child) => {
+  if (!child) return;
+  if (!child.content) child.content = {};
+  child.content.pinBackground = !child.content.pinBackground;
+};
+
+// Inherits the container's radius so backgrounds clip to rounded corners.
+const bgLayerStyle = computed(() => {
+  const c = props.block.content || {};
+  return c.borderRadius ? { borderRadius: c.borderRadius } : undefined;
+});
 
 // Aligns the child blocks inside the container (left / center / right).
 // Uses block layout + per-child width + auto margins (deterministic,
@@ -172,7 +276,9 @@ const containerStyle = computed(() => {
   }
 
   if (contentAlign.value) s.textAlign = contentAlign.value;
-  if (c.position) s.position = c.position;
+  // With a background layer the box must be the positioned ancestor of the
+  // absolute layer, unless the author set an explicit position already.
+  s.position = c.position || (hasPinned.value ? "relative" : undefined);
   if (c.position && c.position !== "static") {
     if (c.top) s.top = c.top;
     if (c.left) s.left = c.left;
@@ -186,6 +292,53 @@ const containerStyle = computed(() => {
 </script>
 
 <style scoped>
+/* Background layer: pinned children fill the container behind the content. */
+.container-bg-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Decorative only — never intercept clicks meant for the content. */
+  pointer-events: none;
+}
+
+.container-bg-item {
+  width: 100%;
+  height: 100%;
+}
+
+/* Let pinned widgets fill the layer height (an image in fill mode or an HTML
+   block that sizes itself will then cover the container). */
+.container-bg-item > :deep(.block-renderer) {
+  height: 100%;
+}
+
+.container-bg-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+/* Content must paint above the absolute background layer. */
+.container-content--above {
+  position: relative;
+  z-index: 1;
+}
+
+/* Edit-mode bar for a pinned child — keeps it manageable without rendering
+   the live background (mirrors how CarouselRenderer abstracts its slides). */
+.container-bg-bar {
+  background: repeating-linear-gradient(
+    45deg,
+    #e0f2f1,
+    #e0f2f1 8px,
+    #d3eae8 8px,
+    #d3eae8 16px
+  );
+  border: 1px dashed #26a69a;
+  border-radius: 4px;
+  min-height: 28px;
+  cursor: pointer;
+}
+
 /* Aligned mode: make the child block hug its content (inline-block) so the
    wrapper's text-align can position it left/center/right. */
 .container-content.content-align

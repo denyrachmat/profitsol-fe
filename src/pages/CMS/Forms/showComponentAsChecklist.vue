@@ -371,7 +371,8 @@ const liveToStoredFieldId = computed(() => {
 
 /**
  * Read a stored answer for a field, tolerating both the live field ID and its
- * canonical report ID, and falling back to any row.
+ * canonical report ID. Strictly per-row: never fall back to another row, or
+ * editing one line leaks its value into every other line's cells.
  */
 const findStoredAnswer = (rowIdx, fieldId) => {
   const answers = getUserAnswers.value || [];
@@ -384,12 +385,6 @@ const findStoredAnswer = (rowIdx, fieldId) => {
     if (val !== undefined) return val;
   }
 
-  for (const id of ids) {
-    for (const rowAns of answers) {
-      const val = rowAns?.[id];
-      if (val !== undefined) return val;
-    }
-  }
   return undefined;
 };
 

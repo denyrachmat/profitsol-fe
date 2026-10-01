@@ -328,6 +328,7 @@ import { useAuthStore } from "stores/authStore";
 
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 import viewSetupFieldPerms from "src/pages/CMS/FormsCreator/viewSetupFieldPerms.vue";
+import { resolveRoleFilters } from "src/components/roleFilteredDefaults.js";
 
 const $q = useQuasar();
 const route = useRoute();
@@ -667,7 +668,8 @@ const resolveDefaultFilter = () => {
   }
   const fromSetup = setupTrainingData.value.defaultFilterData;
   if (Array.isArray(fromSetup) && fromSetup.length > 0) {
-    return JSON.parse(JSON.stringify(fromSetup));
+    const scoped = resolveRoleFilters(fromSetup, currentRoleId.value);
+    return JSON.parse(JSON.stringify(scoped));
   }
   return [];
 };

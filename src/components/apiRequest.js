@@ -20,7 +20,8 @@ const apiRequest = ($qParam) => {
     isApi = null,
     isMSToken = false,
     isNotifySuccess = false,
-    isReturnErrorData = false
+    isReturnErrorData = false,
+    timeout = null
   ) => {
     // Jika menggunakan loading
     // Ensure $q is defined, fallback to useQuasar if not provided
@@ -43,6 +44,11 @@ const apiRequest = ($qParam) => {
     // Setup Root API
     const apiURL = !isApi ? process.env.API + url : isApi;
 
+    // Load-critical calls pass an explicit timeout: without one, a stalled
+    // request (captive portal / proxy / half-open socket) never settles and
+    // the caller's loading flag stays true forever with no console error.
+    const timeoutOpt = timeout ? { timeout } : {};
+
     let header
     if (auth) {
       header = {
@@ -50,6 +56,7 @@ const apiRequest = ($qParam) => {
         xsrfCookieName: 'XSRF-TOKEN',
         xsrfHeaderName: 'X-XSRF-TOKEN',
         withCredentials: true,
+        ...timeoutOpt,
         headers: {
           authorization: `Bearer ${isMSToken ? store.msTokenDet.accessToken : store.authDet.token
             }`,
@@ -70,6 +77,7 @@ const apiRequest = ($qParam) => {
     } else {
       header = {
         responseType: blob ? "arraybuffer" : "json",
+        ...timeoutOpt,
         headers: {
           username: store.authDet.username,
           ...(store.getChoosedRole?.role?.id

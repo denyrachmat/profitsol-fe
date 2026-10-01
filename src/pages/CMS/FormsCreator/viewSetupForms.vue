@@ -1162,7 +1162,7 @@ import viewSetupHistTable from "./viewSetupHistTable.vue";
 import viewSetupAPIDest from "./viewSetupAPIDest.vue";
 import viewSetupKeysBulk from "./viewSetupKeysBulk.vue";
 
-import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
+import defaultFilterEditorDialog from "./defaultFilterEditorDialog.vue";
 
 const store = useAuthStore();
 
@@ -1773,119 +1773,59 @@ const onClickSetBulkKeys = () => {
     });
 };
 
+const filterFieldOptions = computed(() =>
+  (listForms.value || []).map((f) => {
+    const fieldId = String(f.field || f.name || "").replace("CMS_REPORT_", "");
+    const selectedField = (props.forms || [])
+      .flatMap((form) => (form.type === "row" ? form.content : form))
+      .find((form) => form.type === "form" && String(form.id) === fieldId);
+    return {
+      label: f.label,
+      value: f.field || f.name,
+      type: selectedField?.content?.component?.value?.type || "",
+    };
+  })
+);
+
+const groupFilterSetups = (filters) => {
+  const map = new Map();
+  (filters || []).forEach((f) => {
+    const roles = Array.isArray(f.roles)
+      ? [...f.roles].sort((a, b) => String(a).localeCompare(String(b)))
+      : [];
+    const key = JSON.stringify(roles);
+    if (!map.has(key)) map.set(key, { roles, rows: [] });
+    map.get(key).rows.push({
+      cols: f.cols || null,
+      opr: f.opr || "=",
+      conmet: f.conmet || "and",
+      value: Array.isArray(f.value) ? f.value : [f.value ?? ""],
+    });
+  });
+  return [...map.values()];
+};
+
 const onClickSetDefaultFilterData = () => {
-  console.log("Current Default Filter Data:", [
-    listForms.value,
-    formsSetup.value.specificUserSetFilterData,
-    formsSetup.value.listSpecificUserRoleSetFilterDataPeriod,
-  ]);
-  //   optionsUsers
-  // optionsRoles
   $q.dialog({
-    component: multiplePromptDialog,
+    component: defaultFilterEditorDialog,
     componentProps: {
-      title: "Setup Default Filter Data",
-      headerFields: [
-        {
-          label: `Select ${
-            formsSetup.value.specificUserSetFilterData === "user"
-              ? "users"
-              : formsSetup.value.specificUserSetFilterData === "role"
-              ? "roles"
-              : "users/roles"
-          } to be applied`,
-          default:
-            formsSetup.value.listSpecificUserRoleSetFilterDataPeriod || [],
-          type: "select",
-          name: "users",
-          options:
-            formsSetup.value.specificUserSetFilterData === "user"
-              ? optionsUsers.value
-              : formsSetup.value.specificUserSetFilterData === "role"
-              ? optionsRoles.value
-              : [...optionsUsers.value, ...optionsRoles.value],
-          multiple: true,
-        },
-      ],
-      initialFields: [
-        [
-          {
-            label: `Select columns to filter`,
-            default: listForms.value.length > 0 ? listForms.value[0].field : "",
-            type: "select",
-            name: "cols",
-            options: listForms.value.map((form) => ({
-              label: form.label,
-              value: form.field,
-            })),
-          },
-          {
-            label: `Disable filter ?`,
-            default: true,
-            type: "radio",
-            options: [
-              { label: "Yes", value: true },
-              { label: "No", value: false },
-            ],
-            name: "disableFilter",
-          },
-          {
-            label: `Assign Default Value ?`,
-            default: true,
-            type: "radio",
-            options: [
-              { label: "Yes", value: true },
-              { label: "No", value: false },
-            ],
-            name: "defaultValue",
-          },
-          {
-            label: `Input filter Value`,
-            default: "",
-            type: "text",
-            name: "filterValue",
-          },
-        ],
-      ],
-      size: "full",
+      applyToLabel: "users/roles",
+      roleOptions: optionsRoles.value,
+      colOptions: filterFieldOptions.value,
+      initialSetups: groupFilterSetups(formsSetup.value.defaultFilterData),
+      initialReadOnly: formsSetup.value.defaultFilterReadOnly === true,
     },
     persistent: true,
-  })
-    .onOk(async (val) => {
-      formsSetup.value.listSpecificUserRoleSetFilterDataPeriod =
-        val.users || [];
-
-      const selectedField = props.forms
-        .flatMap((form) => (form.type === "row" ? form.content : form))
-        .find(
-          (form) => form.type === "form" && `CMS_REPORT_${form.id}` === val.cols
-        );
-      const colType = selectedField?.content?.component?.value?.type || "";
-
-      formsSetup.value.defaultFilterData =
-        val.defaultValue && val.filterValue
-          ? [
-              {
-                cols: {
-                  value: val.cols,
-                  label: selectedField?.content?.label || val.cols,
-                  type: colType,
-                },
-                value: [val.filterValue],
-                type: colType,
-                opr: "=",
-                conmet: "and",
-              },
-            ]
-          : [];
-      formsSetup.value.defaultFilterReadOnly = val.disableFilter === true;
-      console.log(
-        "Default Filter Data set to:",
-        formsSetup.value.defaultFilterData
-      );
-    })
-    .onDismiss(() => {
-      // Handle dismiss if needed
-    });
+  }).onOk((val) => {
+    formsSetup.value.defaultFilterData = Array.isArray(val.filterData)
+      ? val.filterData
+      : [];
+    formsSetup.value.defaultFilterReadOnly = val.readOnly === true;
+    formsSetup.value.listSpecificUserRoleSetFilterDataPeriod = [
+      ...new Set(
+        formsSetup.value.defaultFilterData.flatMap((f) => f.roles || [])
+      ),
+    ];
+  });
 };
 </script>

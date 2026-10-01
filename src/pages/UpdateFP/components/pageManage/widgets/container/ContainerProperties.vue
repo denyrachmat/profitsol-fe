@@ -1,6 +1,14 @@
 <template>
   <div>
     <ColorPicker v-model="background" label="Background Color" />
+    <ColorPicker
+      v-model="bgScrim"
+      label="Background Scrim (tint over pinned backgrounds, empty = none)"
+    />
+    <div class="text-caption text-grey-6 q-mb-sm">
+      The scrim is painted between a pinned background layer and the content —
+      use a translucent color (e.g. rgba(0,0,0,0.35)) so text stays readable.
+    </div>
     <q-toggle
       v-model="bgFullWidth"
       label="Full-Width Background (edge to edge)"
@@ -107,6 +115,7 @@ import PaddingControl from "../shared/PaddingControl.vue";
 const props = defineProps({ block: { type: Object, required: true } });
 const blockRef = toRef(props, "block");
 const background = useBlockField(blockRef, "background");
+const bgScrim = useBlockField(blockRef, "bgScrim");
 const bgFullWidth = useBlockField(blockRef, "bgFullWidth");
 const padding = useBlockField(blockRef, "padding");
 const borderRadius = useBlockField(blockRef, "borderRadius");

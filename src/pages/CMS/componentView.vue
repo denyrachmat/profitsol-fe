@@ -926,7 +926,9 @@ watch(
 watch(
   () => props.ans,
   (val) => {
-    // console.log("masuk cek jawaban 1");
+    // Don't wipe the local edit when the parent resolves an empty answer to
+    // undefined/null; only adopt real values (empty string included).
+    if (val === undefined || val === null) return;
     modelData.value = val;
     coerceSelectModelToOption();
   }

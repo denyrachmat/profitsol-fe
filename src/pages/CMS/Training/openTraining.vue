@@ -35,6 +35,18 @@
               clearable
             />
           </div>
+          <div class="col">
+            <q-select
+              outlined
+              v-model="filterCategory"
+              :options="availableCategories"
+              label="Filter by Category"
+              emit-value
+              map-options
+              clearable
+              dense
+            />
+          </div>
         </div>
 
         <q-input
@@ -78,6 +90,18 @@
               <q-td key="status" :props="props" class="text-center">
                 <q-badge :color="statusColor(props.row.status)">{{ props.row.status || "draft" }}</q-badge>
               </q-td>
+              <q-td key="tags" :props="props">
+                <q-chip
+                  v-for="tag in (props.row.value?.tags || [])"
+                  :key="tag"
+                  dense
+                  size="sm"
+                  color="blue-1"
+                  text-color="blue-9"
+                >
+                  {{ tag }}
+                </q-chip>
+              </q-td>
               <q-td key="created_at" :props="props" class="text-center">
                 {{ props.row.created_at ? new Date(props.row.created_at).toLocaleString() : "-" }}
               </q-td>
@@ -119,9 +143,11 @@ const loading = ref(false);
 const cloning = ref(false);
 const filterStatus = ref(null);
 const filterYear = ref(null);
+const filterCategory = ref(null);
 const searchText = ref("");
 const columns = ref([
   { name: "label", label: "Title", field: "label", align: "left", sortable: true },
+  { name: "tags", label: "Categories", field: (row) => (row.value?.tags || []).join(", "), align: "left", sortable: true },
   { name: "status", label: "Status", field: "status", align: "center", sortable: true },
   {
     name: "created_at",
@@ -156,10 +182,21 @@ const statusColor = (status) => {
   return map[status] || "grey";
 };
 
+const availableCategories = computed(() => {
+  const set = new Set();
+  listData.value.forEach((o) => {
+    (o.value?.tags || []).forEach((t) => t && set.add(t));
+  });
+  return Array.from(set).sort();
+});
+
 const filteredOptions = computed(() => {
   let opts = listData.value;
   if (filterStatus.value) {
     opts = opts.filter((o) => (o.status || "draft") === filterStatus.value);
+  }
+  if (filterCategory.value) {
+    opts = opts.filter((o) => (o.value?.tags || []).includes(filterCategory.value));
   }
   if (filterYear.value) {
     const target = String(filterYear.value);

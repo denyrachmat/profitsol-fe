@@ -158,6 +158,7 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
 
 const props = defineProps({
   mode: Number,
+  code: { type: String, default: "FP_POST_TAGS" },
 });
 
 const modes = ref(props.mode || 1);
@@ -191,7 +192,7 @@ const getData = async () => {
           creator: "pgm_created_by|string",
         },
       },
-      `portal/gencode/showDetail/FP_POST_TAGS`,
+      `portal/gencode/showDetail/${props.code}`,
       false,
       false,
       true
@@ -255,7 +256,7 @@ const onClickAddTags = async (row) => {
       const response = await postData(
         "post",
         {
-          pgm_code: "FP_POST_TAGS",
+          pgm_code: props.code,
           pgm_value: payload.name,
           pgm_value2: payload.slug,
           pgm_desc: payload.desc || "",
@@ -303,7 +304,7 @@ const onClickDeleteTags = async (id) => {
             },
           ],
         },
-        `portal/gencode/deleteDetail/FP_POST_TAGS`,
+        `portal/gencode/deleteDetail/${props.code}`,
         false,
         false,
         true

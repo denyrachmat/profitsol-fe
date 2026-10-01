@@ -270,6 +270,18 @@
               >
                   <q-tooltip>Section: {{ row.block.content.anchorId }}</q-tooltip>
               </q-icon>
+              <q-chip
+                v-if="row.block.content?.pinBackground"
+                dense
+                size="sm"
+                color="teal"
+                text-color="white"
+                icon="layers"
+                class="q-ml-xs"
+              >
+                <q-tooltip>Pinned as container background</q-tooltip>
+                BG
+              </q-chip>
             </div>
             <div
               v-else
@@ -533,6 +545,22 @@
                   'Must start with a letter; letters, numbers, - and _ only',
               ]"
             />
+
+            <!-- Pin as container background: only meaningful for a direct
+                 child of a container (e.g. an image/html widget used behind
+                 the container's other content). -->
+            <q-toggle
+              v-if="selectedParentIsContainer"
+              :model-value="!!selectedBlock.content?.pinBackground"
+              @update:model-value="onTogglePinBackground"
+              label="Pin as container background"
+              dense
+              class="q-mb-sm"
+            >
+              <q-tooltip>
+                Renders this widget behind the container's other content.
+              </q-tooltip>
+            </q-toggle>
 
             <!-- Dynamic properties component -->
             <component
@@ -1224,6 +1252,23 @@ const onUpdateAnchorId = (val) => {
   const clean = normalizeAnchorId(val);
   if (!selectedBlock.value.content) selectedBlock.value.content = {};
   selectedBlock.value.content.anchorId = clean || null;
+};
+
+// Parent block of the current selection (columns/carousel/container), used to
+// decide whether "pin as background" is available for this block.
+const selectedParentBlock = computed(() => {
+  if (!selectedBlockId.value) return null;
+  return (
+    findParentForChild(selectedBlockId.value, blocks.value)?.parentBlock || null
+  );
+});
+const selectedParentIsContainer = computed(
+  () => selectedParentBlock.value?.type === "container"
+);
+const onTogglePinBackground = (val) => {
+  if (!selectedBlock.value) return;
+  if (!selectedBlock.value.content) selectedBlock.value.content = {};
+  selectedBlock.value.content.pinBackground = !!val;
 };
 
 const widgetCatalog = ref(

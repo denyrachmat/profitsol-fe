@@ -46,27 +46,54 @@
     <q-input v-model="alt" label="Alt Text" dense outlined class="q-mb-sm" />
     <q-input v-model="caption" label="Caption" dense outlined class="q-mb-sm" />
     <q-select
-      v-model="width"
-      :options="imgWidthOptions"
-      label="Image Width"
+      v-model="fit"
+      :options="[
+        { label: 'Contain (fit inside)', value: 'contain' },
+        { label: 'Cover (crop to fill)', value: 'cover' },
+        { label: 'Fill (stretch)', value: 'fill' },
+      ]"
+      label="Object Fit"
       dense
       outlined
       emit-value
       map-options
       class="q-mb-sm"
     />
-    <q-input
-      v-model.number="height"
-      label="Max Height (px)"
-      type="number"
+    <q-toggle
+      v-model="fillHeight"
+      label="Fill parent height (background mode)"
       dense
-      outlined
       class="q-mb-sm"
-    />
+    >
+      <q-tooltip>
+        Makes the image fill its parent box (used when the image is pinned as a
+        container background). Width/height overrides are ignored in this mode.
+      </q-tooltip>
+    </q-toggle>
+    <template v-if="!fillHeight">
+      <q-select
+        v-model="width"
+        :options="imgWidthOptions"
+        label="Image Width"
+        dense
+        outlined
+        emit-value
+        map-options
+        class="q-mb-sm"
+      />
+      <q-input
+        v-model.number="height"
+        label="Max Height (px)"
+        type="number"
+        dense
+        outlined
+        class="q-mb-sm"
+      />
+    </template>
   </div>
 </template>
 <script setup>
-import { ref, toRef } from "vue";
+import { computed, ref, toRef } from "vue";
 import { useQuasar } from "quasar";
 import { imgWidthOptions } from "../options.js";
 import { useBlockField } from "../useBlockField.js";
@@ -80,6 +107,20 @@ const alt = useBlockField(blockRef, "alt");
 const caption = useBlockField(blockRef, "caption");
 const width = useBlockField(blockRef, "width");
 const height = useBlockField(blockRef, "height");
+
+// Defaulted so images saved before these fields show sensible values.
+const fit = computed({
+  get: () => blockRef.value?.content?.fit || "contain",
+  set: (v) => {
+    if (blockRef.value?.content) blockRef.value.content.fit = v;
+  },
+});
+const fillHeight = computed({
+  get: () => !!blockRef.value?.content?.fillHeight,
+  set: (v) => {
+    if (blockRef.value?.content) blockRef.value.content.fillHeight = !!v;
+  },
+});
 
 const fileModel = ref(null);
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB

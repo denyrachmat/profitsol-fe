@@ -15,7 +15,7 @@ export default {
   },
   image: {
     meta: { label: "Image", icon: "image", color: "green" },
-    defaultContent: () => ({ src: "", alt: "", caption: "", width: "100", height: null }),
+    defaultContent: () => ({ src: "", alt: "", caption: "", width: "100", height: null, fit: "contain", fillHeight: false }),
     PropertiesComponent: defineAsyncComponent(() => import("./image/ImageProperties.vue")),
     RendererComponent: defineAsyncComponent(() => import("./image/ImageRenderer.vue")),
   },
@@ -146,7 +146,9 @@ export default {
     defaultContent: () => ({
       background: "", padding: "", borderRadius: "", children: [],
       contentAlign: "", containerAlign: "", maxWidth: "", rowGap: "none",
-      bgFullWidth: false,
+      bgFullWidth: false, bgScrim: "",
+      // Children with content.pinBackground === true render behind the rest
+      // (an image/html widget used as the container background).
       position: "", top: "", left: "", right: "", bottom: "", zIndex: "", width: "",
     }),
     PropertiesComponent: defineAsyncComponent(() => import("./container/ContainerProperties.vue")),

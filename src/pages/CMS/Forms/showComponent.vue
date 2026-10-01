@@ -909,6 +909,7 @@ import showComponentAsChecklistVue from "./showComponentAsChecklist.vue";
 
 import blockRenderer from "../../UpdateFP/components/pageManage/blockRenderer.vue";
 import widgetRegistry from "../../UpdateFP/components/pageManage/widgets/widgetRegistry.js";
+import { resolveRoleFilters } from "src/components/roleFilteredDefaults.js";
 
 /**
  * =========================================================
@@ -2439,9 +2440,13 @@ const loadUserOwnAnswers = async () => {
 
     const currentUsername =
       authStore.authDet?.username || authStore.getDetails?.username || "";
-    const defaultFilter = Array.isArray(props.setup?.defaultFilterData)
-      ? props.setup.defaultFilterData
-      : [];
+    const roleId = authStore.getChoosedRole?.role?.id;
+    const defaultFilter = resolveRoleFilters(
+      Array.isArray(props.setup?.defaultFilterData)
+        ? props.setup.defaultFilterData
+        : [],
+      roleId
+    );
 
     const res = await postData(
       "post",

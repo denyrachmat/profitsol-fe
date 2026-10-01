@@ -4,6 +4,33 @@
       <div class="col q-pr-md">
         <q-input label="Form Title" dense outlined v-model="title" />
       </div>
+      <div class="col-3 q-pr-md">
+        <div class="row no-wrap items-center">
+          <q-select
+            class="col"
+            v-model="tags"
+            :options="listTags"
+            label="Category (Tags)"
+            dense
+            outlined
+            multiple
+            use-chips
+            emit-value
+            map-options
+            clearable
+          />
+          <q-btn
+            flat
+            dense
+            color="primary"
+            icon="category"
+            class="q-ml-xs"
+            @click="onManageCategories"
+          >
+            <q-tooltip>Manage categories</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
       <div class="col-4 text-right">
         <q-btn-group>
           <q-btn
@@ -200,7 +227,7 @@
   </div>
 </template>
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useQuasar } from "quasar";
 
 import chooseComponent from "./chooseComponent.vue";
@@ -214,6 +241,7 @@ import setupTraining from "./Training/setupTraining.vue";
 import showLogicField from "./Forms/showLogicField.vue";
 import showLogicForms from "./Forms/showLogicForms.vue";
 import completionDashboard from "./Training/completionDashboard.vue";
+import tagsManageView from "src/pages/UpdateFP/components/postManage/tagsManageView.vue";
 
 const { postData } = apiRequest();
 
@@ -222,6 +250,8 @@ const $q = useQuasar();
 const idRef = ref("");
 const title = ref("");
 const forms = ref([]);
+const tags = ref([]);
+const listTags = ref([]);
 const formsInit = {
   seq_name: "",
   content: [],
@@ -371,6 +401,7 @@ const onClickSave = () => {
         forms: forms.value,
         ans: [],
         title: title.value,
+        tags: tags.value,
         isQuiz: false,
         status: formStatus.value,
         year: formYear.value,
@@ -417,6 +448,7 @@ const openTraining = () => {
     idRef.value = val.id;
     title.value = val.title;
     forms.value = val.forms;
+    tags.value = val.tags || [];
     share.value = val.share;
     shareMainMenu.value = val.shareFormsIsMainMenu;
     shareIsroles.value = val.shareIsroles;
@@ -537,4 +569,48 @@ const onClickCompletion = () => {
     },
   });
 };
+
+const getDataTags = async () => {
+  try {
+    const response = await postData(
+      "post",
+      {
+        filter: [],
+        selectAs: {
+          value: "pgm_value|string",
+          label: "pgm_value|string",
+          slug: "pgm_value2|string",
+          desc: "pgm_desc|string",
+        },
+      },
+      `portal/gencode/showDetail/CMS_FORM_TAGS`,
+      false,
+      false,
+      true
+    );
+
+    if (response.data) {
+      listTags.value = response.data;
+    }
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: "Failed to fetch category",
+    });
+  }
+};
+
+const onManageCategories = () => {
+  $q.dialog({
+    component: tagsManageView,
+    componentProps: { code: "CMS_FORM_TAGS" },
+  })
+    .onOk(() => getDataTags())
+    .onCancel(() => getDataTags())
+    .onDismiss(() => getDataTags());
+};
+
+onMounted(() => {
+  getDataTags();
+});
 </script>

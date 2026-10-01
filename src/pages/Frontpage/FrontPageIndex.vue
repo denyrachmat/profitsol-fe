@@ -258,67 +258,59 @@
     </q-drawer>
 
     <q-page-container class="full-height relative-position">
-      <div class="row" :key="refreshKeys">
+      <!-- NOTE: the router-view must NOT live inside a :key-bound or
+           v-if="loading" wrapper. refreshKeys / refreshKeysContent are bumped
+           by the boot sequence (getMainConf/getDataNav), and keying a parent
+           of the router-view destroys + recreates the routed page on every
+           bump — which re-ran its data fetch and re-showed the spinner
+           (endless loading + duplicate API calls on /pages/... links). -->
+      <div class="row">
         <div v-if="loading" class="col flex flex-center column">
           <q-spinner color="primary" size="15em" class="q-mt-xl" />
           <div class="text-subtitle2 q-mt-sm">
             Loading content, please wait...
           </div>
         </div>
+        <!-- CMSPageCreator pages manage their own padding (Page Padding
+             setting), so skip the default q-pa-md to avoid double padding. -->
+        <div
+          v-else-if="shouldRenderMainShowComponent"
+          class="col"
+          :class="
+            choosedPages?.forms?.setupTraining?.pagePadding
+              ? 'q-pa-none'
+              : 'q-pa-md'
+          "
+          :key="refreshKeysContent"
+        >
+          <showComponent
+            :data="choosedPages.forms.forms"
+            @loading-state="onShowComponentLoading"
+            :setup="choosedPages.forms.setupTraining"
+            :id="() => String(choosedPages.forms.id)"
+            :showFormOnly="true"
+            :preventClear="true"
+            :removeButton="true"
+            :isFullHeight="true"
+            :tags="choosedPages.tags ? JSON.parse(choosedPages.tags) : []"
+            :use-card-separator="true"
+          />
+        </div>
         <template v-else>
-          <!-- CMSPageCreator pages manage their own padding (Page Padding
-               setting), so skip the default q-pa-md to avoid double padding. -->
-          <div
-            class="col"
-            :class="
-              choosedPages?.forms?.setupTraining?.pagePadding
-                ? 'q-pa-none'
-                : 'q-pa-md'
+          <router-view
+            v-if="
+              formStore.getCMSPageChoosed?.type === 'page' ||
+              formStore.getCMSPageChoosed?.type === 'posts' ||
+              formStore.getCMSPageChoosed?.type === 'tags'
             "
-            :key="refreshKeysContent"
-          >
-            <showComponent
-              :data="choosedPages.forms.forms"
-              v-if="
-                (choosedPages.forms &&
-                  choosedPages.forms.id &&
-                  choosedPages.is_main == 1 &&
-                  formStore.getCMSPageChoosed.type !== 'posts' &&
-                  formStore.getCMSPageChoosed.type !== 'tags') ||
-                viewMode == 'edit'
-              "
-              @loading-state="onShowComponentLoading"
-              :setup="choosedPages.forms.setupTraining"
-              :id="() => String(choosedPages.forms.id)"
-              :showFormOnly="true"
-              :preventClear="true"
-              :removeButton="true"
-              :isFullHeight="true"
-              :tags="choosedPages.tags ? JSON.parse(choosedPages.tags) : []"
-              :use-card-separator="true"
-            />
-            <template v-else>
-              <router-view
-                v-if="
-                  formStore.getCMSPageChoosed.type === 'page' ||
-                  formStore.getCMSPageChoosed.type === 'posts' ||
-                  formStore.getCMSPageChoosed.type === 'tags'
-                "
-              ></router-view>
-              <iframe
-                v-else
-                :src="formStore.getCMSPageChoosed.url"
-                width="100%"
-                height="60vh"
-                style="border: none"
-              ></iframe>
-              <!-- formStore.getCMSPageChoosed -->
-            </template>
-            <!-- <span v-else>
-              There is no content to display here yet. You can add your content
-              and configure the front page as needed.
-            </span> -->
-          </div>
+          ></router-view>
+          <iframe
+            v-else-if="formStore.getCMSPageChoosed?.url"
+            :src="formStore.getCMSPageChoosed.url"
+            width="100%"
+            height="60vh"
+            style="border: none"
+          ></iframe>
         </template>
       </div>
     </q-page-container>
@@ -373,6 +365,9 @@ let tour;
 
 const listPreviewMenu = ref([]);
 const loading = ref(false);
+// Boot calls are load-critical: a stalled request would never settle and the
+// page would spin forever with nothing in the console, so bound them.
+const BOOT_REQUEST_TIMEOUT_MS = 20000;
 const drawerLeft = ref(false);
 const refreshKeys = ref(0);
 const refreshKeysContent = ref(0);
@@ -639,7 +634,9 @@ const shouldRenderMainShowComponent = computed(
   () =>
     ((choosedPages.value?.forms &&
       choosedPages.value.forms.id &&
-      choosedPages.value?.is_main == 1) ||
+      choosedPages.value?.is_main == 1 &&
+      formStore.getCMSPageChoosed?.type !== "posts" &&
+      formStore.getCMSPageChoosed?.type !== "tags") ||
       viewMode.value == "edit") ??
     false
 );
@@ -702,26 +699,68 @@ watch(
     shouldRenderShowComp,
     hasSignal,
   ]) => {
-    // Never release the overlay before the initial fetch sequence is done —
-    // otherwise the gap between getMainConf and getHeaderConf/getNavMenu would
-    // hide it while the header and page are still empty.
-    if (!initialLoadDone.value) return;
-
-    const baseReady =
-      !isLoading && !isDrawerLoading && !isShowCompLoading && !isHeaderLoading;
-
-    if (baseReady && !shouldRenderShowComp) {
-      resetScrollPosition();
-      initialOverlayLock.value = false;
-      return;
-    }
-
-    if (baseReady && shouldRenderShowComp && hasSignal) {
-      resetScrollPosition();
-      initialOverlayLock.value = false;
-    }
+    maybeReleaseOverlay(
+      isLoading,
+      isDrawerLoading,
+      isShowCompLoading,
+      isHeaderLoading,
+      shouldRenderShowComp,
+      hasSignal
+    );
   }
 );
+
+// Single evaluator for releasing the home overlay. It runs from the watcher,
+// at boot finish, and from a fallback timer — a watcher alone is not enough:
+// on a /pages/... deep link no watched flag changes after initialLoadDone,
+// so the lock could stay on forever even though every API already finished.
+const maybeReleaseOverlay = (
+  isLoading,
+  isDrawerLoading,
+  isShowCompLoading,
+  isHeaderLoading,
+  shouldRenderShowComp,
+  hasSignal
+) => {
+  // Never release the overlay before the initial fetch sequence is done —
+  // otherwise the gap between getMainConf and getHeaderConf/getNavMenu would
+  // hide it while the header and page are still empty.
+  if (!initialLoadDone.value) return;
+
+  const baseReady =
+    !isLoading && !isDrawerLoading && !isShowCompLoading && !isHeaderLoading;
+
+  if (baseReady && !shouldRenderShowComp) {
+    resetScrollPosition();
+    initialOverlayLock.value = false;
+    return;
+  }
+
+  if (baseReady && shouldRenderShowComp && hasSignal) {
+    resetScrollPosition();
+    initialOverlayLock.value = false;
+  }
+};
+
+// Last-resort release: if anything downstream (a missing loading-state
+// signal, a watcher that never re-runs, a hung request) keeps the overlay up
+// after boot, force it off once. The routed page has its own local spinner,
+// so there is no content to hide at this point anyway.
+let overlayFallbackTimer = null;
+const armOverlayFallback = () => {
+  clearOverlayFallback();
+  overlayFallbackTimer = setTimeout(() => {
+    overlayFallbackTimer = null;
+    resetScrollPosition();
+    initialOverlayLock.value = false;
+  }, 8000);
+};
+const clearOverlayFallback = () => {
+  if (overlayFallbackTimer) {
+    clearTimeout(overlayFallbackTimer);
+    overlayFallbackTimer = null;
+  }
+};
 
 const props = defineProps({
   mode: {
@@ -843,6 +882,17 @@ onMounted(async () => {
   // All initial config (main conf, header conf, nav) plus the first page (if
   // any) are in place — release the loading overlay only from here.
   initialLoadDone.value = true;
+  // Evaluate immediately (don't wait for a watched flag to change) and arm a
+  // fallback so the overlay can never stay up after boot.
+  maybeReleaseOverlay(
+    loading.value,
+    loadingDrawer.value,
+    loadingShowComponent.value,
+    loadingHeader.value,
+    shouldRenderMainShowComponent.value,
+    hasShowComponentLoadingSignal.value
+  );
+  armOverlayFallback();
   updateScrollState();
 
   if (prevScrollRestoration !== null && typeof history !== "undefined") {
@@ -856,6 +906,7 @@ onUnmounted(() => {
   }
 
   teardownScrollListener();
+  clearOverlayFallback();
 
   if (hideShowComponentOverlayTimer) {
     clearTimeout(hideShowComponentOverlayTimer);
@@ -880,7 +931,15 @@ const getDataNav = async () => {
     const response = await postData(
       "get",
       null,
-      "fpmanager/getNavMenu?rolefilter=1"
+      "fpmanager/getNavMenu?rolefilter=1",
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      BOOT_REQUEST_TIMEOUT_MS
     );
     if (response.data) {
       console.log("Navigation Data:", response.data);
@@ -903,7 +962,19 @@ const getDataNav = async () => {
 const getHeaderConf = async (trackLoading = true) => {
   if (trackLoading) loadingHeader.value = true;
   try {
-    const response = await postData("get", null, "fpmanager/getHeaderConf");
+    const response = await postData(
+      "get",
+      null,
+      "fpmanager/getHeaderConf",
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      BOOT_REQUEST_TIMEOUT_MS
+    );
     const raw = response?.data;
     headerConf.value = raw ? normalizeHeaderConfig(raw) : null;
   } catch (error) {
@@ -920,7 +991,19 @@ const getHeaderConf = async (trackLoading = true) => {
 const getMainConf = async () => {
   loading.value = true;
   try {
-    const response = await postData("get", null, "fpmanager/getMainConf");
+    const response = await postData(
+      "get",
+      null,
+      "fpmanager/getMainConf",
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      BOOT_REQUEST_TIMEOUT_MS
+    );
     if (response.data) {
       console.log("Main Configuration Data:", response.data);
       // Flatten the config if it's not "row"

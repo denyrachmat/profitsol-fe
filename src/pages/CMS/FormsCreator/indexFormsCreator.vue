@@ -6,7 +6,7 @@
           <q-btn color="primary" label="File" flat no-caps>
             <q-menu>
               <q-list dense style="min-width: 100px">
-                <q-item clickable v-close-popup>
+                <q-item clickable v-close-popup @click="onClickNewForm">
                   <q-item-section>New Forms</q-item-section>
                 </q-item>
                 <q-item clickable v-close-popup @click="onClickOpenTraining">
@@ -100,6 +100,33 @@
     <div class="row q-py-sm">
       <div class="col q-pr-md">
         <q-input outlined label="Forms Title" v-model="title" dense />
+      </div>
+      <div class="col-3 q-pr-md">
+        <div class="row no-wrap items-center">
+          <q-select
+            class="col"
+            v-model="formTags"
+            :options="listTags"
+            label="Category (Tags)"
+            dense
+            outlined
+            multiple
+            use-chips
+            emit-value
+            map-options
+            clearable
+          />
+          <q-btn
+            flat
+            dense
+            color="primary"
+            icon="category"
+            class="q-ml-xs"
+            @click="onManageCategories"
+          >
+            <q-tooltip>Manage categories</q-tooltip>
+          </q-btn>
+        </div>
       </div>
       <div class="col-1 text-right">
         <q-btn-group>
@@ -724,6 +751,7 @@ import shareFormsVue from "../Forms/shareForms.vue";
 import multiplePromptDialog from "src/components/multiplePromptDialog.vue";
 
 import folderFilesChooser from "src/pages/UpdateFP/components/pageManage/folderFilesChooser.vue";
+import tagsManageView from "src/pages/UpdateFP/components/postManage/tagsManageView.vue";
 
 import { useAuthStore } from "src/stores/authStore";
 
@@ -756,6 +784,7 @@ const shareFormsMenuIcon = ref("");
 const selectedSharedMenu = ref("");
 const selectedTableRoles = ref([]);
 const listTags = ref([]);
+const formTags = ref([]);
 const props = defineProps({
   mode: String,
   dataForms: Array,
@@ -793,6 +822,7 @@ onMounted(() => {
     title.value = props.dataForms.title || "New Form";
     desc.value = props.dataForms.desc || "New Description";
     idRef.value = props.dataForms.id || null;
+    formTags.value = props.dataForms.tags || [];
     forms.value = props.dataForms.forms || [
       {
         type: "row",
@@ -928,6 +958,51 @@ const onClickAddRows = () => {
         },
       },
     ],
+  });
+};
+
+const onClickNewForm = () => {
+  $q.dialog({
+    title: "Confirm",
+    message: "Start a new form? Any unsaved changes will be lost.",
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    idRef.value = null;
+    title.value = "";
+    desc.value = "";
+    formTags.value = [];
+    formStatus.value = "draft";
+    formYear.value = null;
+    share.value = [];
+    shareMainMenu.value = false;
+    shareIsroles.value = false;
+    shareFormsMenuIcon.value = "";
+    selectedSharedMenu.value = "";
+    selectedTableRoles.value = [];
+    setupTrainingSetup.value = {
+      isRPA: false,
+      isApproval: false,
+      isAPI: false,
+      isNotif: false,
+      rpaId: null,
+      rpaParams: {},
+      apiOpt: [],
+      bulkMode: "once",
+    };
+    forms.value = [
+      {
+        type: "row",
+        content: [
+          {
+            content: {
+              content: null,
+              type: "col",
+            },
+          },
+        ],
+      },
+    ];
   });
 };
 
@@ -1225,6 +1300,7 @@ const onSaveQuestion = () => {
         idRef: idRef.value,
         forms: forms.value,
         title: title.value,
+        tags: formTags.value,
         desc: desc.value,
         isQuiz: props.mode ?? false,
         status: formStatus.value,
@@ -1310,6 +1386,7 @@ const onClickShare = () => {
 watch(
   [
     title,
+    formTags,
     forms,
     setupTrainingSetup,
     formStatus,
@@ -1324,6 +1401,7 @@ watch(
   (
     [
       newTitle,
+      newFormTags,
       newForms,
       newSetup,
       newStatus,
@@ -1337,6 +1415,7 @@ watch(
     ],
     [
       oldTitle,
+      oldFormTags,
       oldForms,
       oldSetup,
       oldStatus,
@@ -1351,6 +1430,7 @@ watch(
   ) => {
     console.log("Watched values changed:", {
       title: [oldTitle, newTitle],
+      formTags: [oldFormTags, newFormTags],
       forms: [oldForms, newForms],
       setupTrainingSetup: [oldSetup, newSetup],
       formStatus: [oldStatus, newStatus],
@@ -1365,6 +1445,7 @@ watch(
     if (
       Object.entries({
         title: [oldTitle, newTitle],
+        formTags: [oldFormTags, newFormTags],
         forms: [oldForms, newForms],
         setupTrainingSetup: [oldSetup, newSetup],
         formStatus: [oldStatus, newStatus],
@@ -1419,7 +1500,7 @@ const getDataTags = async () => {
           desc: "pgm_desc|string",
         },
       },
-      `portal/gencode/showDetail/FP_POST_TAGS`,
+      `portal/gencode/showDetail/CMS_FORM_TAGS`,
       false,
       false,
       true
@@ -1435,5 +1516,15 @@ const getDataTags = async () => {
       message: "Failed to fetch category",
     });
   }
+};
+
+const onManageCategories = () => {
+  $q.dialog({
+    component: tagsManageView,
+    componentProps: { code: "CMS_FORM_TAGS" },
+  })
+    .onOk(() => getDataTags())
+    .onCancel(() => getDataTags())
+    .onDismiss(() => getDataTags());
 };
 </script>
