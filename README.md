@@ -92,10 +92,24 @@ Each feature area has its own doc with detailed pages, flows, and API endpoints:
 
 | Module | Doc |
 |--------|-----|
+| Dashboard Manager (datasets + rendered dashboards) | src/pages/DashboardManager/, src/components/widgets/dashboard/ |
 | Front Page & Website Builder (UpdateFP) | [`FRONTPAGE_WEBSITE_BUILDER.md`](FRONTPAGE_WEBSITE_BUILDER.md) |
 | Macro List distribution | [`MACRO_LIST.md`](MACRO_LIST.md) |
 | Mobile label print templates | [`MOBILE_LABEL_PRINT.md`](MOBILE_LABEL_PRINT.md) |
 | User Profiles | [`PROFILES.md`](PROFILES.md) |
+
+## Deployment Notes
+
+The frontend builds to static files (SPA, with optional PWA mode). There is **no frontend installer**; the `/install` wizard belongs to the Laravel backend (`profitsol-api`).
+
+For each environment:
+
+1. Set `API`, `API_DOWNLOAD`, and `API_DMS` in `quasar.config.js` to the target backend URLs. These are currently hardcoded in `build.env`; the sample `.env` values are not wired into these settings.
+2. Build with `quasar build` (SPA) or `quasar build -m pwa` (PWA). Configuration is embedded in the build, so rebuild after changing environment URLs.
+3. Publish the generated `dist/` files to a static web host. Since the app uses Vue Router history mode, configure the host to serve `index.html` for app routes.
+4. Configure the host with the correct SPA/PWA caching behavior and enable HTTPS.
+
+Keep secrets out of frontend configuration: values bundled into a browser application are visible to users.
 
 ## Technology Stack
 
@@ -128,6 +142,7 @@ Each feature area has its own doc with detailed pages, flows, and API endpoints:
 │   ├── pages/         # feature modules:
 │   │   ├── Auth/      #   login, register, forgot/reset password
 │   │   ├── Dashboards/#   portal home, app list, events
+│   │   ├── DashboardManager/ # dashboard and dataset editor/renderer
 │   │   ├── DMS/       #   document management
 │   │   ├── AMS/       #   approval management + doc signing
 │   │   ├── MRS/       #   modular reporting
@@ -161,18 +176,18 @@ Each feature area has its own doc with detailed pages, flows, and API endpoints:
 
 Environment/build settings live in `quasar.config.js` under `build.env`:
 
-| Variable | Dev default | Purpose |
-|----------|-------------|---------|
-| `API` | `http://stx-api.test/api/` | Base API endpoint |
-| `API_DOWNLOAD` | `http://stx-api.test` | Download base URL |
-| `API_DMS` | `http://stx-api.test/api/dms/...` | DMS shared-files endpoint |
+| Variable | Dev default | Prod default | Purpose |
+|----------|-------------|--------------|---------|
+| `API` | `http://stx-api.test/api/` | `https://api.sumitronics-indonesia.com/api/` | Base API endpoint |
+| `API_DOWNLOAD` | `http://stx-api.test` | `https://api.sumitronics-indonesia.com` | Download base URL |
+| `API_DMS` | `http://stx-api.test/api/dms/...` | `https://api.sumitronics-indonesia.com/api/dms/...` | DMS shared-files endpoint |
 | `MS_CLIENTID` | Azure AD app client ID | MSAL authentication |
 | `MS_AUTHORITY` | `https://login.microsoftonline.com/<tenant>` | MSAL authority |
 | `GRAPH_API` | `https://graph.microsoft.com/v1.0/` | Microsoft Graph |
 | `SHAREPOINT_URL` | Graph sites root | SharePoint drive lookup |
 | `VAPID_KEY` | Web push VAPID key | PWA push notifications |
 
-Sensitive/override values can also be provided via `.env` (`VITE_MS_CLIENT_ID`, `VITE_MS_AUTHORITY`).
+Values are read at build time and embedded in the bundle. The root `.env` file currently holds only placeholder `VITE_MS_CLIENT_ID` / `VITE_MS_AUTHORITY` entries and is **not** consumed by `build.env`; set the real values in `quasar.config.js` instead.
 
 ## Install the dependencies
 ```bash
